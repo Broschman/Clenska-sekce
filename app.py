@@ -277,7 +277,7 @@ for tyden in month_days:
                         # ORIS ODKAZ (Zobrazuje se vlevo pod info)
                         if je_zavod or je_stafeta:
                             st.markdown("---")
-                            st.markdown("**Informace k závodu:**") # ZMĚNA TEXTU
+                            st.markdown("**Informace k závodu:**") 
                             
                             odkaz_zavodu = str(akce['odkaz']).strip() if 'odkaz' in df_akce.columns and pd.notna(akce['odkaz']) else ""
                             link_target = odkaz_zavodu if odkaz_zavodu else "https://oris.orientacnisporty.cz/"
@@ -286,7 +286,6 @@ for tyden in month_days:
                             if je_stafeta:
                                 st.warning("⚠️ **ŠTAFETY:** Přihlaš se **I ZDE (vpravo)** kvůli soupiskám!")
                             
-                            # ZMĚNA TEXTU ODKAZU
                             st.markdown(f"👉 [**ℹ️ Stránka závodu v ORISu**]({link_target})")
 
                     # ----------------------------------------
@@ -342,7 +341,6 @@ for tyden in month_days:
                                 st.info("Přihlašování bylo ukončeno.")
                         
                         elif je_zavod:
-                            # Prázdno pro běžný závod
                             pass
 
 
@@ -356,7 +354,7 @@ for tyden in month_days:
                         nadpis_seznam = f"👥 Zájemci o štafetu ({len(lidi)})" if je_stafeta else f"👥 Přihlášeno ({len(lidi)})"
                         st.markdown(f"#### {nadpis_seznam}")
 
-                        # Potvrzení mazání
+                        # Potvrzení mazání (přes celou šířku)
                         if delete_key_state in st.session_state:
                             clovek_ke_smazani = st.session_state[delete_key_state]
                             st.warning(f"⚠️ Opravdu smazat: **{clovek_ke_smazani}**?")
@@ -379,35 +377,36 @@ for tyden in month_days:
                                 del st.session_state[delete_key_state]
                                 st.rerun()
 
-                        # Výpis lidí - UPRAVENO NA TABULKU
+                        # Výpis lidí - SLOUPEČKOVÁ TABULKA
                         if not lidi.empty:
-                            # ZÁHLAVÍ TABULKY
-                            h1, h2, h3 = st.columns([0.5, 4, 1])
+                            # 1. ZÁHLAVÍ
+                            # Poměry: # | Jméno | Poznámka | Koš
+                            h1, h2, h3, h4 = st.columns([0.4, 2.2, 2.2, 0.5]) 
                             h1.markdown("**#**")
-                            h2.markdown("**Jméno / Poznámka**")
-                            h3.markdown("**Akce**")
+                            h2.markdown("**Jméno**")
+                            h3.markdown("**Poznámka**")
+                            h4.markdown("") # Koš nemá nadpis
                             
-                            st.markdown("<hr style='margin: 0 0 10px 0; border-top: 2px solid #ddd;'>", unsafe_allow_html=True)
+                            st.markdown("<hr style='margin: 5px 0 10px 0; border-top: 2px solid #ccc;'>", unsafe_allow_html=True)
                             
-                            # ŘÁDKY TABULKY
+                            # 2. ŘÁDKY
                             for i, (idx, row) in enumerate(lidi.iterrows()):
-                                c1, c2, c3 = st.columns([0.5, 4, 1], vertical_alignment="center")
+                                c1, c2, c3, c4 = st.columns([0.4, 2.2, 2.2, 0.5], vertical_alignment="center")
                                 
                                 c1.write(f"{i+1}.")
+                                c2.markdown(f"**{row['jméno']}**")
                                 
-                                # Sestavení textu jména
-                                text_ucastnika = f"**{row['jméno']}**"
-                                if pd.notna(row['poznámka']) and row['poznámka']:
-                                    text_ucastnika += f"  \n<span style='color:grey; font-size:0.9em; font-style:italic;'>{row['poznámka']}</span>"
-                                c2.markdown(text_ucastnika, unsafe_allow_html=True)
+                                # Poznámka (pokud není, dáme prázdno)
+                                poznamka_txt = row['poznámka'] if pd.notna(row['poznámka']) else ""
+                                c3.caption(poznamka_txt)
                                 
                                 if not je_po_deadlinu:
-                                    if c3.button("🗑️", key=f"del_{akce['název']}_{idx}"):
+                                    if c4.button("🗑️", key=f"del_{akce['název']}_{idx}"):
                                         st.session_state[delete_key_state] = row['jméno']
                                         st.rerun()
                                 
-                                # ODDĚLOVAČ ŘÁDKŮ
-                                st.markdown("<hr style='margin: 5px 0; border-top: 1px solid #f0f0f0;'>", unsafe_allow_html=True)
+                                # Oddělovač mezi řádky
+                                st.markdown("<hr style='margin: 0; border-top: 1px solid #f0f0f0;'>", unsafe_allow_html=True)
                                 
                         else:
                             st.caption("Zatím nikdo.")
