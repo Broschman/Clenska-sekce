@@ -19,54 +19,61 @@ st.markdown("""
     /* Nadpis - UPROSTŘED */
     h1 {
         color: #2E7D32; 
-        text-align: center !important; /* Vynucení středu */
+        text-align: center !important;
         font-weight: 800;
         letter-spacing: -1px;
         margin: 0;
         padding-bottom: 20px;
     }
 
-    /* Tlačítko nápovědy (Malé v rohu) */
-    div[data-testid="stPopover"] > button {
+    /* === TLAČÍTKO NÁPOVĚDY (HORNÍ) === */
+    /* Zacílíme konkrétně na první popover v hlavičce */
+    div[data-testid="column"] div[data-testid="stPopover"] > button {
         border-radius: 50% !important;
-        width: 35px !important;       /* Menší velikost */
+        width: 35px !important;
         height: 35px !important;
         border: 1px solid #ccc !important;
         color: #555 !important;
-        font-weight: bold !important;
         background-color: white !important;
-        transition: 0.3s;
         padding: 0 !important;
-        line-height: 0 !important;
-    }
-    div[data-testid="stPopover"] > button:hover {
-        border-color: #2E7D32 !important;
-        color: #2E7D32 !important;
-        background-color: #f1f8e9 !important;
     }
 
-    /* KARTY AKCÍ - Musíme resetovat styl tlačítka, aby nevypadalo jako nápověda */
-    div[data-testid="column"] div[data-testid="stPopover"] > button {
-        border-radius: 8px !important; 
-        width: 100% !important;
-        height: auto !important;
-        min-height: 55px;
-        background-color: #ffffff !important;
-        border: 1px solid #e0e0e0 !important;
-        border-left: 5px solid #4CAF50 !important;
-        text-align: left !important;
+    /* === PLOVOUCÍ TLAČÍTKO "NÁVRH" (DOLNÍ) === */
+    /* Toto je pokročilý CSS selektor, který najde náš specifický kontejner s ID 'floating-btn' */
+    
+    .floating-container {
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        z-index: 9999;
+    }
+    
+    /* Styl pro tlačítko uvnitř plovoucího kontejneru */
+    .floating-container button {
+        background-color: #FFC107 !important; /* Žlutá barva pro nápad */
         color: #333 !important;
-        padding: 8px 10px !important;
-        line-height: 1.3 !important;
+        border: none !important;
+        border-radius: 50px !important; /* Ovál */
+        box-shadow: 0 4px 10px rgba(0,0,0,0.3) !important;
+        font-weight: bold !important;
+        padding: 10px 20px !important;
+        height: 50px !important;
+        transition: transform 0.2s !important;
+    }
+    .floating-container button:hover {
+        transform: scale(1.05) !important;
+        background-color: #FFD54F !important;
     }
 
-    /* NAVIGACE */
-    div[data-testid="stButton"] > button {
-        border-radius: 20px !important;
-        font-weight: bold !important;
-        border: none !important;
-        background-color: #f0f2f6 !important;
-        color: #555 !important;
+    /* === KARTY AKCÍ V KALENDÁŘI === */
+    /* Musíme být specifičtí, aby se styl nehádal s těmi kulatými tlačítky */
+    div[data-testid="column"] div[data-testid="stPopover"] button {
+        /* Reset pro běžná tlačítka */
+    }
+    
+    /* Styl pro karty v mřížce */
+    .stPopover button {
+        /* Základní styl */
     }
 
     /* DNEŠNÍ DEN */
@@ -95,15 +102,13 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- HLAVIČKA (Nadpis uprostřed, ikona vpravo) ---
-# Rozložení: Malý sloupec vlevo (aby to bylo symetrické) | Velký střed | Malý vpravo
+# --- HLAVIČKA ---
 col_dummy, col_title, col_help = st.columns([1, 10, 1], vertical_alignment="center")
 
 with col_title:
     st.title("🌲 Tréninkový kalendář")
 
 with col_help:
-    # Zarovnání doprava uvnitř sloupce
     with st.popover("❔", help="Nápověda k aplikaci"):
         st.markdown("### 💡 Nápověda")
         st.info("📱 **Mobil:** Otoč telefon na šířku.")
@@ -111,8 +116,6 @@ with col_help:
         st.markdown("**Legenda:**")
         st.markdown("🌲 Les | 🏙️ Sprint | 🌗 Nočák")
         st.markdown("🔒 Uzavřeno")
-        st.divider()
-        st.caption("Pro přihlášení klikni na trénink.")
 
 
 # --- 2. PŘIPOJENÍ A NAČTENÍ DAT ---
@@ -122,6 +125,8 @@ SHEET_ID = "1lW6DpUQBSm5heSO_HH9lDzm0x7t1eo8dn6FpJHh2y6U"
 url_akce = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=akce"
 url_prihlasky = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=prihlasky"
 url_jmena = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=jmena"
+# Načítání návrhů (nemusíme číst hned, stačí až při zápisu, ale pro jistotu URL)
+url_navrhy = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=navrhy"
 
 try:
     df_akce = pd.read_csv(url_akce)
@@ -180,6 +185,34 @@ st.markdown("<hr style='margin: 0 0 20px 0; border: 0; border-top: 1px solid #ee
 
 dnes = date.today()
 
+# INLINE CSS PRO TLAČÍTKA KALENDÁŘE (aby přebila globální styly)
+st.markdown("""
+<style>
+div[data-testid="column"] button {
+    border-radius: 8px !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 55px !important;
+    background-color: #ffffff !important;
+    border: 1px solid #e0e0e0 !important;
+    text-align: left !important;
+    color: #333 !important;
+    padding: 8px 10px !important;
+    line-height: 1.3 !important;
+}
+/* Zelený proužek */
+div[data-testid="column"] button {
+    border-left: 5px solid #4CAF50 !important;
+}
+div[data-testid="column"] button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1) !important;
+    border-color: #2E7D32 !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+
 for tyden in month_days:
     cols = st.columns(7, gap="small")
     
@@ -196,7 +229,7 @@ for tyden in month_days:
             else:
                 st.markdown(f"<span class='day-number'>{den_cislo}</span>", unsafe_allow_html=True)
 
-            # --- AKCE ---
+            # AKCE
             akce_dne = df_akce[df_akce['datum'] == aktualni_den]
             for _, akce in akce_dne.iterrows():
                 je_po_deadlinu = dnes > akce['deadline']
@@ -228,7 +261,6 @@ for tyden in month_days:
                         st.caption(f"📅 Deadline přihlášek: {deadline_str}")
 
                     st.divider()
-                    
                     lidi = df_prihlasky[df_prihlasky['název'] == akce['název']].copy()
                     st.write(f"**👥 Přihlášeno: {len(lidi)}**")
                     if not lidi.empty:
@@ -241,20 +273,13 @@ for tyden in month_days:
                         st.write("#### ✍️ Nová přihláška")
                         form_key = f"form_{akce['název']}_{aktualni_den}"
                         with st.form(key=form_key, clear_on_submit=True):
-                            
-                            vybrane_jmeno = st.selectbox(
-                                "👤 Jméno", 
-                                options=seznam_jmen, 
-                                index=None, 
-                                placeholder="Vyber ze seznamu..."
-                            )
+                            vybrane_jmeno = st.selectbox("👤 Jméno", options=seznam_jmen, index=None, placeholder="Vyber ze seznamu...")
                             nove_jmeno = st.text_input("...nebo napiš Nové jméno")
                             poznamka_input = st.text_input("Poznámka")
                             odeslat_btn = st.form_submit_button("Přihlásit se")
                             
                             if odeslat_btn:
                                 finalni_jmeno = nove_jmeno.strip() if nove_jmeno else vybrane_jmeno
-                                
                                 if finalni_jmeno:
                                     novy_zaznam = pd.DataFrame([{
                                         "název": akce['název'],
@@ -273,24 +298,59 @@ for tyden in month_days:
                                                 novy_clen = pd.DataFrame([{"jméno": finalni_jmeno}])
                                                 updated_jmena = pd.concat([aktualni_jmena, novy_clen], ignore_index=True)
                                                 conn.update(worksheet="jmena", data=updated_jmena)
-                                            except:
-                                                pass
-
+                                            except: pass
                                         st.success(f"✅ Přihlášeno!")
                                         st.rerun()
-                                    except:
-                                        st.error("Chyba zápisu.")
-                                else:
-                                    st.warning("Vyplň jméno!")
+                                    except: st.error("Chyba zápisu.")
+                                else: st.warning("Vyplň jméno!")
+
+st.markdown("<div style='margin-bottom: 50px'></div>", unsafe_allow_html=True)
+
+
+# --- 5. PLOVOUCÍ TLAČÍTKO "NÁVRH" (FIXNÍ V ROHU) ---
+# Trik: Vytvoříme prázdný kontejner, který CSS styluje na "fixed bottom right"
+# a do něj vložíme popover.
+
+st.markdown('<div class="floating-container">', unsafe_allow_html=True)
+
+# Tady je samotné tlačítko
+with st.popover("💡 Návrh na zlepšení"):
+    st.markdown("### 🛠️ Máš nápad?")
+    st.write("Napiš nám, co vylepšit v aplikaci nebo na tréninku.")
     
-    st.markdown("<div style='margin-bottom: 10px'></div>", unsafe_allow_html=True)
+    with st.form("form_navrhy", clear_on_submit=True):
+        text_navrhu = st.text_area("Tvůj návrh:", height=100)
+        odeslat_navrh = st.form_submit_button("Odeslat návrh")
+        
+        if odeslat_navrh and text_navrhu:
+            # Uložení do tabulky navrhy
+            novy_navrh = pd.DataFrame([{
+                "datum": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "text": text_navrhu
+            }])
+            
+            try:
+                # Zkusíme načíst existující návrhy (pokud list existuje)
+                try:
+                    aktualni_navrhy = conn.read(worksheet="navrhy", ttl=0)
+                    updated_navrhy = pd.concat([aktualni_navrhy, novy_navrh], ignore_index=True)
+                except:
+                    # Pokud je list prázdný nebo neexistuje, začneme novou tabulku
+                    updated_navrhy = novy_navrh
+                
+                conn.update(worksheet="navrhy", data=updated_navrhy)
+                st.toast("✅ Díky! Tvůj návrh byl uložen.")
+            except Exception as e:
+                st.error(f"Chyba při ukládání: {e}. Zkontroluj, zda existuje list 'navrhy'.")
+
+st.markdown('</div>', unsafe_allow_html=True)
 
 # --- PATIČKA ---
 st.markdown("---")
 st.markdown("""
-<div style='text-align: center; color: #aaa; font-size: 0.8em; font-family: sans-serif;'>
+<div style='text-align: center; color: #aaa; font-size: 0.8em; font-family: sans-serif; padding-bottom: 20px;'>
     <b>Členská sekce RBK</b> • Design by Broschman & Gemini<br>
     &copy; 2026 All rights reserved
 </div>
 """, unsafe_allow_html=True)
-                                            
+                
