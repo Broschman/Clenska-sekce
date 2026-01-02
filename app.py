@@ -95,7 +95,7 @@ st.markdown("""
 col_dummy, col_title, col_help = st.columns([1, 10, 1], vertical_alignment="center")
 
 with col_title:
-    st.title("🌲 Tréninkový kalendář")
+    st.title("🌲 Kalendář RBK")
 
 with col_help:
     with st.popover("❔", help="Nápověda k aplikaci"):
