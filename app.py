@@ -105,6 +105,7 @@ with col_help:
         st.markdown("**Legenda:**")
         st.markdown("🏆 **Závod / Štafety**")
         st.markdown("🌲 Les | 🏙️ Sprint | 🌗 Nočák")
+        st.markdown("🚗 Shání odvoz")
         st.markdown("🔒 Uzavřeno")
 
 
@@ -125,8 +126,11 @@ try:
     
     try:
         df_prihlasky = pd.read_csv(url_prihlasky)
+        # Pojistka pro sloupec doprava
+        if 'doprava' not in df_prihlasky.columns:
+            df_prihlasky['doprava'] = ""
     except:
-        df_prihlasky = pd.DataFrame(columns=["název", "jméno", "poznámka", "čas zápisu"])
+        df_prihlasky = pd.DataFrame(columns=["název", "jméno", "poznámka", "doprava", "čas zápisu"])
         
     try:
         df_jmena = pd.read_csv(url_jmena)
@@ -251,7 +255,6 @@ for tyden in month_days:
                 
                 # --- POPOVER (DETAIL) ---
                 with st.popover(label_tlacitka, use_container_width=True):
-                    # Zde rozdělíme obsah na 2 sloupce
                     col_info, col_form = st.columns([1.2, 1], gap="medium")
                     
                     # ----------------------------------------
@@ -274,10 +277,9 @@ for tyden in month_days:
                         else:
                             st.caption(f"📅 Deadline přihlášek: {deadline_str}")
 
-                        # ORIS ODKAZ (Zobrazuje se vlevo pod info)
                         if je_zavod or je_stafeta:
                             st.markdown("---")
-                            st.markdown("**Informace k závodu:**") 
+                            st.markdown("**Informace k závodu:**")
                             
                             odkaz_zavodu = str(akce['odkaz']).strip() if 'odkaz' in df_akce.columns and pd.notna(akce['odkaz']) else ""
                             link_target = odkaz_zavodu if odkaz_zavodu else "https://oris.orientacnisporty.cz/"
@@ -292,7 +294,6 @@ for tyden in month_days:
                     # PRAVÝ SLOUPEC: FORMULÁŘ
                     # ----------------------------------------
                     with col_form:
-                        
                         delete_key_state = f"confirm_delete_{akce['název']}"
                         
                         if (not je_zavod or je_stafeta):
@@ -305,16 +306,25 @@ for tyden in month_days:
                                     vybrane_jmeno = st.selectbox("Jméno", options=seznam_jmen, index=None, placeholder="Vyber...")
                                     nove_jmeno = st.text_input("...nebo Nové jméno")
                                     poznamka_input = st.text_input("Poznámka")
+                                    
+                                    # CHECKBOX PRO DOPRAVU
+                                    doprava_input = st.checkbox("🚗 Sháním odvoz")
+                                    
                                     odeslat_btn = st.form_submit_button("Zapsat se" if je_stafeta else "Přihlásit se")
                                     
                                     if odeslat_btn:
                                         finalni_jmeno = nove_jmeno.strip() if nove_jmeno else vybrane_jmeno
                                         if finalni_jmeno:
                                             uspesne_zapsano = False
+                                            
+                                            # ZDE SE UKLÁDÁ TEXT "Ano 🚗"
+                                            hodnota_dopravy = "Ano 🚗" if doprava_input else ""
+                                            
                                             novy_zaznam = pd.DataFrame([{
                                                 "název": akce['název'],
                                                 "jméno": finalni_jmeno,
                                                 "poznámka": poznamka_input,
+                                                "doprava": hodnota_dopravy, 
                                                 "čas zápisu": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                                             }])
                                             try:
@@ -339,10 +349,8 @@ for tyden in month_days:
                                         else: st.warning("Vyplň jméno!")
                             elif je_po_deadlinu:
                                 st.info("Přihlašování bylo ukončeno.")
-                        
                         elif je_zavod:
                             pass
-
 
                     # ----------------------------------------
                     # SPODEK: SEZNAM PŘIHLÁŠENÝCH (TABULKA)
@@ -354,7 +362,7 @@ for tyden in month_days:
                         nadpis_seznam = f"👥 Zájemci o štafetu ({len(lidi)})" if je_stafeta else f"👥 Přihlášeno ({len(lidi)})"
                         st.markdown(f"#### {nadpis_seznam}")
 
-                        # Potvrzení mazání (přes celou šířku)
+                        # Potvrzení mazání
                         if delete_key_state in st.session_state:
                             clovek_ke_smazani = st.session_state[delete_key_state]
                             st.warning(f"⚠️ Opravdu smazat: **{clovek_ke_smazani}**?")
@@ -379,33 +387,36 @@ for tyden in month_days:
 
                         # Výpis lidí - SLOUPEČKOVÁ TABULKA
                         if not lidi.empty:
-                            # 1. ZÁHLAVÍ
-                            # Poměry: # | Jméno | Poznámka | Koš
-                            h1, h2, h3, h4 = st.columns([0.4, 2.2, 2.2, 0.5]) 
+                            # ZÁHLAVÍ - PŘIDÁN SLOUPEC PRO DOPRAVU
+                            # Poměry: # | Jméno | Poznámka | Auto | Koš
+                            h1, h2, h3, h4, h5 = st.columns([0.4, 2.0, 2.0, 0.8, 0.5]) 
                             h1.markdown("**#**")
                             h2.markdown("**Jméno**")
                             h3.markdown("**Poznámka**")
-                            h4.markdown("") # Koš nemá nadpis
+                            h4.markdown("🚗")
+                            h5.markdown("") 
                             
                             st.markdown("<hr style='margin: 5px 0 10px 0; border-top: 2px solid #ccc;'>", unsafe_allow_html=True)
                             
-                            # 2. ŘÁDKY
+                            # ŘÁDKY
                             for i, (idx, row) in enumerate(lidi.iterrows()):
-                                c1, c2, c3, c4 = st.columns([0.4, 2.2, 2.2, 0.5], vertical_alignment="center")
+                                c1, c2, c3, c4, c5 = st.columns([0.4, 2.0, 2.0, 0.8, 0.5], vertical_alignment="center")
                                 
                                 c1.write(f"{i+1}.")
                                 c2.markdown(f"**{row['jméno']}**")
                                 
-                                # Poznámka (pokud není, dáme prázdno)
                                 poznamka_txt = row['poznámka'] if pd.notna(row['poznámka']) else ""
                                 c3.caption(poznamka_txt)
                                 
+                                # Zobrazení dopravy (Ano 🚗)
+                                doprava_val = str(row['doprava']) if pd.notna(row.get('doprava')) else ""
+                                c4.write(doprava_val)
+                                
                                 if not je_po_deadlinu:
-                                    if c4.button("🗑️", key=f"del_{akce['název']}_{idx}"):
+                                    if c5.button("🗑️", key=f"del_{akce['název']}_{idx}"):
                                         st.session_state[delete_key_state] = row['jméno']
                                         st.rerun()
                                 
-                                # Oddělovač mezi řádky
                                 st.markdown("<hr style='margin: 0; border-top: 1px solid #f0f0f0;'>", unsafe_allow_html=True)
                                 
                         else:
