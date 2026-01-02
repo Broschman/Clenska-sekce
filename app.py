@@ -7,7 +7,7 @@ import calendar
 # --- 1. NASTAVENÍ STRÁNKY ---
 st.set_page_config(page_title="OB Klub - Kalendář", page_icon="🌲", layout="wide")
 
-# --- CSS VZHLED (FANCY DESIGN + FIXY) ---
+# --- CSS VZHLED ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
@@ -90,7 +90,8 @@ st.markdown("""
         display: block;
         text-align: center;
     }
-
+    
+    /* Skrytí patičky */
     footer {visibility: hidden;}
     #MainMenu {visibility: hidden;}
 </style>
@@ -101,20 +102,35 @@ st.title("🌲 Tréninkový kalendář")
 # --- 2. PŘIPOJENÍ A NAČTENÍ DAT ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 SHEET_ID = "1lW6DpUQBSm5heSO_HH9lDzm0x7t1eo8dn6FpJHh2y6U"
+
+# Odkazy na CSV (rychlé čtení)
 url_akce = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=akce"
 url_prihlasky = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=prihlasky"
+url_jmena = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=jmena"
 
 try:
+    # A) Načtení Akcí
     df_akce = pd.read_csv(url_akce)
     df_akce['datum'] = pd.to_datetime(df_akce['datum'], dayfirst=True, errors='coerce').dt.date
     df_akce['deadline'] = pd.to_datetime(df_akce['deadline'], dayfirst=True, errors='coerce').dt.date
     df_akce = df_akce.dropna(subset=['datum'])
+    
+    # B) Načtení Přihlášek
     try:
         df_prihlasky = pd.read_csv(url_prihlasky)
     except:
         df_prihlasky = pd.DataFrame(columns=["název", "jméno", "poznámka", "čas zápisu"])
+        
+    # C) Načtení Databáze jmen (NOVINKA)
+    try:
+        df_jmena = pd.read_csv(url_jmena)
+        # Uděláme z toho čistý seznam jmen, seřazený abecedně
+        seznam_jmen = sorted(df_jmena['jméno'].dropna().unique().tolist())
+    except:
+        seznam_jmen = [] # Kdyby list jmena neexistoval, apka nespadne
+
 except Exception as e:
-    st.error("⚠️ Chyba načítání dat. Zkontroluj tabulku.")
+    st.error("⚠️ Chyba načítání dat. Zkontroluj, zda jsi vytvořil list 'jmena' v tabulce.")
     st.stop()
 
 # --- 3. LOGIKA KALENDÁŘE ---
@@ -173,42 +189,26 @@ for tyden in month_days:
             for _, akce in akce_dne.iterrows():
                 je_po_deadlinu = dnes > akce['deadline']
                 
-                # --- 1. ZJIŠTĚNÍ TYPU A IKONY ---
-                # Načteme typ z tabulky, převedeme na malá písmena a odstraníme mezery
+                # Ikony
                 typ_akce = str(akce['typ']).lower().strip() if 'typ' in df_akce.columns and pd.notna(akce['typ']) else "ostatní"
-                
-                # Mapa ikon podle typu
-                ikony_mapa = {
-                    "les": "🌲",
-                    "sprint": "🏙️",
-                    "nočák": "🌗"
-                }
-                # Vybere ikonu, pokud typ nezná, dá běžce
+                ikony_mapa = {"les": "🌲", "sprint": "🏙️", "nočák": "🌗"}
                 emoji_typ = ikony_mapa.get(typ_akce, "🏃")
                 
-                # Pokud je zamčeno, přidáme zámek, jinak necháme jen typ
-                if je_po_deadlinu:
-                    finalni_ikona = f"🔒 {emoji_typ}"
-                else:
-                    finalni_ikona = emoji_typ
+                finalni_ikona = f"🔒 {emoji_typ}" if je_po_deadlinu else emoji_typ
 
-                # --- 2. OŘEZÁNÍ NÁZVU (Před pomlčkou) ---
+                # Zkrácení názvu
                 nazev_full = akce['název']
                 if '-' in nazev_full:
                     display_text = nazev_full.split('-')[0].strip()
                 else:
                     display_text = nazev_full
                 
-                # Výsledný text na tlačítku
                 label_tlacitka = f"{finalni_ikona} {display_text}"
                 
+                # POPOVER
                 with st.popover(label_tlacitka, use_container_width=True):
-                    # --- DETAIL AKCE ---
                     st.markdown(f"### {nazev_full}")
-                    
-                    # Tady zobrazíme ten typ i textově
-                    st.caption(f"Typ: {typ_akce.upper()}")
-                    
+                    st.caption(f"Typ tréninku: {typ_akce.upper()}")
                     st.write(f"**📍 Místo:** {akce['místo']}")
                     popis_txt = akce['popis'] if pd.notna(akce['popis']) else ""
                     st.info(f"📝 {popis_txt}")
@@ -231,25 +231,46 @@ for tyden in month_days:
                     if not je_po_deadlinu:
                         st.write("#### ✍️ Nová přihláška")
                         form_key = f"form_{akce['název']}_{aktualni_den}"
+                        
+                        # FORMULÁŘ S INTELIGENTNÍM VÝBĚREM JMENA
                         with st.form(key=form_key, clear_on_submit=True):
-                            jmeno_input = st.text_input("Jméno a příjmení")
+                            
+                            # 1. Výběr ze seznamu (s možností vyhledávání psaním)
+                            # index=None znamená, že na začátku je pole prázdné
+                            vybrane_jmeno = st.selectbox(
+                                "👤 Jméno (vyber ze seznamu)", 
+                                options=seznam_jmen, 
+                                index=None, 
+                                placeholder="Začni psát jméno..."
+                            )
+                            
+                            # 2. Možnost pro nové lidi
+                            nove_jmeno = st.text_input("...nebo napiš Nové Jméno (pokud nejsi v seznamu)")
+                            
                             poznamka_input = st.text_input("Poznámka")
                             odeslat_btn = st.form_submit_button("Přihlásit se")
-                            if odeslat_btn and jmeno_input:
-                                novy = pd.DataFrame([{
-                                    "název": akce['název'],
-                                    "jméno": jmeno_input,
-                                    "poznámka": poznamka_input,
-                                    "čas zápisu": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                                }])
-                                try:
-                                    aktualni = conn.read(worksheet="prihlasky", ttl=0)
-                                    updated = pd.concat([aktualni, novy], ignore_index=True)
-                                    conn.update(worksheet="prihlasky", data=updated)
-                                    st.success("✅ Zapsáno!")
-                                    st.rerun()
-                                except:
-                                    st.error("Chyba zápisu.")
+                            
+                            if odeslat_btn:
+                                # Logika: Prioritu má "Nové jméno", pokud je vyplněné. Jinak bere "Vybrané jméno".
+                                finalni_jmeno = nove_jmeno if nove_jmeno else vybrane_jmeno
+                                
+                                if finalni_jmeno:
+                                    novy_zaznam = pd.DataFrame([{
+                                        "název": akce['název'],
+                                        "jméno": finalni_jmeno,
+                                        "poznámka": poznamka_input,
+                                        "čas zápisu": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                                    }])
+                                    try:
+                                        aktualni = conn.read(worksheet="prihlasky", ttl=0)
+                                        updated = pd.concat([aktualni, novy_zaznam], ignore_index=True)
+                                        conn.update(worksheet="prihlasky", data=updated)
+                                        st.success(f"✅ {finalni_jmeno} přihlášen(a)!")
+                                        st.rerun()
+                                    except:
+                                        st.error("Chyba zápisu.")
+                                else:
+                                    st.warning("⚠️ Musíš vybrat nebo napsat jméno!")
 
     st.markdown("<div style='margin-bottom: 20px'></div>", unsafe_allow_html=True)
 
@@ -257,7 +278,8 @@ for tyden in month_days:
 st.markdown("---")
 st.markdown("""
 <div style='text-align: center; color: #aaa; font-size: 0.8em; font-family: sans-serif;'>
-    <b>Členská sekce RBK</b> • Designed by Broschman<br>
+    <b>Členská sekce RBK</b> • Design by Broschman & Gemini<br>
     &copy; 2026 All rights reserved
 </div>
 """, unsafe_allow_html=True)
+    
