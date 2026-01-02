@@ -5,10 +5,10 @@ from datetime import datetime, date, timedelta
 import calendar
 
 # --- 1. NASTAVENÍ STRÁNKY ---
-# Dáme layout="wide", aby nás nelimitovaly okraje, a my si šířku vynutíme přes CSS
+# layout="wide" zajistí, že na PC to bude krásně roztáhlé přes celou obrazovku
 st.set_page_config(page_title="OB Klub - Kalendář", page_icon="🌲", layout="wide")
 
-# --- CSS VZHLED (VYNUCENÍ 3 DNŮ NA ŠÍŘKU) ---
+# --- CSS VZHLED (ELEGANTNÍ & ČISTÝ) ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
@@ -16,88 +16,79 @@ st.markdown("""
     html, body, [class*="css"] {
         font-family: 'Roboto', sans-serif;
     }
-    
-    /* === HLAVNÍ TRIK: JEDNOTNÉ SCROLOVÁNÍ === */
-    
-    /* 1. Vynutíme, aby se sloupce nikdy nezalamovaly pod sebe */
-    div[data-testid="stHorizontalBlock"] {
-        flex-wrap: nowrap !important;
-    }
-    
-    /* 2. Každý sloupec (den) bude mít fixní šířku 30% obrazovky (takže se vejdou 3 a kousek) */
-    div[data-testid="column"] {
-        flex: 0 0 auto !important;
-        width: 30vw !important;       /* 30 % šířky obrazovky mobilu */
-        min-width: 110px !important;  /* Pojistka pro hodně úzké telefony */
-        max-width: 30vw !important;   /* Aby se to neroztahovalo na PC zbytečně moc */
-    }
 
-    /* Nadpis */
     h1 {
         color: #2E7D32; 
         text-align: center;
         font-weight: 800;
-        margin-bottom: 20px;
-        font-size: 1.5rem;
+        letter-spacing: -1px;
+        margin-bottom: 30px;
     }
 
-    /* KARTY AKCÍ */
+    /* KARTY AKCÍ (Designová tlačítka) */
     div[data-testid="stPopover"] > button {
         white-space: normal !important;
-        word-break: keep-all !important;
+        word-break: keep-all !important;    /* Zákaz dělení slov */
         overflow-wrap: normal !important;
         hyphens: none !important;
         
         background-color: #ffffff !important;
         border: 1px solid #e0e0e0 !important;
-        border-left: 4px solid #4CAF50 !important;
-        border-radius: 6px !important;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
+        border-left: 5px solid #4CAF50 !important; /* Zelený proužek */
+        border-radius: 8px !important;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05) !important;
         
         color: #333 !important;
-        font-size: 0.75rem !important;
+        font-size: 0.85rem !important;
         font-weight: 600 !important;
         
         text-align: left !important;
         height: auto !important;
-        min-height: 50px;
+        min-height: 55px; /* Sjednocená výška */
         width: 100% !important;
-        padding: 4px 6px !important;
-        line-height: 1.2 !important;
+        padding: 8px 10px !important;
+        line-height: 1.3 !important;
+        transition: all 0.2s ease-in-out !important;
     }
 
-    /* NAVIGACE - Tlačítka nebudou mít 30vw, ty chceme roztažené */
-    /* Musíme specificky zacílit kontejnery, kde jsou tlačítka, aby se nerozbily */
-    /* Streamlit bohužel dává stejnou třídu 'column' všemu. 
-       Trik: Navigaci dáme do st.container, který nebude mít horizontal block */
+    /* Efekt při najetí myší */
+    div[data-testid="stPopover"] > button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1) !important;
+        border-color: #2E7D32 !important;
+    }
 
+    /* NAVIGACE */
     div[data-testid="stButton"] > button {
         border-radius: 20px !important;
         font-weight: bold !important;
         border: none !important;
         background-color: #f0f2f6 !important;
         color: #555 !important;
-        width: 100% !important;
+        transition: 0.2s;
+    }
+    div[data-testid="stButton"] > button:hover {
+        background-color: #e0e2e6 !important;
+        color: #000 !important;
     }
 
-    /* DNEŠNÍ DEN */
+    /* DNEŠNÍ DEN (Zvýraznění) */
     .today-box {
         background: linear-gradient(135deg, #FF4B4B 0%, #FF9068 100%);
         color: white;
-        padding: 2px 8px;
-        border-radius: 10px;
+        padding: 4px 12px;
+        border-radius: 15px;
         font-weight: bold;
-        font-size: 0.9rem;
-        box-shadow: 0 2px 5px rgba(255, 75, 75, 0.3);
+        box-shadow: 0 3px 6px rgba(255, 75, 75, 0.3);
         display: inline-block;
-        margin-bottom: 5px;
+        margin-bottom: 8px;
     }
 
     .day-number {
-        font-size: 1rem;
+        font-size: 1.1em;
         font-weight: 700;
         color: #444;
-        margin-bottom: 5px;
+        margin-bottom: 8px;
         display: block;
         text-align: center;
     }
@@ -113,21 +104,25 @@ st.title("🌲 Tréninkový kalendář")
 conn = st.connection("gsheets", type=GSheetsConnection)
 SHEET_ID = "1lW6DpUQBSm5heSO_HH9lDzm0x7t1eo8dn6FpJHh2y6U"
 
+# Odkazy pro rychlé načítání
 url_akce = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=akce"
 url_prihlasky = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=prihlasky"
 url_jmena = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=jmena"
 
 try:
+    # A) Akce
     df_akce = pd.read_csv(url_akce)
     df_akce['datum'] = pd.to_datetime(df_akce['datum'], dayfirst=True, errors='coerce').dt.date
     df_akce['deadline'] = pd.to_datetime(df_akce['deadline'], dayfirst=True, errors='coerce').dt.date
     df_akce = df_akce.dropna(subset=['datum'])
     
+    # B) Přihlášky
     try:
         df_prihlasky = pd.read_csv(url_prihlasky)
     except:
         df_prihlasky = pd.DataFrame(columns=["název", "jméno", "poznámka", "čas zápisu"])
         
+    # C) Jména (Našeptávač)
     try:
         df_jmena = pd.read_csv(url_jmena)
         seznam_jmen = sorted(df_jmena['jméno'].dropna().unique().tolist())
@@ -135,26 +130,22 @@ try:
         seznam_jmen = []
         
 except Exception as e:
-    st.error("⚠️ Chyba načítání dat.")
+    st.error("⚠️ Chyba načítání dat. Zkontroluj Google Tabulku.")
     st.stop()
 
 # --- 3. LOGIKA KALENDÁŘE ---
 if 'vybrany_datum' not in st.session_state:
     st.session_state.vybrany_datum = date.today()
 
-# NAVIGACE
-# Tady musíme použít malý trik. Aby se tlačítka nenaformátovala na 30vw (jako dny),
-# nepoužijeme st.columns, ale jednoduché HTML zarovnání nebo nativní Streamlit s custom CSS pro tuto sekci.
-# Pro jednoduchost necháme st.columns, ale víme, že na PC to bude vypadat úzce, na mobilu to bude OK.
-
-col_nav1, col_nav2, col_nav3 = st.columns([1, 2, 1])
+# Navigace
+col_nav1, col_nav2, col_nav3 = st.columns([2, 5, 2])
 with col_nav1:
-    if st.button("⬅️"):
+    if st.button("⬅️ Předchozí měsíc"):
         curr = st.session_state.vybrany_datum
         prev_month = curr.replace(day=1) - timedelta(days=1)
         st.session_state.vybrany_datum = prev_month.replace(day=1)
 with col_nav3:
-    if st.button("➡️"):
+    if st.button("Další měsíc ➡️"):
         curr = st.session_state.vybrany_datum
         next_month = (curr.replace(day=28) + timedelta(days=4)).replace(day=1)
         st.session_state.vybrany_datum = next_month
@@ -164,24 +155,26 @@ mesic = st.session_state.vybrany_datum.month
 ceske_mesice = ["", "Leden", "Únor", "Březen", "Duben", "Květen", "Červen", "Červenec", "Srpen", "Září", "Říjen", "Listopad", "Prosinec"]
 
 with col_nav2:
-    st.markdown(f"<h3 style='text-align: center; color: #333; margin: 0; padding-top: 5px;'>{ceske_mesice[mesic]} {rok}</h3>", unsafe_allow_html=True)
-st.markdown("<div style='margin-bottom: 15px'></div>", unsafe_allow_html=True)
+    st.markdown(f"<h2 style='text-align: center; color: #333; margin-top: -5px; font-weight: 300;'>{ceske_mesice[mesic]} <b>{rok}</b></h2>", unsafe_allow_html=True)
 
-# --- 4. VYKRESLENÍ MŘÍŽKY (JEDNOTNÝ SCROLL) ---
+# --- 4. VYKRESLENÍ MŘÍŽKY ---
 cal = calendar.Calendar(firstweekday=0)
 month_days = cal.monthdayscalendar(rok, mesic)
 
 dny_v_tydnu = ["Po", "Út", "St", "Čt", "Pá", "So", "Ne"]
 cols_header = st.columns(7)
 for i, d in enumerate(dny_v_tydnu):
-    cols_header[i].markdown(f"<div style='text-align: center; color: #888; font-size: 0.8rem;'>{d}</div>", unsafe_allow_html=True)
+    # Stylové záhlaví dnů
+    cols_header[i].markdown(f"<div style='text-align: center; color: #888; text-transform: uppercase; font-size: 0.8rem; margin-bottom: 10px;'>{d}</div>", unsafe_allow_html=True)
 
-st.markdown("<hr style='margin: 5px 0 10px 0; border: 0; border-top: 1px solid #eee;'>", unsafe_allow_html=True)
+st.markdown("<hr style='margin: 0 0 20px 0; border: 0; border-top: 1px solid #eee;'>", unsafe_allow_html=True)
 
 dnes = date.today()
 
 for tyden in month_days:
-    cols = st.columns(7) 
+    # Standardní sloupce - na PC vedle sebe, na mobilu se poskládají pod sebe
+    cols = st.columns(7, gap="small")
+    
     for i, den_cislo in enumerate(tyden):
         with cols[i]:
             if den_cislo == 0:
@@ -190,21 +183,25 @@ for tyden in month_days:
             
             aktualni_den = date(rok, mesic, den_cislo)
             
+            # Číslo dne
             if aktualni_den == dnes:
                 st.markdown(f"<div style='text-align: center;'><span class='today-box'>{den_cislo}</span></div>", unsafe_allow_html=True)
             else:
                 st.markdown(f"<span class='day-number'>{den_cislo}</span>", unsafe_allow_html=True)
 
-            # AKCE
+            # --- AKCE ---
             akce_dne = df_akce[df_akce['datum'] == aktualni_den]
             for _, akce in akce_dne.iterrows():
                 je_po_deadlinu = dnes > akce['deadline']
                 
+                # Ikona podle typu
                 typ_akce = str(akce['typ']).lower().strip() if 'typ' in df_akce.columns and pd.notna(akce['typ']) else "ostatní"
                 ikony_mapa = {"les": "🌲", "sprint": "🏙️", "nočák": "🌗"}
                 emoji_typ = ikony_mapa.get(typ_akce, "🏃")
+                
                 finalni_ikona = f"🔒 {emoji_typ}" if je_po_deadlinu else emoji_typ
 
+                # Zkrácení názvu (před pomlčkou)
                 nazev_full = akce['název']
                 if '-' in nazev_full:
                     display_text = nazev_full.split('-')[0].strip()
@@ -213,9 +210,10 @@ for tyden in month_days:
                 
                 label_tlacitka = f"{finalni_ikona} {display_text}"
                 
+                # Bublina s detailem
                 with st.popover(label_tlacitka, use_container_width=True):
                     st.markdown(f"### {nazev_full}")
-                    st.caption(f"Typ tréninku: {typ_akce.upper()}")
+                    st.caption(f"Typ: {typ_akce.upper()}")
                     st.write(f"**📍 Místo:** {akce['místo']}")
                     popis_txt = akce['popis'] if pd.notna(akce['popis']) else ""
                     st.info(f"📝 {popis_txt}")
@@ -227,6 +225,8 @@ for tyden in month_days:
                         st.caption(f"📅 Deadline přihlášek: {deadline_str}")
 
                     st.divider()
+                    
+                    # Seznam přihlášených
                     lidi = df_prihlasky[df_prihlasky['název'] == akce['název']].copy()
                     st.write(f"**👥 Přihlášeno: {len(lidi)}**")
                     if not lidi.empty:
@@ -235,18 +235,22 @@ for tyden in month_days:
                     else:
                         st.caption("Zatím nikdo.")
 
+                    # Formulář
                     if not je_po_deadlinu:
                         st.write("#### ✍️ Nová přihláška")
                         form_key = f"form_{akce['název']}_{aktualni_den}"
                         with st.form(key=form_key, clear_on_submit=True):
                             
+                            # Našeptávač jmen
                             vybrane_jmeno = st.selectbox(
                                 "👤 Jméno", 
                                 options=seznam_jmen, 
                                 index=None, 
-                                placeholder="Vyber nebo piš..."
+                                placeholder="Vyber ze seznamu..."
                             )
+                            # Pole pro nové jméno
                             nove_jmeno = st.text_input("...nebo napiš Nové jméno")
+                            
                             poznamka_input = st.text_input("Poznámka")
                             odeslat_btn = st.form_submit_button("Přihlásit se")
                             
@@ -254,6 +258,7 @@ for tyden in month_days:
                                 finalni_jmeno = nove_jmeno.strip() if nove_jmeno else vybrane_jmeno
                                 
                                 if finalni_jmeno:
+                                    # Zápis do přihlášek
                                     novy_zaznam = pd.DataFrame([{
                                         "název": akce['název'],
                                         "jméno": finalni_jmeno,
@@ -265,30 +270,30 @@ for tyden in month_days:
                                         updated = pd.concat([aktualni, novy_zaznam], ignore_index=True)
                                         conn.update(worksheet="prihlasky", data=updated)
                                         
+                                        # Zápis do databáze jmen (pokud je nový)
                                         if finalni_jmeno not in seznam_jmen:
                                             try:
-                                                aktualni_jmena_df = conn.read(worksheet="jmena", ttl=0)
+                                                aktualni_jmena = conn.read(worksheet="jmena", ttl=0)
                                                 novy_clen = pd.DataFrame([{"jméno": finalni_jmeno}])
-                                                updated_jmena = pd.concat([aktualni_jmena_df, novy_clen], ignore_index=True)
+                                                updated_jmena = pd.concat([aktualni_jmena, novy_clen], ignore_index=True)
                                                 conn.update(worksheet="jmena", data=updated_jmena)
                                             except:
-                                                pass
+                                                pass # Chyba v jménech nevadí, hlavně že je přihlášen
 
                                         st.success(f"✅ Přihlášeno!")
                                         st.rerun()
-                                    except:
-                                        st.error("Chyba zápisu.")
+                                    except Exception as e:
+                                        st.error(f"Chyba zápisu.")
                                 else:
                                     st.warning("Vyplň jméno!")
     
-    st.markdown("<div style='margin-bottom: 5px'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='margin-bottom: 10px'></div>", unsafe_allow_html=True)
 
 # --- PATIČKA ---
 st.markdown("---")
 st.markdown("""
 <div style='text-align: center; color: #aaa; font-size: 0.8em; font-family: sans-serif;'>
-    <b>Členská sekce RBK</b><br>
+    <b>Členská sekce RBK</b> • Design by Broschman & Gemini<br>
     &copy; 2026 All rights reserved
 </div>
 """, unsafe_allow_html=True)
-                                
