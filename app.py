@@ -3,7 +3,7 @@ from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import datetime, date, timedelta
 import calendar
-import time # Přidáno pro jistotu, aby stihla probliknout success hláška
+import time
 
 # --- 1. NASTAVENÍ STRÁNKY ---
 st.set_page_config(page_title="OB Klub - Kalendář", page_icon="🌲", layout="wide")
@@ -25,6 +25,12 @@ st.markdown("""
         letter-spacing: -1px;
         margin: 0;
         padding-bottom: 20px;
+    }
+
+    /* ZVĚTŠENÍ BUBLINY (POPOVER) - Aby se tam toho víc vešlo */
+    div[data-testid="stPopoverBody"] {
+        max-height: 80vh !important; /* Využije až 80% výšky obrazovky */
+        width: 400px !important;     /* Trochu širší pro pohodlí */
     }
 
     /* TLAČÍTKO NÁPOVĚDY (HORNÍ) */
@@ -220,24 +226,19 @@ for tyden in month_days:
             for _, akce in akce_dne.iterrows():
                 je_po_deadlinu = dnes > akce['deadline']
                 
-                # DATA
+                # DATA & IKONY
                 typ_udalosti = str(akce['typ']).lower().strip() if 'typ' in df_akce.columns and pd.notna(akce['typ']) else ""
                 druh_akce = str(akce['druh']).lower().strip() if 'druh' in df_akce.columns and pd.notna(akce['druh']) else "ostatní"
                 je_zavod = "závod" in typ_udalosti
 
-                # IKONY
                 ikony_mapa = {"les": "🌲", "sprint": "🏙️", "nočák": "🌗"}
                 emoji_druh = ikony_mapa.get(druh_akce, "🏃")
                 
-                if je_zavod:
-                    emoji_final = f"🏆{emoji_druh}"
-                else:
-                    emoji_final = emoji_druh
+                if je_zavod: emoji_final = f"🏆{emoji_druh}"
+                else: emoji_final = emoji_druh
                 
-                if je_po_deadlinu:
-                    display_ikona = f"🔒 {emoji_final}"
-                else:
-                    display_ikona = emoji_final
+                if je_po_deadlinu: display_ikona = f"🔒 {emoji_final}"
+                else: display_ikona = emoji_final
 
                 # NÁZEV
                 nazev_full = akce['název']
@@ -248,16 +249,15 @@ for tyden in month_days:
                 
                 label_tlacitka = f"{display_ikona} {display_text}"
                 
-                # --- POPOVER (Detail) ---
+                # --- POPOVER (DETAIL) ---
                 with st.popover(label_tlacitka, use_container_width=True):
+                    # 1. HLAVIČKA
                     st.markdown(f"### {nazev_full}")
-                    
                     popis_typu = f"ZÁVOD 🏆 ({druh_akce.upper()})" if je_zavod else f"TRÉNINK ({druh_akce.upper()})"
                     st.caption(f"Typ akce: {popis_typu}")
-                    
                     st.write(f"**📍 Místo:** {akce['místo']}")
-                    popis_txt = akce['popis'] if pd.notna(akce['popis']) else ""
-                    st.info(f"📝 {popis_txt}")
+                    if pd.notna(akce['popis']):
+                        st.info(f"📝 {akce['popis']}")
                     
                     deadline_str = akce['deadline'].strftime('%d.%m.%Y')
                     if je_po_deadlinu:
@@ -266,10 +266,16 @@ for tyden in month_days:
                         st.caption(f"📅 Deadline přihlášek: {deadline_str}")
 
                     st.divider()
+
+                    # ==========================================
+                    # 2. PŘIHLAŠOVÁNÍ (TEĎ JE TO UPROSTŘED!)
+                    # ==========================================
                     
-                    # --- SEKCE ZÁVOD ---
+                    delete_key_state = f"confirm_delete_{akce['název']}"
+                    
                     if je_zavod:
-                        st.warning("⚠️ **Toto je oficiální závod.**")
+                        # --- ZÁVOD: ODKAZ NA ORIS ---
+                        st.markdown("#### 🏆 Registrace na závod")
                         if je_po_deadlinu:
                             st.error("Termín pro přihlášky v systému ORIS již vypršel.")
                         else:
@@ -277,20 +283,65 @@ for tyden in month_days:
                             link_target = odkaz_zavodu if odkaz_zavodu else "https://oris.orientacnisporty.cz/"
                             st.markdown(f"👉 [**Přejít na přihlášky (ORIS)**]({link_target})")
                     
-                    # --- SEKCE TRÉNINK (s odhlašováním) ---
                     else:
+                        # --- TRÉNINK: FORMULÁŘ ---
+                        # Zobrazíme formulář JEN pokud není po deadlinu a zrovna se neřeší mazání
+                        if not je_po_deadlinu and delete_key_state not in st.session_state:
+                            st.markdown("#### ✍️ Chci se přihlásit")
+                            form_key = f"form_{akce['název']}_{aktualni_den}"
+                            
+                            with st.form(key=form_key, clear_on_submit=True):
+                                vybrane_jmeno = st.selectbox("Jméno", options=seznam_jmen, index=None, placeholder="Vyber ze seznamu...")
+                                nove_jmeno = st.text_input("...nebo napiš Nové jméno")
+                                poznamka_input = st.text_input("Poznámka")
+                                odeslat_btn = st.form_submit_button("Přihlásit se")
+                                
+                                if odeslat_btn:
+                                    finalni_jmeno = nove_jmeno.strip() if nove_jmeno else vybrane_jmeno
+                                    if finalni_jmeno:
+                                        uspesne_zapsano = False
+                                        novy_zaznam = pd.DataFrame([{
+                                            "název": akce['název'],
+                                            "jméno": finalni_jmeno,
+                                            "poznámka": poznamka_input,
+                                            "čas zápisu": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                                        }])
+                                        try:
+                                            aktualni = conn.read(worksheet="prihlasky", ttl=0)
+                                            updated = pd.concat([aktualni, novy_zaznam], ignore_index=True)
+                                            conn.update(worksheet="prihlasky", data=updated)
+                                            if finalni_jmeno not in seznam_jmen:
+                                                try:
+                                                    aktualni_jmena = conn.read(worksheet="jmena", ttl=0)
+                                                    novy_clen = pd.DataFrame([{"jméno": finalni_jmeno}])
+                                                    updated_jmena = pd.concat([aktualni_jmena, novy_clen], ignore_index=True)
+                                                    conn.update(worksheet="jmena", data=updated_jmena)
+                                                except: pass
+                                            uspesne_zapsano = True
+                                        except Exception as e:
+                                            st.error(f"Chyba zápisu: {e}")
+                                        
+                                        if uspesne_zapsano:
+                                            st.success(f"✅ Přihlášeno!")
+                                            time.sleep(0.5)
+                                            st.rerun()
+                                    else: st.warning("Vyplň jméno!")
+
+                    st.divider()
+
+                    # ==========================================
+                    # 3. SEZNAM PŘIHLÁŠENÝCH (AŽ DOLE)
+                    # ==========================================
+                    if not je_zavod:
                         lidi = df_prihlasky[df_prihlasky['název'] == akce['název']].copy()
-                        st.write(f"**👥 Přihlášeno: {len(lidi)}**")
+                        st.markdown(f"#### 👥 Kdo už je přihlášený ({len(lidi)})")
                         
-                        # LOGIKA ODHLAŠOVÁNÍ
-                        delete_key_state = f"confirm_delete_{akce['název']}"
-                        
+                        # Potvrzení mazání (musí být tady, aby bylo vidět)
                         if delete_key_state in st.session_state:
                             clovek_ke_smazani = st.session_state[delete_key_state]
                             st.warning(f"⚠️ Opravdu chceš odhlásit: **{clovek_ke_smazani}**?")
-                            
                             col_conf1, col_conf2 = st.columns(2)
-                            if col_conf1.button("✅ ANO, Odhlásit", key=f"yes_{akce['název']}"):
+                            if col_conf1.button("✅ ANO", key=f"yes_{akce['název']}"):
                                 smazano_ok = False
                                 try:
                                     df_curr = conn.read(worksheet="prihlasky", ttl=0)
@@ -300,20 +351,16 @@ for tyden in month_days:
                                     smazano_ok = True
                                 except Exception as e:
                                     st.error(f"Chyba mazání: {e}")
-                                
                                 if smazano_ok:
                                     del st.session_state[delete_key_state]
-                                    st.success(f"Odhlášeno!")
+                                    st.success("Odhlášeno!")
                                     time.sleep(0.5)
                                     st.rerun()
-                            
-                            if col_conf2.button("❌ Storno", key=f"no_{akce['název']}"):
+                            if col_conf2.button("❌ NE", key=f"no_{akce['název']}"):
                                 del st.session_state[delete_key_state]
                                 st.rerun()
-                            
-                            st.markdown("---")
 
-                        # VÝPIS SEZNAMU
+                        # Výpis seznamu
                         if not lidi.empty:
                             for i, (idx, row) in enumerate(lidi.iterrows()):
                                 c1, c2, c3 = st.columns([0.5, 4, 1], vertical_alignment="center")
@@ -329,57 +376,6 @@ for tyden in month_days:
                                         st.rerun()
                         else:
                             st.caption("Zatím nikdo.")
-
-                        # FORMULÁŘ PRO PŘIHLÁŠENÍ (OPRAVENO)
-                        if not je_po_deadlinu and delete_key_state not in st.session_state:
-                            st.markdown("---")
-                            st.write("#### ✍️ Nová přihláška")
-                            form_key = f"form_{akce['název']}_{aktualni_den}"
-                            with st.form(key=form_key, clear_on_submit=True):
-                                vybrane_jmeno = st.selectbox("👤 Jméno", options=seznam_jmen, index=None, placeholder="Vyber ze seznamu...")
-                                nove_jmeno = st.text_input("...nebo napiš Nové jméno")
-                                poznamka_input = st.text_input("Poznámka")
-                                odeslat_btn = st.form_submit_button("Přihlásit se")
-                                
-                                if odeslat_btn:
-                                    finalni_jmeno = nove_jmeno.strip() if nove_jmeno else vybrane_jmeno
-                                    if finalni_jmeno:
-                                        # FLAG PRO KONTROLU ZÁPISU
-                                        uspesne_zapsano = False
-                                        
-                                        novy_zaznam = pd.DataFrame([{
-                                            "název": akce['název'],
-                                            "jméno": finalni_jmeno,
-                                            "poznámka": poznamka_input,
-                                            "čas zápisu": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                                        }])
-                                        try:
-                                            # Zápis do přihlášek
-                                            aktualni = conn.read(worksheet="prihlasky", ttl=0)
-                                            updated = pd.concat([aktualni, novy_zaznam], ignore_index=True)
-                                            conn.update(worksheet="prihlasky", data=updated)
-                                            
-                                            # Zápis do jmen (volitelné, pokud selže, nevadí)
-                                            if finalni_jmeno not in seznam_jmen:
-                                                try:
-                                                    aktualni_jmena = conn.read(worksheet="jmena", ttl=0)
-                                                    novy_clen = pd.DataFrame([{"jméno": finalni_jmeno}])
-                                                    updated_jmena = pd.concat([aktualni_jmena, novy_clen], ignore_index=True)
-                                                    conn.update(worksheet="jmena", data=updated_jmena)
-                                                except: pass
-                                            
-                                            # Vše OK
-                                            uspesne_zapsano = True
-                                        except Exception as e:
-                                            st.error(f"Chyba zápisu: {e}")
-                                            
-                                        # RERUN AŽ TADY VENKU
-                                        if uspesne_zapsano:
-                                            st.success(f"✅ Přihlášeno!")
-                                            time.sleep(0.5) # Krátká pauza pro efekt
-                                            st.rerun()
-                                            
-                                    else: st.warning("Vyplň jméno!")
 
 st.markdown("<div style='margin-bottom: 50px'></div>", unsafe_allow_html=True)
 
