@@ -91,7 +91,6 @@ st.markdown("""
         text-align: center;
     }
     
-    /* Skrytí patičky */
     footer {visibility: hidden;}
     #MainMenu {visibility: hidden;}
 </style>
@@ -103,34 +102,32 @@ st.title("🌲 Tréninkový kalendář")
 conn = st.connection("gsheets", type=GSheetsConnection)
 SHEET_ID = "1lW6DpUQBSm5heSO_HH9lDzm0x7t1eo8dn6FpJHh2y6U"
 
-# Odkazy na CSV (rychlé čtení)
 url_akce = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=akce"
 url_prihlasky = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=prihlasky"
 url_jmena = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=jmena"
 
 try:
-    # A) Načtení Akcí
+    # A) Akce
     df_akce = pd.read_csv(url_akce)
     df_akce['datum'] = pd.to_datetime(df_akce['datum'], dayfirst=True, errors='coerce').dt.date
     df_akce['deadline'] = pd.to_datetime(df_akce['deadline'], dayfirst=True, errors='coerce').dt.date
     df_akce = df_akce.dropna(subset=['datum'])
     
-    # B) Načtení Přihlášek
+    # B) Přihlášky
     try:
         df_prihlasky = pd.read_csv(url_prihlasky)
     except:
         df_prihlasky = pd.DataFrame(columns=["název", "jméno", "poznámka", "čas zápisu"])
         
-    # C) Načtení Databáze jmen (NOVINKA)
+    # C) Databáze jmen
     try:
         df_jmena = pd.read_csv(url_jmena)
-        # Uděláme z toho čistý seznam jmen, seřazený abecedně
         seznam_jmen = sorted(df_jmena['jméno'].dropna().unique().tolist())
     except:
-        seznam_jmen = [] # Kdyby list jmena neexistoval, apka nespadne
-
+        seznam_jmen = []
+        
 except Exception as e:
-    st.error("⚠️ Chyba načítání dat. Zkontroluj, zda jsi vytvořil list 'jmena' v tabulce.")
+    st.error("⚠️ Chyba načítání dat.")
     st.stop()
 
 # --- 3. LOGIKA KALENDÁŘE ---
@@ -184,19 +181,17 @@ for tyden in month_days:
             else:
                 st.markdown(f"<span class='day-number'>{den_cislo}</span>", unsafe_allow_html=True)
 
-            # --- VYKRESLOVÁNÍ AKCÍ ---
+            # --- AKCE ---
             akce_dne = df_akce[df_akce['datum'] == aktualni_den]
             for _, akce in akce_dne.iterrows():
                 je_po_deadlinu = dnes > akce['deadline']
                 
-                # Ikony
                 typ_akce = str(akce['typ']).lower().strip() if 'typ' in df_akce.columns and pd.notna(akce['typ']) else "ostatní"
                 ikony_mapa = {"les": "🌲", "sprint": "🏙️", "nočák": "🌗"}
                 emoji_typ = ikony_mapa.get(typ_akce, "🏃")
                 
                 finalni_ikona = f"🔒 {emoji_typ}" if je_po_deadlinu else emoji_typ
 
-                # Zkrácení názvu
                 nazev_full = akce['název']
                 if '-' in nazev_full:
                     display_text = nazev_full.split('-')[0].strip()
@@ -205,7 +200,6 @@ for tyden in month_days:
                 
                 label_tlacitka = f"{finalni_ikona} {display_text}"
                 
-                # POPOVER
                 with st.popover(label_tlacitka, use_container_width=True):
                     st.markdown(f"### {nazev_full}")
                     st.caption(f"Typ tréninku: {typ_akce.upper()}")
@@ -231,44 +225,55 @@ for tyden in month_days:
                     if not je_po_deadlinu:
                         st.write("#### ✍️ Nová přihláška")
                         form_key = f"form_{akce['název']}_{aktualni_den}"
-                        
-                        # FORMULÁŘ S INTELIGENTNÍM VÝBĚREM JMENA
                         with st.form(key=form_key, clear_on_submit=True):
                             
-                            # 1. Výběr ze seznamu (s možností vyhledávání psaním)
-                            # index=None znamená, že na začátku je pole prázdné
+                            # VÝBĚR NEBO NOVÉ JMÉNO
                             vybrane_jmeno = st.selectbox(
                                 "👤 Jméno (vyber ze seznamu)", 
                                 options=seznam_jmen, 
                                 index=None, 
-                                placeholder="Začni psát jméno..."
+                                placeholder="Začni psát..."
                             )
-                            
-                            # 2. Možnost pro nové lidi
                             nove_jmeno = st.text_input("...nebo napiš Nové Jméno (pokud nejsi v seznamu)")
                             
                             poznamka_input = st.text_input("Poznámka")
                             odeslat_btn = st.form_submit_button("Přihlásit se")
                             
                             if odeslat_btn:
-                                # Logika: Prioritu má "Nové jméno", pokud je vyplněné. Jinak bere "Vybrané jméno".
-                                finalni_jmeno = nove_jmeno if nove_jmeno else vybrane_jmeno
+                                # Prioritu má nové jméno
+                                finalni_jmeno = nove_jmeno.strip() if nove_jmeno else vybrane_jmeno
                                 
                                 if finalni_jmeno:
+                                    # 1. ZÁPIS PŘIHLÁŠKY
                                     novy_zaznam = pd.DataFrame([{
                                         "název": akce['název'],
                                         "jméno": finalni_jmeno,
                                         "poznámka": poznamka_input,
                                         "čas zápisu": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                                     }])
+                                    
                                     try:
+                                        # Uložit přihlášku
                                         aktualni = conn.read(worksheet="prihlasky", ttl=0)
                                         updated = pd.concat([aktualni, novy_zaznam], ignore_index=True)
                                         conn.update(worksheet="prihlasky", data=updated)
-                                        st.success(f"✅ {finalni_jmeno} přihlášen(a)!")
+                                        
+                                        # 2. AUTO-UPDATE SEZNAMU JMEN
+                                        # Pokud jméno v seznamu ještě není, přidáme ho
+                                        if finalni_jmeno not in seznam_jmen:
+                                            try:
+                                                aktualni_jmena_df = conn.read(worksheet="jmena", ttl=0)
+                                                novy_clen = pd.DataFrame([{"jméno": finalni_jmeno}])
+                                                updated_jmena = pd.concat([aktualni_jmena_df, novy_clen], ignore_index=True)
+                                                conn.update(worksheet="jmena", data=updated_jmena)
+                                                st.toast(f"ℹ️ {finalni_jmeno} přidán(a) do seznamu členů.")
+                                            except:
+                                                pass # Když se to nepovede, nevadí, hlavní je přihláška
+
+                                        st.success(f"✅ {finalni_jmeno} úspěšně přihlášen(a)!")
                                         st.rerun()
-                                    except:
-                                        st.error("Chyba zápisu.")
+                                    except Exception as e:
+                                        st.error(f"Chyba zápisu: {e}")
                                 else:
                                     st.warning("⚠️ Musíš vybrat nebo napsat jméno!")
 
