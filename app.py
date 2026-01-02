@@ -7,7 +7,7 @@ import calendar
 # --- 1. NASTAVENÍ STRÁNKY ---
 st.set_page_config(page_title="OB Klub - Kalendář", page_icon="🌲", layout="wide")
 
-# --- CSS ÚPRAVY VZHLEDU (FANCY DESIGN) ---
+# --- CSS VZHLED (FANCY DESIGN + FIXY) ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
@@ -24,7 +24,7 @@ st.markdown("""
         margin-bottom: 30px;
     }
 
-    /* KARTY AKCÍ (Tlačítka) */
+    /* KARTY AKCÍ */
     div[data-testid="stPopover"] > button {
         white-space: normal !important;
         word-break: keep-all !important;
@@ -33,17 +33,17 @@ st.markdown("""
         
         background-color: #ffffff !important;
         border: 1px solid #e0e0e0 !important;
-        border-left: 5px solid #4CAF50 !important; /* Zelený proužek */
+        border-left: 5px solid #4CAF50 !important;
         border-radius: 8px !important;
         box-shadow: 0 2px 5px rgba(0,0,0,0.05) !important;
         
         color: #333 !important;
-        font-size: 0.85rem !important; /* Písmo akorát */
+        font-size: 0.85rem !important;
         font-weight: 600 !important;
         
         text-align: left !important;
         height: auto !important;
-        min-height: 50px; /* Stačí menší výška, když jsou názvy kratší */
+        min-height: 50px;
         width: 100% !important;
         padding: 6px 10px !important;
         line-height: 1.3 !important;
@@ -114,7 +114,7 @@ try:
     except:
         df_prihlasky = pd.DataFrame(columns=["název", "jméno", "poznámka", "čas zápisu"])
 except Exception as e:
-    st.error("⚠️ Chyba načítání dat.")
+    st.error("⚠️ Chyba načítání dat. Zkontroluj tabulku.")
     st.stop()
 
 # --- 3. LOGIKA KALENDÁŘE ---
@@ -172,24 +172,43 @@ for tyden in month_days:
             akce_dne = df_akce[df_akce['datum'] == aktualni_den]
             for _, akce in akce_dne.iterrows():
                 je_po_deadlinu = dnes > akce['deadline']
-                ikona = "🔒" if je_po_deadlinu else "" 
                 
-                nazev_full = akce['název'] # Celý název (pro detail)
+                # --- 1. ZJIŠTĚNÍ TYPU A IKONY ---
+                # Načteme typ z tabulky, převedeme na malá písmena a odstraníme mezery
+                typ_akce = str(akce['typ']).lower().strip() if 'typ' in df_akce.columns and pd.notna(akce['typ']) else "ostatní"
                 
-                # --- NOVÁ LOGIKA: OŘEZÁNÍ NÁZVU PRO TLAČÍTKO ---
-                # Vezmeme všechno před první pomlčkou
+                # Mapa ikon podle typu
+                ikony_mapa = {
+                    "les": "🌲",
+                    "sprint": "🏙️",
+                    "nočák": "🌗"
+                }
+                # Vybere ikonu, pokud typ nezná, dá běžce
+                emoji_typ = ikony_mapa.get(typ_akce, "🏃")
+                
+                # Pokud je zamčeno, přidáme zámek, jinak necháme jen typ
+                if je_po_deadlinu:
+                    finalni_ikona = f"🔒 {emoji_typ}"
+                else:
+                    finalni_ikona = emoji_typ
+
+                # --- 2. OŘEZÁNÍ NÁZVU (Před pomlčkou) ---
+                nazev_full = akce['název']
                 if '-' in nazev_full:
-                    # split('-') rozdělí text na části, [0] vezme tu první, strip() ořízne mezery
                     display_text = nazev_full.split('-')[0].strip()
                 else:
                     display_text = nazev_full
                 
-                # Sestavení textu tlačítka
-                label_tlacitka = f"{ikona} {display_text}" if ikona else display_text
+                # Výsledný text na tlačítku
+                label_tlacitka = f"{finalni_ikona} {display_text}"
                 
                 with st.popover(label_tlacitka, use_container_width=True):
-                    # Uvnitř stále ukazujeme plný název!
+                    # --- DETAIL AKCE ---
                     st.markdown(f"### {nazev_full}")
+                    
+                    # Tady zobrazíme ten typ i textově
+                    st.caption(f"Typ tréninku: {typ_akce.upper()}")
+                    
                     st.write(f"**📍 Místo:** {akce['místo']}")
                     popis_txt = akce['popis'] if pd.notna(akce['popis']) else ""
                     st.info(f"📝 {popis_txt}")
@@ -242,4 +261,3 @@ st.markdown("""
     &copy; 2026 All rights reserved
 </div>
 """, unsafe_allow_html=True)
-                    
