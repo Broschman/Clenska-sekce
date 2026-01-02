@@ -95,7 +95,7 @@ st.markdown("""
 col_dummy, col_title, col_help = st.columns([1, 10, 1], vertical_alignment="center")
 
 with col_title:
-    st.title("🌲 Kalendář RBK")
+    st.title("🌲 Tréninkový kalendář")
 
 with col_help:
     with st.popover("❔", help="Nápověda k aplikaci"):
@@ -347,7 +347,7 @@ for tyden in month_days:
 
 
                     # ----------------------------------------
-                    # SPODEK: SEZNAM PŘIHLÁŠENÝCH
+                    # SPODEK: SEZNAM PŘIHLÁŠENÝCH (TABULKA)
                     # ----------------------------------------
                     st.divider()
 
@@ -356,7 +356,7 @@ for tyden in month_days:
                         nadpis_seznam = f"👥 Zájemci o štafetu ({len(lidi)})" if je_stafeta else f"👥 Přihlášeno ({len(lidi)})"
                         st.markdown(f"#### {nadpis_seznam}")
 
-                        # Potvrzení mazání (přes celou šířku)
+                        # Potvrzení mazání
                         if delete_key_state in st.session_state:
                             clovek_ke_smazani = st.session_state[delete_key_state]
                             st.warning(f"⚠️ Opravdu smazat: **{clovek_ke_smazani}**?")
@@ -379,27 +379,36 @@ for tyden in month_days:
                                 del st.session_state[delete_key_state]
                                 st.rerun()
 
-                        # Výpis lidí - úhledná tabulka s košem
+                        # Výpis lidí - UPRAVENO NA TABULKU
                         if not lidi.empty:
-                            # Hlavička tabulky
+                            # ZÁHLAVÍ TABULKY
                             h1, h2, h3 = st.columns([0.5, 4, 1])
-                            h1.caption("#")
-                            h2.caption("Jméno / Poznámka")
-                            h3.caption("Akce")
+                            h1.markdown("**#**")
+                            h2.markdown("**Jméno / Poznámka**")
+                            h3.markdown("**Akce**")
                             
+                            st.markdown("<hr style='margin: 0 0 10px 0; border-top: 2px solid #ddd;'>", unsafe_allow_html=True)
+                            
+                            # ŘÁDKY TABULKY
                             for i, (idx, row) in enumerate(lidi.iterrows()):
                                 c1, c2, c3 = st.columns([0.5, 4, 1], vertical_alignment="center")
-                                c1.write(f"**{i+1}.**")
+                                
+                                c1.write(f"{i+1}.")
+                                
+                                # Sestavení textu jména
                                 text_ucastnika = f"**{row['jméno']}**"
                                 if pd.notna(row['poznámka']) and row['poznámka']:
-                                    text_ucastnika += f" | *{row['poznámka']}*"
-                                c2.markdown(text_ucastnika)
+                                    text_ucastnika += f"  \n<span style='color:grey; font-size:0.9em; font-style:italic;'>{row['poznámka']}</span>"
+                                c2.markdown(text_ucastnika, unsafe_allow_html=True)
                                 
                                 if not je_po_deadlinu:
                                     if c3.button("🗑️", key=f"del_{akce['název']}_{idx}"):
                                         st.session_state[delete_key_state] = row['jméno']
                                         st.rerun()
-                            st.caption("--- Konec seznamu ---")
+                                
+                                # ODDĚLOVAČ ŘÁDKŮ
+                                st.markdown("<hr style='margin: 5px 0; border-top: 1px solid #f0f0f0;'>", unsafe_allow_html=True)
+                                
                         else:
                             st.caption("Zatím nikdo.")
 
