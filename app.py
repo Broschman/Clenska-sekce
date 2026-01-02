@@ -257,7 +257,7 @@ for tyden in month_days:
 st.markdown("---")
 st.markdown("""
 <div style='text-align: center; color: #aaa; font-size: 0.8em; font-family: sans-serif;'>
-    <b>Členská sekce RBK</b> • Design by Broschman & Gemini<br>
+    <b>Členská sekce RBK</b> • Design by Broschman<br>
     &copy; 2026 All rights reserved
 </div>
 """, unsafe_allow_html=True)
