@@ -3,6 +3,7 @@ from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import datetime, date, timedelta
 import calendar
+import time # Přidáno pro jistotu, aby stihla probliknout success hláška
 
 # --- 1. NASTAVENÍ STRÁNKY ---
 st.set_page_config(page_title="OB Klub - Kalendář", page_icon="🌲", layout="wide")
@@ -16,6 +17,7 @@ st.markdown("""
         font-family: 'Roboto', sans-serif;
     }
 
+    /* Nadpis - UPROSTŘED */
     h1 {
         color: #2E7D32; 
         text-align: center !important;
@@ -78,11 +80,6 @@ st.markdown("""
         margin-bottom: 8px;
         display: block;
         text-align: center;
-    }
-
-    /* STYL PRO SEZNAM PŘIHLÁŠENÝCH (Aby tlačítko koše vypadalo hezky) */
-    .stButton button {
-        /* Globální styl tlačítek, resetujeme pro delete buttony níže */
     }
     
     footer {visibility: hidden;}
@@ -285,8 +282,7 @@ for tyden in month_days:
                         lidi = df_prihlasky[df_prihlasky['název'] == akce['název']].copy()
                         st.write(f"**👥 Přihlášeno: {len(lidi)}**")
                         
-                        # LOGIKA ODHLAŠOVÁNÍ: Pokud bylo kliknuto na koš, zobrazíme potvrzení
-                        # Unikátní klíč pro mazání v rámci této akce
+                        # LOGIKA ODHLAŠOVÁNÍ
                         delete_key_state = f"confirm_delete_{akce['název']}"
                         
                         if delete_key_state in st.session_state:
@@ -295,55 +291,46 @@ for tyden in month_days:
                             
                             col_conf1, col_conf2 = st.columns(2)
                             if col_conf1.button("✅ ANO, Odhlásit", key=f"yes_{akce['název']}"):
+                                smazano_ok = False
                                 try:
-                                    # 1. Načíst aktuální data (aby to bylo fresh)
                                     df_curr = conn.read(worksheet="prihlasky", ttl=0)
-                                    # 2. Najít řádek a smazat ho (podle akce a jména)
-                                    # Hledáme indexy, kde se shoduje název i jméno
                                     mask = (df_curr['název'] == akce['název']) & (df_curr['jméno'] == clovek_ke_smazani)
-                                    df_clean = df_curr[~mask] # Všechno KROMĚ toho řádku
-                                    
-                                    # 3. Uložit
+                                    df_clean = df_curr[~mask]
                                     conn.update(worksheet="prihlasky", data=df_clean)
-                                    
-                                    # 4. Úklid
-                                    del st.session_state[delete_key_state]
-                                    st.success(f"Borec {clovek_ke_smazani} byl odhlášen.")
-                                    st.rerun()
+                                    smazano_ok = True
                                 except Exception as e:
                                     st.error(f"Chyba mazání: {e}")
+                                
+                                if smazano_ok:
+                                    del st.session_state[delete_key_state]
+                                    st.success(f"Odhlášeno!")
+                                    time.sleep(0.5)
+                                    st.rerun()
                             
                             if col_conf2.button("❌ Storno", key=f"no_{akce['název']}"):
                                 del st.session_state[delete_key_state]
                                 st.rerun()
                             
-                            st.markdown("---") # Oddělovač od seznamu
+                            st.markdown("---")
 
-                        # VÝPIS SEZNAMU S TLAČÍTKY
+                        # VÝPIS SEZNAMU
                         if not lidi.empty:
-                            # Iterujeme přes lidi a každému dáme řádek s tlačítkem
                             for i, (idx, row) in enumerate(lidi.iterrows()):
-                                # Sloupce: [Pořadí] [Jméno + Poznámka] [Tlačítko koš]
                                 c1, c2, c3 = st.columns([0.5, 4, 1], vertical_alignment="center")
-                                
                                 c1.write(f"**{i+1}.**")
-                                
-                                # Text jména a poznámky
                                 text_ucastnika = f"**{row['jméno']}**"
                                 if pd.notna(row['poznámka']) and row['poznámka']:
                                     text_ucastnika += f" | *{row['poznámka']}*"
                                 c2.markdown(text_ucastnika)
                                 
-                                # Tlačítko smazat (jen pokud není po deadlinu)
                                 if not je_po_deadlinu:
                                     if c3.button("🗑️", key=f"del_{akce['název']}_{idx}"):
-                                        # Uložíme si, koho chceme smazat, do session_state
                                         st.session_state[delete_key_state] = row['jméno']
                                         st.rerun()
                         else:
                             st.caption("Zatím nikdo.")
 
-                        # FORMULÁŘ PRO PŘIHLÁŠENÍ (Jen pokud není potvrzovací okno a není po deadlinu)
+                        # FORMULÁŘ PRO PŘIHLÁŠENÍ (OPRAVENO)
                         if not je_po_deadlinu and delete_key_state not in st.session_state:
                             st.markdown("---")
                             st.write("#### ✍️ Nová přihláška")
@@ -357,6 +344,9 @@ for tyden in month_days:
                                 if odeslat_btn:
                                     finalni_jmeno = nove_jmeno.strip() if nove_jmeno else vybrane_jmeno
                                     if finalni_jmeno:
+                                        # FLAG PRO KONTROLU ZÁPISU
+                                        uspesne_zapsano = False
+                                        
                                         novy_zaznam = pd.DataFrame([{
                                             "název": akce['název'],
                                             "jméno": finalni_jmeno,
@@ -364,10 +354,12 @@ for tyden in month_days:
                                             "čas zápisu": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                                         }])
                                         try:
+                                            # Zápis do přihlášek
                                             aktualni = conn.read(worksheet="prihlasky", ttl=0)
                                             updated = pd.concat([aktualni, novy_zaznam], ignore_index=True)
                                             conn.update(worksheet="prihlasky", data=updated)
                                             
+                                            # Zápis do jmen (volitelné, pokud selže, nevadí)
                                             if finalni_jmeno not in seznam_jmen:
                                                 try:
                                                     aktualni_jmena = conn.read(worksheet="jmena", ttl=0)
@@ -375,9 +367,18 @@ for tyden in month_days:
                                                     updated_jmena = pd.concat([aktualni_jmena, novy_clen], ignore_index=True)
                                                     conn.update(worksheet="jmena", data=updated_jmena)
                                                 except: pass
+                                            
+                                            # Vše OK
+                                            uspesne_zapsano = True
+                                        except Exception as e:
+                                            st.error(f"Chyba zápisu: {e}")
+                                            
+                                        # RERUN AŽ TADY VENKU
+                                        if uspesne_zapsano:
                                             st.success(f"✅ Přihlášeno!")
+                                            time.sleep(0.5) # Krátká pauza pro efekt
                                             st.rerun()
-                                        except: st.error("Chyba zápisu.")
+                                            
                                     else: st.warning("Vyplň jméno!")
 
 st.markdown("<div style='margin-bottom: 50px'></div>", unsafe_allow_html=True)
@@ -395,6 +396,7 @@ with st.popover("💡 Návrh na zlepšení"):
         odeslat_navrh = st.form_submit_button("Odeslat návrh")
         
         if odeslat_navrh and text_navrhu:
+            uspesne_odeslano = False
             novy_navrh = pd.DataFrame([{
                 "datum": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 "text": text_navrhu
@@ -405,11 +407,13 @@ with st.popover("💡 Návrh na zlepšení"):
                     updated_navrhy = pd.concat([aktualni_navrhy, novy_navrh], ignore_index=True)
                 except:
                     updated_navrhy = novy_navrh
-                
                 conn.update(worksheet="navrhy", data=updated_navrhy)
-                st.toast("✅ Díky! Tvůj návrh byl uložen.")
+                uspesne_odeslano = True
             except Exception as e:
-                st.error(f"Chyba při ukládání: {e}")
+                st.error(f"Chyba: {e}")
+            
+            if uspesne_odeslano:
+                st.toast("✅ Díky! Tvůj návrh byl uložen.")
 
 st.markdown('</div>', unsafe_allow_html=True)
 
