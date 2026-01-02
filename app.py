@@ -207,7 +207,7 @@ for tyden in month_days:
                     st.markdown(f"### {nazev_full}")
                     
                     # Tady zobrazíme ten typ i textově
-                    st.caption(f"Typ tréninku: {typ_akce.upper()}")
+                    st.caption(f"Typ: {typ_akce.upper()}")
                     
                     st.write(f"**📍 Místo:** {akce['místo']}")
                     popis_txt = akce['popis'] if pd.notna(akce['popis']) else ""
