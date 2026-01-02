@@ -317,8 +317,8 @@ for tyden in month_days:
                                         if finalni_jmeno:
                                             uspesne_zapsano = False
                                             
-                                            # ZDE SE UKLÁDÁ TEXT "Ano 🚗"
-                                            hodnota_dopravy = "Ano 🚗" if doprava_input else ""
+                                            # ZDE SE UKLÁDÁ TEXT "Ano"
+                                            hodnota_dopravy = "Ano" if doprava_input else ""
                                             
                                             novy_zaznam = pd.DataFrame([{
                                                 "název": akce['název'],
@@ -393,7 +393,7 @@ for tyden in month_days:
                             h1.markdown("**#**")
                             h2.markdown("**Jméno**")
                             h3.markdown("**Poznámka**")
-                            h4.markdown("🚗")
+                            h4.markdown("Shnáním dopravu 🚗")
                             h5.markdown("") 
                             
                             st.markdown("<hr style='margin: 5px 0 10px 0; border-top: 2px solid #ccc;'>", unsafe_allow_html=True)
@@ -408,7 +408,7 @@ for tyden in month_days:
                                 poznamka_txt = row['poznámka'] if pd.notna(row['poznámka']) else ""
                                 c3.caption(poznamka_txt)
                                 
-                                # Zobrazení dopravy (Ano 🚗)
+                                # Zobrazení dopravy (Ano)
                                 doprava_val = str(row['doprava']) if pd.notna(row.get('doprava')) else ""
                                 c4.write(doprava_val)
                                 
