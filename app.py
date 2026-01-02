@@ -6,7 +6,7 @@ import calendar
 import time
 
 # --- 1. NASTAVENÍ STRÁNKY ---
-st.set_page_config(page_title="Kalendář RBK", page_icon="🌲", layout="wide")
+st.set_page_config(page_title=" Kalendář RBK ", page_icon="🌲", layout="wide")
 
 # --- CSS VZHLED ---
 st.markdown("""
