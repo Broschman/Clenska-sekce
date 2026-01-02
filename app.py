@@ -218,23 +218,20 @@ for tyden in month_days:
                 je_po_deadlinu = dnes > akce['deadline']
                 
                 # 1. Zjistíme, jestli to je ZÁVOD
-                # Načteme sloupec 'kategorie', pokud existuje
-                kategorie_akce = str(akce['kategorie']).lower().strip() if 'kategorie' in df_akce.columns and pd.notna(akce['kategorie']) else ""
-                je_zavod = "závod" in kategorie_akce
+                typ_udalosti = str(akce['typ']).lower().strip() if 'typ' in df_akce.columns and pd.notna(akce['typ']) else ""
+                je_zavod = "závod" in typ_udalosti
 
-                # 2. Zjistíme DRUH (les/sprint) - pro info v bublině
+                # 2. Zjistíme DRUH
                 druh_akce = str(akce['druh']).lower().strip() if 'druh' in df_akce.columns and pd.notna(akce['druh']) else "ostatní"
                 
                 # 3. Určení ikony
                 if je_zavod:
-                    # Pokud je to závod, má vždy trofej 🏆
                     emoji_final = "🏆"
                 else:
-                    # Pokud je to trénink, má ikonu podle druhu
                     ikony_mapa = {"les": "🌲", "sprint": "🏙️", "nočák": "🌗"}
                     emoji_final = ikony_mapa.get(druh_akce, "🏃")
                 
-                # Zámek má přednost jen v zobrazení
+                # Zámek
                 if je_po_deadlinu:
                     display_ikona = f"🔒 {emoji_final}"
                 else:
@@ -253,9 +250,8 @@ for tyden in month_days:
                 with st.popover(label_tlacitka, use_container_width=True):
                     st.markdown(f"### {nazev_full}")
                     
-                    # Info o typu
-                    typ_text = "ZÁVOD 🏆" if je_zavod else f"TRÉNINK ({druh_akce.upper()})"
-                    st.caption(f"Typ akce: {typ_text}")
+                    popis_typu = "ZÁVOD 🏆" if je_zavod else f"TRÉNINK ({druh_akce.upper()})"
+                    st.caption(f"Typ akce: {popis_typu}")
                     
                     st.write(f"**📍 Místo:** {akce['místo']}")
                     popis_txt = akce['popis'] if pd.notna(akce['popis']) else ""
@@ -271,16 +267,27 @@ for tyden in month_days:
                     
                     # --- ROZHODOVÁNÍ: ZÁVOD vs. TRÉNINK ---
                     if je_zavod:
-                        # PRO ZÁVODY: Žádný formulář, jen info
+                        # PRO ZÁVODY
                         st.warning("⚠️ **Toto je oficiální závod.**")
-                        st.markdown("""
+                        
+                        # NOVINKA: Zjištění odkazu
+                        odkaz_zavodu = str(akce['odkaz']).strip() if 'odkaz' in df_akce.columns and pd.notna(akce['odkaz']) else ""
+                        
+                        if odkaz_zavodu:
+                            # Pokud je odkaz v tabulce, použijeme ho
+                            link_target = odkaz_zavodu
+                        else:
+                            # Jinak obecný odkaz
+                            link_target = "https://oris.orientacnisporty.cz/"
+                            
+                        st.markdown(f"""
                         Přihlašování na závody probíhá výhradně přes svazový systém **ORIS**.
                         
-                        👉 [Přejít na ORIS](https://oris.orientacnisporty.cz/)
+                        👉 [**Přejít na přihlášky (ORIS)**]({link_target})
                         """)
                     
                     else:
-                        # PRO TRÉNINKY: Zobrazíme seznam přihlášených a formulář
+                        # PRO TRÉNINKY
                         lidi = df_prihlasky[df_prihlasky['název'] == akce['název']].copy()
                         st.write(f"**👥 Přihlášeno na trénink: {len(lidi)}**")
                         
@@ -366,4 +373,3 @@ st.markdown("""
     &copy; 2026 All rights reserved
 </div>
 """, unsafe_allow_html=True)
-                    
