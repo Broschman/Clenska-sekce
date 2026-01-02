@@ -27,10 +27,11 @@ st.markdown("""
         padding-bottom: 20px;
     }
 
-    /* ZVĚTŠENÍ BUBLINY */
+    /* === OPRAVA ŠÍŘKY BUBLINY (POPOVER) === */
     div[data-testid="stPopoverBody"] {
-        max-height: 80vh !important;
-        width: 400px !important;
+        width: 500px !important;      /* Pevná šířka pro PC */
+        max-width: 95vw !important;   /* Aby to na mobilu nelezlo ven */
+        max-height: 85vh !important;  /* Aby se to vešlo na výšku */
     }
 
     /* TLAČÍTKO NÁPOVĚDY */
@@ -233,7 +234,6 @@ for tyden in month_days:
                 je_stafeta = "štafety" in typ_udalosti
                 je_zavod = "závod" in typ_udalosti
                 
-                # Štafeta je technicky taky závod (pro ikonku), ale má speciální chování
                 ma_pohar = je_zavod or je_stafeta
 
                 # --- 2. IKONY ---
