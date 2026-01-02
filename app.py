@@ -298,7 +298,7 @@ for tyden in month_days:
                         
                         if (not je_zavod or je_stafeta):
                             if not je_po_deadlinu and delete_key_state not in st.session_state:
-                                nadpis_form = "✍️ Soupiska" if je_stafeta else "✍️ Přihláška"
+                                nadpis_form = "✍️ Přihláška"
                                 st.markdown(f"#### {nadpis_form}")
                                 
                                 form_key = f"form_{akce['název']}_{aktualni_den}"
@@ -365,7 +365,7 @@ for tyden in month_days:
                         # Potvrzení mazání
                         if delete_key_state in st.session_state:
                             clovek_ke_smazani = st.session_state[delete_key_state]
-                            st.warning(f"⚠️ Opravdu smazat: **{clovek_ke_smazani}**?")
+                            st.warning(f"⚠️ Opravdu odhlásit: **{clovek_ke_smazani}**?")
                             col_conf1, col_conf2 = st.columns(2)
                             if col_conf1.button("✅ ANO", key=f"yes_{akce['název']}"):
                                 smazano_ok = False
