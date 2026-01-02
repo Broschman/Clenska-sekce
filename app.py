@@ -6,7 +6,7 @@ import calendar
 import time
 
 # --- 1. NASTAVENÍ STRÁNKY ---
-st.set_page_config(page_title="OB Klub - Kalendář", page_icon="🌲", layout="wide")
+st.set_page_config(page_title="Kalendář RBK", page_icon="🌲", layout="wide")
 
 # --- CSS VZHLED ---
 st.markdown("""
@@ -284,7 +284,7 @@ for tyden in month_days:
                             
                             st.caption("Přihlášky probíhají v systému ORIS.")
                             if je_stafeta:
-                                st.warning("⚠️ **ŠTAFETY:** Přihlaš se v ORISu, ale **I ZDE (vpravo)** kvůli soupiskám!")
+                                st.warning("⚠️ **ŠTAFETY:** Přihlaš se **I ZDE (vpravo)** kvůli soupiskám!")
                             
                             # ZMĚNA TEXTU ODKAZU
                             st.markdown(f"👉 [**ℹ️ Stránka závodu v ORISu**]({link_target})")
