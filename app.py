@@ -138,14 +138,19 @@ except Exception as e:
 if 'vybrany_datum' not in st.session_state:
     st.session_state.vybrany_datum = date.today()
 
+# ZMĚNA ZDE: Poměr sloupců a roztažení tlačítek
 col_nav1, col_nav2, col_nav3 = st.columns([2, 5, 2])
+
 with col_nav1:
-    if st.button("⬅️ Předchozí měsíc"):
+    # use_container_width=True zajistí, že tlačítko vyplní celý sloupec -> dotkne se levého okraje
+    if st.button("⬅️ Předchozí měsíc", use_container_width=True):
         curr = st.session_state.vybrany_datum
         prev_month = curr.replace(day=1) - timedelta(days=1)
         st.session_state.vybrany_datum = prev_month.replace(day=1)
+
 with col_nav3:
-    if st.button("Další měsíc ➡️"):
+    # use_container_width=True zajistí, že tlačítko vyplní celý sloupec -> dotkne se pravého okraje
+    if st.button("Další měsíc ➡️", use_container_width=True):
         curr = st.session_state.vybrany_datum
         next_month = (curr.replace(day=28) + timedelta(days=4)).replace(day=1)
         st.session_state.vybrany_datum = next_month
@@ -218,23 +223,20 @@ for tyden in month_days:
             for _, akce in akce_dne.iterrows():
                 je_po_deadlinu = dnes > akce['deadline']
                 
-                # 1. DATA
+                # 1. ZÍSKÁNÍ DAT
                 typ_udalosti = str(akce['typ']).lower().strip() if 'typ' in df_akce.columns and pd.notna(akce['typ']) else ""
                 druh_akce = str(akce['druh']).lower().strip() if 'druh' in df_akce.columns and pd.notna(akce['druh']) else "ostatní"
                 
                 je_zavod = "závod" in typ_udalosti
 
                 # 2. IKONY
-                # Pokud v tabulce není les/sprint/nočák, funkce .get() vrátí "🏃" (běžce)
                 ikony_mapa = {"les": "🌲", "sprint": "🏙️", "nočák": "🌗"}
                 emoji_druh = ikony_mapa.get(druh_akce, "🏃")
                 
                 # 3. SLOŽENÍ FINALNÍ IKONY
                 if je_zavod:
-                    # Závod má pohár + druh (nebo běžce)
                     emoji_final = f"🏆{emoji_druh}"
                 else:
-                    # Trénink má jen druh (nebo běžce)
                     emoji_final = emoji_druh
                 
                 # Zámek
@@ -264,6 +266,7 @@ for tyden in month_days:
                     st.info(f"📝 {popis_txt}")
                     
                     deadline_str = akce['deadline'].strftime('%d.%m.%Y')
+                    
                     if je_po_deadlinu:
                         st.error(f"⛔ Přihlášky uzavřeny (Deadline: {deadline_str})")
                     else:
@@ -275,14 +278,17 @@ for tyden in month_days:
                     if je_zavod:
                         st.warning("⚠️ **Toto je oficiální závod.**")
                         
-                        odkaz_zavodu = str(akce['odkaz']).strip() if 'odkaz' in df_akce.columns and pd.notna(akce['odkaz']) else ""
-                        link_target = odkaz_zavodu if odkaz_zavodu else "https://oris.orientacnisporty.cz/"
+                        if je_po_deadlinu:
+                            st.error("Termín pro přihlášky v systému ORIS již vypršel.")
+                        else:
+                            odkaz_zavodu = str(akce['odkaz']).strip() if 'odkaz' in df_akce.columns and pd.notna(akce['odkaz']) else ""
+                            link_target = odkaz_zavodu if odkaz_zavodu else "https://oris.orientacnisporty.cz/"
+                                
+                            st.markdown(f"""
+                            Přihlašování na závody probíhá výhradně přes svazový systém **ORIS**.
                             
-                        st.markdown(f"""
-                        Přihlašování na závody probíhá výhradně přes svazový systém **ORIS**.
-                        
-                        👉 [**Přejít na přihlášky (ORIS)**]({link_target})
-                        """)
+                            👉 [**Přejít na přihlášky (ORIS)**]({link_target})
+                            """)
                     
                     else:
                         lidi = df_prihlasky[df_prihlasky['název'] == akce['název']].copy()
