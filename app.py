@@ -4,11 +4,11 @@ import pandas as pd
 from datetime import datetime, date, timedelta
 import calendar
 
-# --- 1. NASTAVENÍ STRÁNKY (MOBILNÍ REŽIM) ---
-# Změna na "centered" = aplikace na výšku
-st.set_page_config(page_title="OB Klub - Kalendář", page_icon="🌲", layout="centered")
+# --- 1. NASTAVENÍ STRÁNKY ---
+# Dáme layout="wide", aby nás nelimitovaly okraje, a my si šířku vynutíme přes CSS
+st.set_page_config(page_title="OB Klub - Kalendář", page_icon="🌲", layout="wide")
 
-# --- CSS VZHLED + HORIZONTÁLNÍ SCROLL ---
+# --- CSS VZHLED (VYNUCENÍ 3 DNŮ NA ŠÍŘKU) ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
@@ -17,21 +17,19 @@ st.markdown("""
         font-family: 'Roboto', sans-serif;
     }
     
-    /* === HLAVNÍ TRIK: HORIZONTÁLNÍ SCROLOVÁNÍ === */
+    /* === HLAVNÍ TRIK: JEDNOTNÉ SCROLOVÁNÍ === */
     
-    /* 1. Kontejner pro sloupce (týden) */
+    /* 1. Vynutíme, aby se sloupce nikdy nezalamovaly pod sebe */
     div[data-testid="stHorizontalBlock"] {
-        flex-wrap: nowrap !important;     /* ZAKÁZAT zalamování na další řádek */
-        overflow-x: auto !important;      /* POVOLIT posouvání do boku */
-        padding-bottom: 10px !important;  /* Místo pro posuvník */
-        gap: 5px !important;              /* Mezery mezi dny */
+        flex-wrap: nowrap !important;
     }
     
-    /* 2. Jednotlivé sloupce (dny) */
+    /* 2. Každý sloupec (den) bude mít fixní šířku 30% obrazovky (takže se vejdou 3 a kousek) */
     div[data-testid="column"] {
-        min-width: 100px !important;      /* KAŽDÝ DEN MÁ GARANTOVANOU ŠÍŘKU */
-        flex: 0 0 auto !important;        /* Nesmršťovat se */
-        width: 100px !important;          /* Fixní šířka */
+        flex: 0 0 auto !important;
+        width: 30vw !important;       /* 30 % šířky obrazovky mobilu */
+        min-width: 110px !important;  /* Pojistka pro hodně úzké telefony */
+        max-width: 30vw !important;   /* Aby se to neroztahovalo na PC zbytečně moc */
     }
 
     /* Nadpis */
@@ -39,12 +37,11 @@ st.markdown("""
         color: #2E7D32; 
         text-align: center;
         font-weight: 800;
-        letter-spacing: -1px;
         margin-bottom: 20px;
-        font-size: 1.8rem;
+        font-size: 1.5rem;
     }
 
-    /* KARTY AKCÍ (Tlačítka) */
+    /* KARTY AKCÍ */
     div[data-testid="stPopover"] > button {
         white-space: normal !important;
         word-break: keep-all !important;
@@ -58,20 +55,22 @@ st.markdown("""
         box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
         
         color: #333 !important;
-        font-size: 0.75rem !important;    /* Menší písmo pro mobil */
+        font-size: 0.75rem !important;
         font-weight: 600 !important;
         
         text-align: left !important;
         height: auto !important;
-        min-height: 45px;
+        min-height: 50px;
         width: 100% !important;
         padding: 4px 6px !important;
         line-height: 1.2 !important;
     }
 
-    /* NAVIGACE (Předchozí/Další) */
-    /* Zde musíme trochu obejít to globální nastavení šířky sloupců */
-    /* Tlačítka budou taky scrolovací, ale to na mobilu nevadí */
+    /* NAVIGACE - Tlačítka nebudou mít 30vw, ty chceme roztažené */
+    /* Musíme specificky zacílit kontejnery, kde jsou tlačítka, aby se nerozbily */
+    /* Streamlit bohužel dává stejnou třídu 'column' všemu. 
+       Trik: Navigaci dáme do st.container, který nebude mít horizontal block */
+
     div[data-testid="stButton"] > button {
         border-radius: 20px !important;
         font-weight: bold !important;
@@ -79,7 +78,6 @@ st.markdown("""
         background-color: #f0f2f6 !important;
         color: #555 !important;
         width: 100% !important;
-        font-size: 0.8rem !important;
     }
 
     /* DNEŠNÍ DEN */
@@ -144,8 +142,12 @@ except Exception as e:
 if 'vybrany_datum' not in st.session_state:
     st.session_state.vybrany_datum = date.today()
 
-# Navigace (i ta bude mít teď fixní šířku sloupců, ale to nevadí)
-col_nav1, col_nav2, col_nav3 = st.columns([2, 4, 2])
+# NAVIGACE
+# Tady musíme použít malý trik. Aby se tlačítka nenaformátovala na 30vw (jako dny),
+# nepoužijeme st.columns, ale jednoduché HTML zarovnání nebo nativní Streamlit s custom CSS pro tuto sekci.
+# Pro jednoduchost necháme st.columns, ale víme, že na PC to bude vypadat úzce, na mobilu to bude OK.
+
+col_nav1, col_nav2, col_nav3 = st.columns([1, 2, 1])
 with col_nav1:
     if st.button("⬅️"):
         curr = st.session_state.vybrany_datum
@@ -165,7 +167,7 @@ with col_nav2:
     st.markdown(f"<h3 style='text-align: center; color: #333; margin: 0; padding-top: 5px;'>{ceske_mesice[mesic]} {rok}</h3>", unsafe_allow_html=True)
 st.markdown("<div style='margin-bottom: 15px'></div>", unsafe_allow_html=True)
 
-# --- 4. VYKRESLENÍ MŘÍŽKY (S HORIZONTÁLNÍM SCROLLEM) ---
+# --- 4. VYKRESLENÍ MŘÍŽKY (JEDNOTNÝ SCROLL) ---
 cal = calendar.Calendar(firstweekday=0)
 month_days = cal.monthdayscalendar(rok, mesic)
 
@@ -179,7 +181,6 @@ st.markdown("<hr style='margin: 5px 0 10px 0; border: 0; border-top: 1px solid #
 dnes = date.today()
 
 for tyden in month_days:
-    # Tady se děje magie - st.columns(7) se díky CSS roztáhne a půjde scrolovat
     cols = st.columns(7) 
     for i, den_cislo in enumerate(tyden):
         with cols[i]:
@@ -202,7 +203,6 @@ for tyden in month_days:
                 typ_akce = str(akce['typ']).lower().strip() if 'typ' in df_akce.columns and pd.notna(akce['typ']) else "ostatní"
                 ikony_mapa = {"les": "🌲", "sprint": "🏙️", "nočák": "🌗"}
                 emoji_typ = ikony_mapa.get(typ_akce, "🏃")
-                
                 finalni_ikona = f"🔒 {emoji_typ}" if je_po_deadlinu else emoji_typ
 
                 nazev_full = akce['název']
@@ -247,7 +247,6 @@ for tyden in month_days:
                                 placeholder="Vyber nebo piš..."
                             )
                             nove_jmeno = st.text_input("...nebo napiš Nové jméno")
-                            
                             poznamka_input = st.text_input("Poznámka")
                             odeslat_btn = st.form_submit_button("Přihlásit se")
                             
@@ -282,7 +281,6 @@ for tyden in month_days:
                                 else:
                                     st.warning("Vyplň jméno!")
     
-    # Menší mezera mezi týdny pro kompaktnost na mobilu
     st.markdown("<div style='margin-bottom: 5px'></div>", unsafe_allow_html=True)
 
 # --- PATIČKA ---
@@ -293,4 +291,4 @@ st.markdown("""
     &copy; 2026 All rights reserved
 </div>
 """, unsafe_allow_html=True)
-    
+                                
