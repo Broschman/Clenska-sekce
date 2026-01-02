@@ -17,7 +17,6 @@ st.markdown("""
         font-family: 'Roboto', sans-serif;
     }
 
-    /* Nadpis - UPROSTŘED */
     h1 {
         color: #2E7D32; 
         text-align: center !important;
@@ -27,14 +26,14 @@ st.markdown("""
         padding-bottom: 20px;
     }
 
-    /* === OPRAVA ŠÍŘKY BUBLINY (POPOVER) === */
+    /* === ŠIROKÁ BUBLINA PRO DVA SLOUPCE === */
     div[data-testid="stPopoverBody"] {
-        width: 500px !important;      /* Pevná šířka pro PC */
-        max-width: 95vw !important;   /* Aby to na mobilu nelezlo ven */
-        max-height: 85vh !important;  /* Aby se to vešlo na výšku */
+        width: 700px !important;      /* Dost místa pro formulář i info vedle sebe */
+        max-width: 95vw !important;   /* Na mobilu se zmenší */
+        max-height: 80vh !important;
     }
 
-    /* TLAČÍTKO NÁPOVĚDY */
+    /* Tlačítko nápovědy */
     div[data-testid="column"] div[data-testid="stPopover"] > button {
         border-radius: 50% !important;
         width: 35px !important;
@@ -45,7 +44,7 @@ st.markdown("""
         padding: 0 !important;
     }
 
-    /* PLOVOUCÍ TLAČÍTKO */
+    /* Plovoucí tlačítko */
     .floating-container {
         position: fixed;
         bottom: 30px;
@@ -68,7 +67,7 @@ st.markdown("""
         background-color: #FFD54F !important;
     }
 
-    /* DNEŠNÍ DEN */
+    /* Dnešní den */
     .today-box {
         background: linear-gradient(135deg, #FF4B4B 0%, #FF9068 100%);
         color: white;
@@ -108,6 +107,7 @@ with col_help:
         st.markdown("**Legenda:**")
         st.markdown("🏆 **Závod / Štafety**")
         st.markdown("🌲 Les | 🏙️ Sprint | 🌗 Nočák")
+        st.markdown("🏃 Ostatní")
         st.markdown("🔒 Uzavřeno")
 
 
@@ -226,17 +226,14 @@ for tyden in month_days:
             for _, akce in akce_dne.iterrows():
                 je_po_deadlinu = dnes > akce['deadline']
                 
-                # --- 1. ZÍSKÁNÍ DAT ---
+                # --- DATA ---
                 typ_udalosti = str(akce['typ']).lower().strip() if 'typ' in df_akce.columns and pd.notna(akce['typ']) else ""
                 druh_akce = str(akce['druh']).lower().strip() if 'druh' in df_akce.columns and pd.notna(akce['druh']) else "ostatní"
-                
-                # Detekce typu
                 je_stafeta = "štafety" in typ_udalosti
                 je_zavod = "závod" in typ_udalosti
-                
                 ma_pohar = je_zavod or je_stafeta
 
-                # --- 2. IKONY ---
+                # --- IKONY ---
                 ikony_mapa = {"les": "🌲", "sprint": "🏙️", "nočák": "🌗"}
                 emoji_druh = ikony_mapa.get(druh_akce, "🏃")
                 
@@ -246,7 +243,7 @@ for tyden in month_days:
                 if je_po_deadlinu: display_ikona = f"🔒 {emoji_final}"
                 else: display_ikona = emoji_final
 
-                # --- 3. TLAČÍTKO ---
+                # --- NÁZEV ---
                 nazev_full = akce['název']
                 if '-' in nazev_full:
                     display_text = nazev_full.split('-')[0].strip()
@@ -255,108 +252,107 @@ for tyden in month_days:
                 
                 label_tlacitka = f"{display_ikona} {display_text}"
                 
-                # --- 4. POPOVER (DETAIL) ---
+                # --- POPOVER (DETAIL) ---
                 with st.popover(label_tlacitka, use_container_width=True):
-                    # HLAVIČKA
+                    # Nadpis
                     st.markdown(f"### {nazev_full}")
-                    
-                    if je_stafeta: typ_label = "ŠTAFETY 🏆"
-                    elif je_zavod: typ_label = "ZÁVOD 🏆"
-                    else: typ_label = "TRÉNINK"
-                    
-                    st.caption(f"Typ akce: {typ_label} ({druh_akce.upper()})")
-                    st.write(f"**📍 Místo:** {akce['místo']}")
-                    if pd.notna(akce['popis']): st.info(f"📝 {akce['popis']}")
-                    
-                    deadline_str = akce['deadline'].strftime('%d.%m.%Y')
-                    if je_po_deadlinu:
-                        st.error(f"⛔ Přihlášky uzavřeny (Deadline: {deadline_str})")
-                    else:
-                        st.caption(f"📅 Deadline přihlášek: {deadline_str}")
-
-                    st.divider()
 
                     # ==========================================
-                    # A) SEKCE ORIS (Pro Závody i Štafety)
+                    # DVA SLOUPCE: VLEVO (Form/ORIS) | VPRAVO (Info)
                     # ==========================================
-                    if je_zavod or je_stafeta:
-                        st.markdown("#### 🏆 Registrace v ORIS")
-                        if je_po_deadlinu:
-                            st.error("Termín pro přihlášky v systému ORIS již vypršel.")
-                        else:
-                            odkaz_zavodu = str(akce['odkaz']).strip() if 'odkaz' in df_akce.columns and pd.notna(akce['odkaz']) else ""
-                            link_target = odkaz_zavodu if odkaz_zavodu else "https://oris.orientacnisporty.cz/"
-                            
-                            if je_stafeta:
-                                st.warning("⚠️ **Pozor:** Pro štafety se přihlaš v ORISu, ale **NUTNĚ I ZDE** (níže) kvůli soupiskám!")
-                            else:
-                                st.info("ℹ️ Přihlašování na závody probíhá výhradně v systému ORIS.")
-                                
-                            st.markdown(f"👉 [**Přejít na přihlášky (ORIS)**]({link_target})")
-                            st.divider()
+                    col_left, col_right = st.columns([1.3, 1], gap="medium")
 
-                    # ==========================================
-                    # B) INTERNÍ PŘIHLÁŠKY (Pro Tréninky a Štafety)
-                    # ==========================================
-                    # Zobrazíme formulář, pokud to NENÍ obyčejný závod (tj. je to trénink NEBO štafeta)
-                    if not je_zavod or je_stafeta:
+                    # --- PRAVÝ SLOUPEC: INFO ---
+                    with col_right:
+                        if je_stafeta: typ_label = "ŠTAFETY 🏆"
+                        elif je_zavod: typ_label = "ZÁVOD 🏆"
+                        else: typ_label = "TRÉNINK"
                         
+                        st.caption(f"Typ: {typ_label} ({druh_akce.upper()})")
+                        st.write(f"**📍 Místo:** {akce['místo']}")
+                        if pd.notna(akce['popis']):
+                            st.info(f"📝 {akce['popis']}")
+                        
+                        deadline_str = akce['deadline'].strftime('%d.%m.%Y')
+                        if je_po_deadlinu:
+                            st.error(f"⛔ Deadline: {deadline_str}")
+                        else:
+                            st.caption(f"📅 Deadline: {deadline_str}")
+
+                    # --- LEVÝ SLOUPEC: PŘIHLAŠOVÁNÍ ---
+                    with col_left:
                         delete_key_state = f"confirm_delete_{akce['název']}"
                         
-                        # 1. FORMULÁŘ (UPROSTŘED)
-                        if not je_po_deadlinu and delete_key_state not in st.session_state:
-                            nadpis_form = "✍️ Zapsat se na soupisku" if je_stafeta else "✍️ Chci se přihlásit"
-                            st.markdown(f"#### {nadpis_form}")
-                            
-                            form_key = f"form_{akce['název']}_{aktualni_den}"
-                            with st.form(key=form_key, clear_on_submit=True):
-                                vybrane_jmeno = st.selectbox("Jméno", options=seznam_jmen, index=None, placeholder="Vyber ze seznamu...")
-                                nove_jmeno = st.text_input("...nebo napiš Nové jméno")
-                                poznamka_input = st.text_input("Poznámka")
-                                odeslat_btn = st.form_submit_button("Zapsat se" if je_stafeta else "Přihlásit se")
+                        # A) ORIS (Závod/Štafeta)
+                        if je_zavod or je_stafeta:
+                            st.markdown("##### 🏆 Registrace v ORIS")
+                            if je_po_deadlinu:
+                                st.error("Termín vypršel.")
+                            else:
+                                odkaz_zavodu = str(akce['odkaz']).strip() if 'odkaz' in df_akce.columns and pd.notna(akce['odkaz']) else ""
+                                link_target = odkaz_zavodu if odkaz_zavodu else "https://oris.orientacnisporty.cz/"
                                 
-                                if odeslat_btn:
-                                    finalni_jmeno = nove_jmeno.strip() if nove_jmeno else vybrane_jmeno
-                                    if finalni_jmeno:
-                                        uspesne_zapsano = False
-                                        novy_zaznam = pd.DataFrame([{
-                                            "název": akce['název'],
-                                            "jméno": finalni_jmeno,
-                                            "poznámka": poznamka_input,
-                                            "čas zápisu": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                                        }])
-                                        try:
-                                            aktualni = conn.read(worksheet="prihlasky", ttl=0)
-                                            updated = pd.concat([aktualni, novy_zaznam], ignore_index=True)
-                                            conn.update(worksheet="prihlasky", data=updated)
-                                            if finalni_jmeno not in seznam_jmen:
-                                                try:
-                                                    aktualni_jmena = conn.read(worksheet="jmena", ttl=0)
-                                                    novy_clen = pd.DataFrame([{"jméno": finalni_jmeno}])
-                                                    updated_jmena = pd.concat([aktualni_jmena, novy_clen], ignore_index=True)
-                                                    conn.update(worksheet="jmena", data=updated_jmena)
-                                                except: pass
-                                            uspesne_zapsano = True
-                                        except Exception as e:
-                                            st.error(f"Chyba zápisu: {e}")
-                                        
-                                        if uspesne_zapsano:
-                                            st.success(f"✅ Hotovo!")
-                                            time.sleep(0.5)
-                                            st.rerun()
-                                    else: st.warning("Vyplň jméno!")
-                        
+                                st.markdown(f"👉 [**Přejít na ORIS**]({link_target})")
+                                if je_stafeta:
+                                    st.warning("⚠️ Pro štafety se zapiš i dolů na soupisku!")
+                                st.write("") # Mezera
+
+                        # B) INTERNÍ FORMULÁŘ (Trénink/Štafeta)
+                        if not je_zavod or je_stafeta:
+                            if not je_po_deadlinu and delete_key_state not in st.session_state:
+                                nadpis_form = "Soupiska (Štafety)" if je_stafeta else "Přihláška na trénink"
+                                st.markdown(f"##### ✍️ {nadpis_form}")
+                                
+                                form_key = f"form_{akce['název']}_{aktualni_den}"
+                                with st.form(key=form_key, clear_on_submit=True):
+                                    vybrane_jmeno = st.selectbox("Jméno", options=seznam_jmen, index=None, placeholder="Vyber...", label_visibility="collapsed")
+                                    nove_jmeno = st.text_input("Nové jméno", placeholder="...nebo napiš nové")
+                                    poznamka_input = st.text_input("Poznámka", placeholder="Poznámka (auto, ...)")
+                                    odeslat_btn = st.form_submit_button("Přihlásit se", use_container_width=True)
+                                    
+                                    if odeslat_btn:
+                                        finalni_jmeno = nove_jmeno.strip() if nove_jmeno else vybrane_jmeno
+                                        if finalni_jmeno:
+                                            uspesne_zapsano = False
+                                            novy_zaznam = pd.DataFrame([{
+                                                "název": akce['název'],
+                                                "jméno": finalni_jmeno,
+                                                "poznámka": poznamka_input,
+                                                "čas zápisu": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                                            }])
+                                            try:
+                                                aktualni = conn.read(worksheet="prihlasky", ttl=0)
+                                                updated = pd.concat([aktualni, novy_zaznam], ignore_index=True)
+                                                conn.update(worksheet="prihlasky", data=updated)
+                                                if finalni_jmeno not in seznam_jmen:
+                                                    try:
+                                                        aktualni_jmena = conn.read(worksheet="jmena", ttl=0)
+                                                        novy_clen = pd.DataFrame([{"jméno": finalni_jmeno}])
+                                                        updated_jmena = pd.concat([aktualni_jmena, novy_clen], ignore_index=True)
+                                                        conn.update(worksheet="jmena", data=updated_jmena)
+                                                    except: pass
+                                                uspesne_zapsano = True
+                                            except Exception as e: st.error(f"Chyba: {e}")
+                                            
+                                            if uspesne_zapsano:
+                                                st.success(f"✅ Hotovo!")
+                                                time.sleep(0.5)
+                                                st.rerun()
+                                        else: st.warning("Vyplň jméno!")
+
+                    # ==========================================
+                    # 3. TABULKA PŘIHLÁŠENÝCH (DOLE)
+                    # ==========================================
+                    if not je_zavod or je_stafeta:
                         st.divider()
-
-                        # 2. SEZNAM PŘIHLÁŠENÝCH (DOLE)
                         lidi = df_prihlasky[df_prihlasky['název'] == akce['název']].copy()
-                        nadpis_seznam = f"👥 Zájemci o štafetu ({len(lidi)})" if je_stafeta else f"👥 Přihlášeno ({len(lidi)})"
-                        st.markdown(f"#### {nadpis_seznam}")
+                        nadpis_seznam = f"👥 Zájemci o štafetu ({len(lidi)})" if je_stafeta else f"👥 Přihlášeno na trénink ({len(lidi)})"
+                        st.markdown(f"**{nadpis_seznam}**")
 
-                        # Potvrzení mazání
+                        # Logika mazání
                         if delete_key_state in st.session_state:
                             clovek_ke_smazani = st.session_state[delete_key_state]
-                            st.warning(f"⚠️ Opravdu smazat: **{clovek_ke_smazani}**?")
+                            st.warning(f"Odhlásit: {clovek_ke_smazani}?")
                             col_conf1, col_conf2 = st.columns(2)
                             if col_conf1.button("✅ ANO", key=f"yes_{akce['název']}"):
                                 smazano_ok = False
@@ -372,24 +368,32 @@ for tyden in month_days:
                                     st.success("Smazáno!")
                                     time.sleep(0.5)
                                     st.rerun()
-                            if col_conf2.button("❌ ZPĚT", key=f"no_{akce['název']}"):
+                            if col_conf2.button("❌ NE", key=f"no_{akce['název']}"):
                                 del st.session_state[delete_key_state]
                                 st.rerun()
 
-                        # Výpis lidí
+                        # Výpis tabulky
                         if not lidi.empty:
+                            # Hlavička tabulky
+                            h1, h2, h3 = st.columns([0.5, 4, 1])
+                            h1.caption("#")
+                            h2.caption("Jméno")
+                            h3.caption("") # Koš
+
                             for i, (idx, row) in enumerate(lidi.iterrows()):
                                 c1, c2, c3 = st.columns([0.5, 4, 1], vertical_alignment="center")
-                                c1.write(f"**{i+1}.**")
+                                c1.write(f"{i+1}.")
                                 text_ucastnika = f"**{row['jméno']}**"
                                 if pd.notna(row['poznámka']) and row['poznámka']:
-                                    text_ucastnika += f" | *{row['poznámka']}*"
-                                c2.markdown(text_ucastnika)
+                                    text_ucastnika += f" | <span style='color:gray; font-size:0.9em'>{row['poznámka']}</span>"
+                                c2.markdown(text_ucastnika, unsafe_allow_html=True)
                                 
                                 if not je_po_deadlinu:
                                     if c3.button("🗑️", key=f"del_{akce['název']}_{idx}"):
                                         st.session_state[delete_key_state] = row['jméno']
                                         st.rerun()
+                            
+                            # Oddělovací čára mezi řádky (volitelné, Streamlit columns nemají border, tak aspoň vizuálně)
                         else:
                             st.caption("Zatím nikdo.")
 
