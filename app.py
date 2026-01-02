@@ -28,8 +28,8 @@ st.markdown("""
 
     /* === ŠIROKÁ BUBLINA PRO ROZLOŽENÍ VE SLOUPCÍCH === */
     div[data-testid="stPopoverBody"] {
-        width: 750px !important;      /* Dost místa pro 2 sloupce */
-        max-width: 95vw !important;   /* Pojistka pro mobily */
+        width: 750px !important;      
+        max-width: 95vw !important;   
         max-height: 80vh !important;
     }
 
@@ -277,24 +277,22 @@ for tyden in month_days:
                         # ORIS ODKAZ (Zobrazuje se vlevo pod info)
                         if je_zavod or je_stafeta:
                             st.markdown("---")
-                            st.markdown("**Registrace v ORIS:**")
-                            if je_po_deadlinu:
-                                st.error("Termín ORIS vypršel.")
-                            else:
-                                odkaz_zavodu = str(akce['odkaz']).strip() if 'odkaz' in df_akce.columns and pd.notna(akce['odkaz']) else ""
-                                link_target = odkaz_zavodu if odkaz_zavodu else "https://oris.orientacnisporty.cz/"
-                                
-                                if je_stafeta:
-                                    st.warning("⚠️ Pro štafety se přihlaš v ORISu, ale **I ZDE (vpravo)** kvůli soupiskám!")
-                                
-                                st.markdown(f"👉 [**Přejít na ORIS**]({link_target})")
+                            st.markdown("**Informace k závodu:**") # ZMĚNA TEXTU
+                            
+                            odkaz_zavodu = str(akce['odkaz']).strip() if 'odkaz' in df_akce.columns and pd.notna(akce['odkaz']) else ""
+                            link_target = odkaz_zavodu if odkaz_zavodu else "https://oris.orientacnisporty.cz/"
+                            
+                            st.caption("Přihlášky probíhají v systému ORIS.")
+                            if je_stafeta:
+                                st.warning("⚠️ **ŠTAFETY:** Přihlaš se v ORISu, ale **I ZDE (vpravo)** kvůli soupiskám!")
+                            
+                            # ZMĚNA TEXTU ODKAZU
+                            st.markdown(f"👉 [**ℹ️ Stránka závodu v ORISu**]({link_target})")
 
                     # ----------------------------------------
                     # PRAVÝ SLOUPEC: FORMULÁŘ
                     # ----------------------------------------
                     with col_form:
-                        # Formulář zobrazíme jen pokud to NENÍ čistokrevný závod (tj. je to trénink nebo štafeta)
-                        # A pokud není po deadlinu
                         
                         delete_key_state = f"confirm_delete_{akce['název']}"
                         
@@ -308,7 +306,7 @@ for tyden in month_days:
                                     vybrane_jmeno = st.selectbox("Jméno", options=seznam_jmen, index=None, placeholder="Vyber...")
                                     nove_jmeno = st.text_input("...nebo Nové jméno")
                                     poznamka_input = st.text_input("Poznámka")
-                                    odeslat_btn = st.form_submit_button("Přihlásit se")
+                                    odeslat_btn = st.form_submit_button("Zapsat se" if je_stafeta else "Přihlásit se")
                                     
                                     if odeslat_btn:
                                         finalni_jmeno = nove_jmeno.strip() if nove_jmeno else vybrane_jmeno
@@ -344,8 +342,8 @@ for tyden in month_days:
                                 st.info("Přihlašování bylo ukončeno.")
                         
                         elif je_zavod:
-                            # Pokud je to jen závod, pravý sloupec necháme prázdný nebo dáme info
-                            st.info("ℹ️ Toto je závod. Přihlášky pouze přes ORIS (odkaz vlevo).")
+                            # Prázdno pro běžný závod
+                            pass
 
 
                     # ----------------------------------------
