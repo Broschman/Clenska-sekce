@@ -6,7 +6,7 @@ import calendar
 import time
 
 # --- 1. NASTAVENÍ STRÁNKY ---
-st.set_page_config(page_title=" Kalendář RBK ", page_icon="🌲", layout="wide")
+st.set_page_config(page_title="Kalendář RBK", page_icon="🌲", layout="wide")
 
 # --- CSS VZHLED ---
 st.markdown("""
@@ -95,7 +95,7 @@ st.markdown("""
 col_dummy, col_title, col_help = st.columns([1, 10, 1], vertical_alignment="center")
 
 with col_title:
-    st.title("🌲 Tréninkový kalendář")
+    st.title("🌲 Kalendář RBK")
 
 with col_help:
     with st.popover("❔", help="Nápověda k aplikaci"):
