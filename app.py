@@ -10,59 +10,53 @@ st.set_page_config(page_title="OB Klub - Kalendář", page_icon="🌲", layout="
 # --- CSS ÚPRAVY VZHLEDU (FANCY DESIGN) ---
 st.markdown("""
 <style>
-    /* IMPORT FONTU (volitelné, jinak bere systémový) */
     @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
 
     html, body, [class*="css"] {
         font-family: 'Roboto', sans-serif;
     }
 
-    /* NADPIS APLIKACE */
     h1 {
-        color: #2E7D32; /* Lesní zelená */
+        color: #2E7D32; 
         text-align: center;
         font-weight: 800;
         letter-spacing: -1px;
         margin-bottom: 30px;
     }
 
-    /* 1. KARTY AKCÍ (Tlačítka v kalendáři) */
+    /* KARTY AKCÍ (Tlačítka) */
     div[data-testid="stPopover"] > button {
         white-space: normal !important;
-        word-break: keep-all !important;    /* FIX PRO BOSKOVICE */
+        word-break: keep-all !important;
         overflow-wrap: normal !important;
         hyphens: none !important;
         
         background-color: #ffffff !important;
         border: 1px solid #e0e0e0 !important;
-        border-left: 5px solid #4CAF50 !important; /* Zelený proužek vlevo */
+        border-left: 5px solid #4CAF50 !important; /* Zelený proužek */
         border-radius: 8px !important;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.05) !important; /* Jemný stín */
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05) !important;
         
         color: #333 !important;
-        font-size: 0.8rem !important;
+        font-size: 0.85rem !important; /* Písmo akorát */
         font-weight: 600 !important;
         
-        text-align: left !important;        /* Text zarovnaný doleva vypadá v kartě lépe */
+        text-align: left !important;
         height: auto !important;
-        min-height: 65px;
+        min-height: 50px; /* Stačí menší výška, když jsou názvy kratší */
         width: 100% !important;
-        padding: 8px !important;
+        padding: 6px 10px !important;
         line-height: 1.3 !important;
-        transition: all 0.2s ease-in-out !important; /* Plynulá animace */
+        transition: all 0.2s ease-in-out !important;
     }
 
-    /* HOVER EFEKT (Když na to najedeš myší) */
     div[data-testid="stPopover"] > button:hover {
-        transform: translateY(-3px); /* Karta se "vznese" */
+        transform: translateY(-3px);
         box-shadow: 0 5px 15px rgba(0,0,0,0.15) !important;
         border-color: #4CAF50 !important;
     }
 
-    /* ZAMČENÉ AKCE (Jiný styl pro akce po deadlinu) */
-    /* Bohužel přes CSS nezjistíme obsah tlačítka, to musíme nechat na ikoně 🔒 */
-
-    /* 2. NAVIGACE (Tlačítka zpět/vpřed) */
+    /* NAVIGACE */
     div[data-testid="stButton"] > button {
         border-radius: 20px !important;
         font-weight: bold !important;
@@ -76,7 +70,7 @@ st.markdown("""
         color: #000 !important;
     }
 
-    /* 3. DNEŠNÍ DEN (Fancy Badge) */
+    /* DNEŠNÍ DEN */
     .today-box {
         background: linear-gradient(135deg, #FF4B4B 0%, #FF9068 100%);
         color: white;
@@ -88,7 +82,6 @@ st.markdown("""
         margin-bottom: 8px;
     }
 
-    /* Obyčejné dny */
     .day-number {
         font-size: 1.1em;
         font-weight: 700;
@@ -98,10 +91,8 @@ st.markdown("""
         text-align: center;
     }
 
-    /* Skrytí patičky Streamlitu */
     footer {visibility: hidden;}
     #MainMenu {visibility: hidden;}
-
 </style>
 """, unsafe_allow_html=True)
 
@@ -156,7 +147,6 @@ month_days = cal.monthdayscalendar(rok, mesic)
 dny_v_tydnu = ["Po", "Út", "St", "Čt", "Pá", "So", "Ne"]
 cols_header = st.columns(7)
 for i, d in enumerate(dny_v_tydnu):
-    # Stylovější hlavička dnů
     cols_header[i].markdown(f"<div style='text-align: center; color: #888; text-transform: uppercase; font-size: 0.8rem; margin-bottom: 10px;'>{d}</div>", unsafe_allow_html=True)
 
 st.markdown("<hr style='margin: 0 0 20px 0; border: 0; border-top: 1px solid #eee;'>", unsafe_allow_html=True)
@@ -173,31 +163,32 @@ for tyden in month_days:
             
             aktualni_den = date(rok, mesic, den_cislo)
             
-            # Zobrazení čísla dne (Fancy styl)
             if aktualni_den == dnes:
                 st.markdown(f"<div style='text-align: center;'><span class='today-box'>{den_cislo}</span></div>", unsafe_allow_html=True)
             else:
                 st.markdown(f"<span class='day-number'>{den_cislo}</span>", unsafe_allow_html=True)
 
-            # --- AKCE ---
+            # --- VYKRESLOVÁNÍ AKCÍ ---
             akce_dne = df_akce[df_akce['datum'] == aktualni_den]
             for _, akce in akce_dne.iterrows():
                 je_po_deadlinu = dnes > akce['deadline']
-                # Prohození ikon pro čistší design
                 ikona = "🔒" if je_po_deadlinu else "" 
                 
-                nazev_full = akce['název']
-                # Inteligentní zkrácení
-                if len(nazev_full) > 25:
-                    display_text = f"{nazev_full[:23]}.."
+                nazev_full = akce['název'] # Celý název (pro detail)
+                
+                # --- NOVÁ LOGIKA: OŘEZÁNÍ NÁZVU PRO TLAČÍTKO ---
+                # Vezmeme všechno před první pomlčkou
+                if '-' in nazev_full:
+                    # split('-') rozdělí text na části, [0] vezme tu první, strip() ořízne mezery
+                    display_text = nazev_full.split('-')[0].strip()
                 else:
                     display_text = nazev_full
                 
-                # Sestavení obsahu tlačítka
-                # Pokud je akce zamčená, přidáme ikonu, jinak jen text (zelený proužek vlevo značí "Open")
+                # Sestavení textu tlačítka
                 label_tlacitka = f"{ikona} {display_text}" if ikona else display_text
                 
                 with st.popover(label_tlacitka, use_container_width=True):
+                    # Uvnitř stále ukazujeme plný název!
                     st.markdown(f"### {nazev_full}")
                     st.write(f"**📍 Místo:** {akce['místo']}")
                     popis_txt = akce['popis'] if pd.notna(akce['popis']) else ""
@@ -241,7 +232,7 @@ for tyden in month_days:
                                 except:
                                     st.error("Chyba zápisu.")
 
-    st.markdown("<div style='margin-bottom: 20px'></div>", unsafe_allow_html=True) # Mezera
+    st.markdown("<div style='margin-bottom: 20px'></div>", unsafe_allow_html=True)
 
 # --- PATIČKA ---
 st.markdown("---")
@@ -251,3 +242,4 @@ st.markdown("""
     &copy; 2026 All rights reserved
 </div>
 """, unsafe_allow_html=True)
+                    
