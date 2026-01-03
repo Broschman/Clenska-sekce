@@ -8,7 +8,7 @@ import time
 # --- 1. NASTAVENÍ STRÁNKY ---
 st.set_page_config(page_title="Kalendář RBK", page_icon="🌲", layout="wide")
 
-# --- CSS VZHLED (Bezpečné stylování) ---
+# --- CSS VZHLED (BOOST BAREV) ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap');
@@ -86,33 +86,50 @@ st.markdown("""
         text-align: center;
     }
     
-    /* === UPRAVENÝ VZHLED TLAČÍTEK V KALENDÁŘI === */
-    /* Cílem je, aby tlačítko nebylo vidět, ale jen ten barevný obsah uvnitř */
+    /* === ÚPRAVA TLAČÍTEK V KALENDÁŘI === */
+    /* 1. Reset vzhledu tlačítka */
     div[data-testid="column"] button {
         border: none !important;
-        background-color: transparent !important;
+        background: transparent !important;
         width: 100% !important;
-        padding: 0px !important;
-        margin: 0px !important;
+        padding: 2px !important;
+        margin: 0 !important;
+        box-shadow: none !important;
     }
     
-    /* Zvětšení a nastylování barevného textu uvnitř */
-    div[data-testid="column"] button p {
+    /* 2. Cílení na barevný text uvnitř (Hackujeme Streamlit barvy) */
+    div[data-testid="column"] button p span {
+        display: flex !important;
+        justify-content: flex-start;
+        align-items: center;
+        width: 100% !important;
+        padding: 10px 8px !important;
+        border-radius: 6px !important;
+        
+        /* MAGIE: Zvýšíme sytost barev o 300% a upravíme kontrast */
+        filter: saturate(3) contrast(1.1) !important; 
+        
+        /* Text styling */
+        font-weight: 900 !important; /* Extra tučné */
         font-size: 14px !important;
-        font-weight: 700 !important; /* Tučné písmo pro lepší kontrast */
-        padding: 8px 10px !important;
-        border-radius: 8px !important;
-        margin: 2px 0 !important;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.15) !important; /* Jemný stín */
-        width: 100%;
-        display: block;
-        line-height: 1.4 !important;
+        color: #222 !important; /* Tmavý text pro kontrast na syté barvě */
+        line-height: 1.2 !important;
+        text-transform: uppercase; /* Aby to vypadalo jako štítek */
+        letter-spacing: 0.5px;
+        border: 1px solid rgba(0,0,0,0.1);
     }
 
-    /* Hover efekt pro lepší pocit */
-    div[data-testid="column"] button:hover p {
-        transform: translateY(-1px);
-        box-shadow: 0 3px 6px rgba(0,0,0,0.2) !important;
+    /* Duhové MČR potřebuje speciální péči, aby se filtr nezbláznil */
+    div[data-testid="column"] button p span[style*="background"] {
+       /* Tady se chytí rainbow gradient */
+       text-shadow: 0 1px 2px rgba(255,255,255,0.5);
+    }
+
+    /* Hover efekt - tlačítko se trochu zvětší */
+    div[data-testid="column"] button:hover p span {
+        transform: scale(1.02);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        cursor: pointer;
     }
     
     footer {visibility: hidden;}
@@ -131,9 +148,9 @@ with col_help:
         st.markdown("### 💡 Nápověda")
         st.info("📱 **Mobil:** Otoč telefon na šířku.")
         
-        # Legenda (používá stejné barvy jako systém)
+        # Legenda s ukázkou barev
         st.markdown("""
-        **Legenda barev:**
+        **Typy akcí:**
         * :rainbow-background[MČR / Mistrovství]
         * :red-background[Závod ŽA] (Žebříček A)
         * :orange-background[Závod ŽB] (Žebříček B)
@@ -144,7 +161,7 @@ with col_help:
         
         **Tipy:**
         * **🚗 Doprava:** Pokud nemáš odvoz, zaškrtni *"Sháním odvoz"*.
-        * **🗑️ Odhlášení:** Klikni na koš a pak potvrď tlačítkem **ANO**.
+        * **🏆 Štafety:** Hlas se v ORISu i ZDE.
         * **⚠️ Deadline:** Pokud je deadline dnes, máš poslední šanci!
         """)
         
@@ -167,7 +184,7 @@ try:
     df_akce['deadline'] = pd.to_datetime(df_akce['deadline'], dayfirst=True, errors='coerce').dt.date
     df_akce = df_akce.dropna(subset=['datum'])
     
-    # --- FIX PRO CHYBĚJÍCÍ DEADLINE (AUTOMATICKY 14 DNÍ PŘED AKCÍ) ---
+    # --- FIX PRO CHYBĚJÍCÍ DEADLINE ---
     def get_deadline(row):
         if pd.isna(row['deadline']):
             return row['datum'] - timedelta(days=14)
@@ -317,6 +334,7 @@ for tyden in month_days:
                     final_text = "🔒 " + final_text
                 
                 # ZDE JE KOUZLO: Obalíme text do barvy
+                # CSS pak tento element roztáhne na celou šířku
                 label_tlacitka = f":{bg_style}-background[{final_text}]"
                 
                 # --- POPOVER ---
@@ -463,7 +481,6 @@ for tyden in month_days:
                             
                             for i, (idx, row) in enumerate(lidi.iterrows()):
                                 c1, c2, c3, c4, c5 = st.columns([0.4, 2.0, 2.0, 0.8, 0.5], vertical_alignment="center")
-                                
                                 c1.write(f"{i+1}.")
                                 c2.markdown(f"**{row['jméno']}**")
                                 poznamka_txt = row['poznámka'] if pd.notna(row['poznámka']) else ""
