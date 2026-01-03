@@ -1,6 +1,6 @@
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
-from streamlit_extras.stylable_container import stylable_container # <--- NOVÁ KNIHOVNA
+from streamlit_extras.stylable_container import stylable_container
 import pandas as pd
 from datetime import datetime, date, timedelta
 import calendar
@@ -9,29 +9,37 @@ import time
 # --- 1. NASTAVENÍ STRÁNKY ---
 st.set_page_config(page_title="Kalendář RBK", page_icon="🌲", layout="wide")
 
-# --- CSS VZHLED (GLOBÁLNÍ) ---
+# --- CSS VZHLED (DESIGN 2.0) ---
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
 
     html, body, [class*="css"] {
-        font-family: 'Roboto', sans-serif;
+        font-family: 'Inter', sans-serif;
+        color: #1f2937; /* Tmavě šedá pro lepší čitelnost */
     }
 
     h1 {
-        color: #2E7D32; 
+        color: #166534; /* Lesní zelená */
         text-align: center !important;
         font-weight: 800;
-        letter-spacing: -1px;
+        letter-spacing: -0.5px;
         margin: 0;
         padding-bottom: 20px;
+        text-transform: uppercase;
+    }
+
+    h3 {
+        font-weight: 600;
+        color: #111;
     }
 
     /* === ŠIROKÁ BUBLINA === */
     div[data-testid="stPopoverBody"] {
-        width: 750px !important;      
+        width: 700px !important;      
         max-width: 95vw !important;   
-        max-height: 80vh !important;
+        border-radius: 12px !important;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.15) !important;
     }
 
     /* Plovoucí tlačítko */
@@ -42,92 +50,107 @@ st.markdown("""
         z-index: 9999;
     }
     .floating-container button {
-        background-color: #FFC107 !important;
-        color: #333 !important;
+        background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%) !important;
+        color: white !important;
         border: none !important;
         border-radius: 50px !important;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.3) !important;
-        font-weight: bold !important;
-        padding: 10px 20px !important;
+        box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4) !important;
+        font-weight: 600 !important;
+        padding: 12px 24px !important;
+        letter-spacing: 0.5px;
     }
     .floating-container button:hover {
-        transform: scale(1.05) !important;
-        background-color: #FFD54F !important;
+        transform: translateY(-3px) !important;
+        box-shadow: 0 6px 20px rgba(245, 158, 11, 0.6) !important;
     }
 
     /* Dnešní den */
     .today-box {
-        background: linear-gradient(135deg, #FF4B4B 0%, #FF9068 100%);
+        background: #DC2626;
         color: white;
-        padding: 4px 12px;
-        border-radius: 15px;
-        font-weight: bold;
-        box-shadow: 0 3px 6px rgba(255, 75, 75, 0.3);
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-weight: 700;
+        font-size: 0.9em;
+        box-shadow: 0 2px 5px rgba(220, 38, 38, 0.3);
         display: inline-block;
         margin-bottom: 8px;
     }
 
     .day-number {
-        font-size: 1.1em;
-        font-weight: 700;
-        color: #444;
+        font-size: 1em;
+        font-weight: 600;
+        color: #9CA3AF; /* Světlejší šedá pro čísla dnů */
         margin-bottom: 8px;
         display: block;
         text-align: center;
     }
     
+    /* Vylepšení kontejneru dne (aby to vypadalo jako mřížka) */
+    div[data-testid="column"] {
+        background-color: #FAFAFA; /* Velmi světlé pozadí pro dny */
+        border-radius: 8px;
+        padding: 5px;
+        min-height: 100px; /* Aby prázdné dny držely výšku */
+        transition: background-color 0.2s;
+    }
+    div[data-testid="column"]:hover {
+        background-color: #F3F4F6;
+    }
+
     footer {visibility: hidden;}
     #MainMenu {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
 
-# --- DEFINICE BAREV PRO STREAMLIT-EXTRAS ---
-# Zde si můžeme hrát s přesnými barvami (HEX)
+# --- DEFINICE BAREV PRO STREAMLIT-EXTRAS (PASTELOVÁ EDICE) ---
+# Logic: bg = velmi světlý pastel, color = tmavší sytý odstín, border = jemný rámeček
 BARVY_AKCI = {
     "mcr": {
-        "bg": "linear-gradient(90deg, #ff0000, #ffa500, #ffff00, #008000, #0000ff, #4b0082, #ee82ee)", # DUHA
-        "color": "white",
-        "border": "none"
+        # Duhový gradient, ale jemnější
+        "bg": "linear-gradient(135deg, #E0F2FE, #F3E8FF, #FCE7F3)", 
+        "color": "#333",
+        "border": "1px solid #DBEAFE"
     },
     "za": {
-        "bg": "#FF4B4B", # Červená
-        "color": "white",
-        "border": "1px solid #FF4B4B"
+        "bg": "#FEF2F2", # Světle červená
+        "color": "#991B1B", # Tmavě červené písmo
+        "border": "1px solid #FECACA"
     },
     "zb": {
-        "bg": "#FFA500", # Oranžová
-        "color": "white",
-        "border": "1px solid #FFA500"
+        "bg": "#FFF7ED", # Světle oranžová
+        "color": "#9A3412", # Tmavě oranžové písmo
+        "border": "1px solid #FED7AA"
     },
     "soustredeni": {
-        "bg": "#FFD700", # !!! ŽLUTÁ / ZLATÁ !!!
-        "color": "black", # Černý text na žluté
-        "border": "1px solid #E6C200"
+        "bg": "#FEFCE8", # Velmi světle žlutá
+        "color": "#854D0E", # Tmavě zlatá/hnědá
+        "border": "1px solid #FEF08A" # Žlutý rámeček
     },
     "oblastni": {
-        "bg": "#2196F3", # Modrá
-        "color": "white",
-        "border": "1px solid #2196F3"
+        "bg": "#EFF6FF", # Světle modrá
+        "color": "#1E40AF", # Tmavě modrá
+        "border": "1px solid #BFDBFE"
     },
     "zimni_liga": {
-        "bg": "#9E9E9E", # Šedá
-        "color": "white",
-        "border": "1px solid #9E9E9E"
+        "bg": "#F3F4F6", # Světle šedá
+        "color": "#374151", # Tmavě šedá
+        "border": "1px solid #E5E7EB"
     },
     "stafety": {
-        "bg": "#9C27B0", # Fialová
-        "color": "white",
-        "border": "1px solid #9C27B0"
+        "bg": "#FAF5FF", # Světle fialová
+        "color": "#6B21A8", # Tmavě fialová
+        "border": "1px solid #E9D5FF"
     },
     "trenink": {
-        "bg": "#4CAF50", # Zelená
-        "color": "white",
-        "border": "1px solid #4CAF50"
+        "bg": "#F0FDF4", # Světle zelená (Mint)
+        "color": "#166534", # Tmavě zelená
+        "border": "1px solid #BBF7D0"
     },
     "default": {
-        "bg": "white",
-        "color": "#333",
-        "border": "1px solid #eee"
+        "bg": "#FFFFFF",
+        "color": "#374151",
+        "border": "1px solid #E5E7EB"
     }
 }
 
@@ -139,19 +162,21 @@ with col_title:
 
 with col_help:
     with st.popover("❔", help="Nápověda k aplikaci"):
-        st.markdown("### 💡 Nápověda")
-        st.info("📱 **Mobil:** Otoč telefon na šířku.")
+        st.markdown("### 💡 Legenda barev")
+        st.info("📱 **Mobil:** Pro lepší přehled otoč telefon na šířku.")
         
+        # HTML legenda s novými barvami
         st.markdown("""
-        **Barevné rozlišení:**
-        * <span style='color:purple'><b>🌈 MČR / Mistrovství</b></span>
-        * <span style='color:red'><b>🔴 Závod ŽA</b></span>
-        * <span style='color:orange'><b>🟠 Závod ŽB</b></span>
-        * <span style='color:#b58900'><b>🟡 Soustředění (Žlutá)</b></span>
-        * <span style='color:blue'><b>🔵 Oblastní žebříček</b></span>
-        * <span style='color:gray'><b>⚪ Zimní liga (BZL)</b></span>
-        * <span style='color:violet'><b>🟣 Štafety</b></span>
-        * <span style='color:green'><b>🟢 Trénink</b></span>
+        <div style="display: grid; gap: 8px;">
+            <span style="background: linear-gradient(135deg, #E0F2FE, #FCE7F3); padding: 2px 8px; border-radius: 4px; border: 1px solid #ccc; color: #333"><b>🌈 MČR / Mistrovství</b></span>
+            <span style="background: #FEF2F2; color: #991B1B; padding: 2px 8px; border-radius: 4px; border: 1px solid #FECACA"><b>🔴 Závod ŽA</b></span>
+            <span style="background: #FFF7ED; color: #9A3412; padding: 2px 8px; border-radius: 4px; border: 1px solid #FED7AA"><b>🟠 Závod ŽB</b></span>
+            <span style="background: #FEFCE8; color: #854D0E; padding: 2px 8px; border-radius: 4px; border: 1px solid #FEF08A"><b>🟡 Soustředění</b></span>
+            <span style="background: #EFF6FF; color: #1E40AF; padding: 2px 8px; border-radius: 4px; border: 1px solid #BFDBFE"><b>🔵 Oblastní žebříček</b></span>
+            <span style="background: #F3F4F6; color: #374151; padding: 2px 8px; border-radius: 4px; border: 1px solid #E5E7EB"><b>⚪ Zimní liga (BZL)</b></span>
+            <span style="background: #FAF5FF; color: #6B21A8; padding: 2px 8px; border-radius: 4px; border: 1px solid #E9D5FF"><b>🟣 Štafety</b></span>
+            <span style="background: #F0FDF4; color: #166534; padding: 2px 8px; border-radius: 4px; border: 1px solid #BBF7D0"><b>🟢 Trénink</b></span>
+        </div>
         """, unsafe_allow_html=True)
         
         st.divider()
@@ -169,30 +194,19 @@ url_navrhy = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out
 
 try:
     df_akce = pd.read_csv(url_akce)
-    
-    # 1. Datum začátku
     df_akce['datum'] = pd.to_datetime(df_akce['datum'], dayfirst=True, errors='coerce').dt.date
-    
-    # 2. Datum konce (pro vícedenní)
     if 'datum_do' in df_akce.columns:
         df_akce['datum_do'] = pd.to_datetime(df_akce['datum_do'], dayfirst=True, errors='coerce').dt.date
         df_akce['datum_do'] = df_akce['datum_do'].fillna(df_akce['datum'])
     else:
         df_akce['datum_do'] = df_akce['datum']
-
-    # 3. Deadline
     df_akce['deadline'] = pd.to_datetime(df_akce['deadline'], dayfirst=True, errors='coerce').dt.date
     df_akce = df_akce.dropna(subset=['datum'])
-    
-    # 4. FIX DEADLINE (AUTOMATICKY 14 DNÍ PŘED)
     def get_deadline(row):
         if pd.isna(row['deadline']):
             return row['datum'] - timedelta(days=14)
         return row['deadline']
-
     df_akce['deadline'] = df_akce.apply(get_deadline, axis=1)
-
-    # 5. ID na string
     if 'id' in df_akce.columns:
         df_akce['id'] = df_akce['id'].astype(str).str.replace(r'\.0$', '', regex=True)
     
@@ -220,13 +234,13 @@ if 'vybrany_datum' not in st.session_state:
 
 col_nav1, col_nav2, col_nav3 = st.columns([2, 5, 2])
 with col_nav1:
-    if st.button("⬅️ Předchozí měsíc", use_container_width=True):
+    if st.button("⬅️ Předchozí", use_container_width=True):
         curr = st.session_state.vybrany_datum
         prev_month = curr.replace(day=1) - timedelta(days=1)
         st.session_state.vybrany_datum = prev_month.replace(day=1)
 
 with col_nav3:
-    if st.button("Další měsíc ➡️", use_container_width=True):
+    if st.button("Další ➡️", use_container_width=True):
         curr = st.session_state.vybrany_datum
         next_month = (curr.replace(day=28) + timedelta(days=4)).replace(day=1)
         st.session_state.vybrany_datum = next_month
@@ -236,7 +250,7 @@ mesic = st.session_state.vybrany_datum.month
 ceske_mesice = ["", "Leden", "Únor", "Březen", "Duben", "Květen", "Červen", "Červenec", "Srpen", "Září", "Říjen", "Listopad", "Prosinec"]
 
 with col_nav2:
-    st.markdown(f"<h2 style='text-align: center; color: #333; margin-top: -5px; font-weight: 300;'>{ceske_mesice[mesic]} <b>{rok}</b></h2>", unsafe_allow_html=True)
+    st.markdown(f"<h2 style='text-align: center; color: #1F2937; margin-top: -5px; font-weight: 300; letter-spacing: 1px;'>{ceske_mesice[mesic]} <b>{rok}</b></h2>", unsafe_allow_html=True)
 
 # --- 4. VYKRESLENÍ MŘÍŽKY ---
 cal = calendar.Calendar(firstweekday=0)
@@ -245,9 +259,9 @@ month_days = cal.monthdayscalendar(rok, mesic)
 dny_v_tydnu = ["Po", "Út", "St", "Čt", "Pá", "So", "Ne"]
 cols_header = st.columns(7)
 for i, d in enumerate(dny_v_tydnu):
-    cols_header[i].markdown(f"<div style='text-align: center; color: #888; text-transform: uppercase; font-size: 0.8rem; margin-bottom: 10px;'>{d}</div>", unsafe_allow_html=True)
+    cols_header[i].markdown(f"<div style='text-align: center; color: #6B7280; font-weight: 600; text-transform: uppercase; font-size: 0.75rem; margin-bottom: 10px;'>{d}</div>", unsafe_allow_html=True)
 
-st.markdown("<hr style='margin: 0 0 20px 0; border: 0; border-top: 1px solid #eee;'>", unsafe_allow_html=True)
+st.markdown("<hr style='margin: 0 0 15px 0; border: 0; border-top: 1px solid #E5E7EB;'>", unsafe_allow_html=True)
 
 dnes = date.today()
 
@@ -267,7 +281,6 @@ for tyden in month_days:
             else:
                 st.markdown(f"<span class='day-number'>{den_cislo}</span>", unsafe_allow_html=True)
 
-            # --- FILTRACE PRO VÍCEDENNÍ AKCE ---
             maska_dne = (df_akce['datum'] <= aktualni_den) & (df_akce['datum_do'] >= aktualni_den)
             akce_dne = df_akce[maska_dne]
             
@@ -278,7 +291,6 @@ for tyden in month_days:
                 akce_id_str = str(akce['id']) if 'id' in df_akce.columns else ""
                 unique_key = f"{akce_id_str}_{aktualni_den.strftime('%Y%m%d')}"
 
-                # DATA
                 typ_udalosti = str(akce['typ']).lower().strip() if 'typ' in df_akce.columns and pd.notna(akce['typ']) else ""
                 druh_akce = str(akce['druh']).lower().strip() if 'druh' in df_akce.columns and pd.notna(akce['druh']) else "ostatní"
                 
@@ -288,8 +300,6 @@ for tyden in month_days:
                 zavodni_slova = ["závod", "mčr", "žebříček", "liga", "mistrovství", "štafety", "ža", "žb"]
                 je_zavod_obecne = any(s in typ_udalosti for s in zavodni_slova)
 
-                # --- VÝBĚR BARVY PRO EXTRAS ---
-                # Výchozí styl
                 style_key = "default"
                 typ_label_short = "AKCE"
 
@@ -303,7 +313,7 @@ for tyden in month_days:
                     style_key = "zb"
                     typ_label_short = "ŽB"
                 elif "soustředění" in typ_udalosti:
-                    style_key = "soustredeni" # Načte žlutou
+                    style_key = "soustredeni"
                     typ_label_short = "SOUSTŘEDĚNÍ"
                 elif "oblastní" in typ_udalosti or "žebříček" in typ_udalosti:
                     style_key = "oblastni"
@@ -321,10 +331,8 @@ for tyden in month_days:
                     style_key = "oblastni"
                     typ_label_short = "ZÁVOD"
 
-                # Načtení stylů
                 vybrany_styl = BARVY_AKCI.get(style_key, BARVY_AKCI["default"])
 
-                # --- EMOJI LOGIKA ---
                 ikony_mapa = {
                     "les": "🌲", 
                     "krátká trať": "🌲", 
@@ -341,8 +349,6 @@ for tyden in month_days:
                 if je_po_deadlinu:
                     final_text = "🔒 " + final_text
 
-                # --- STREAMLIT EXTRAS IMPLEMENTACE ---
-                # Obalíme tlačítko do kontejneru a vnutíme CSS
                 with stylable_container(
                     key=f"btn_container_{unique_key}",
                     css_styles=f"""
@@ -351,27 +357,37 @@ for tyden in month_days:
                             color: {vybrany_styl['color']} !important;
                             border: {vybrany_styl['border']} !important;
                             width: 100%;
-                            border-radius: 8px;
-                            transition: transform 0.1s;
+                            border-radius: 6px;
+                            padding: 6px 8px !important;
+                            transition: all 0.2s ease;
                             text-align: left;
+                            font-size: 0.85rem;
+                            font-weight: 500;
+                            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+                            margin-bottom: 4px;
                         }}
                         button:hover {{
-                            filter: brightness(1.1);
+                            filter: brightness(0.98);
                             transform: translateY(-2px);
-                            border-color: #999 !important;
-                            z-index: 2;
+                            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                            z-index: 5;
                         }}
                     """
                 ):
-                    # Zde už nepoužíváme :color-background[...] v názvu, protože barvu řeší CSS
                     with st.popover(final_text, use_container_width=True):
                         
-                        # --- OBSAH POPOVERU (BEZE ZMĚN) ---
-                        col_info, col_form = st.columns([1.2, 1], gap="medium")
+                        col_info, col_form = st.columns([1.2, 1], gap="large")
                         
                         with col_info:
                             st.markdown(f"### {nazev_full}")
-                            st.caption(f"Typ akce: {typ_label_short} ({druh_akce.upper()})")
+                            
+                            # Elegantní štítky
+                            st.markdown(f"""
+                            <span style='background-color: #f3f4f6; color: #555; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; font-weight: 600;'>{typ_label_short}</span>
+                            <span style='background-color: #f3f4f6; color: #555; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; font-weight: 600; margin-left: 5px;'>{druh_akce.upper()}</span>
+                            """, unsafe_allow_html=True)
+                            
+                            st.markdown("---")
                             st.write(f"**📍 Místo:** {akce['místo']}")
                             
                             if akce['datum'] != akce['datum_do']:
@@ -381,16 +397,17 @@ for tyden in month_days:
                             
                             kategorie_txt = str(akce['kategorie']).strip() if 'kategorie' in df_akce.columns and pd.notna(akce['kategorie']) else ""
                             if kategorie_txt:
-                                st.write(f"**🎯 Tato akce je určena pro:** {kategorie_txt}")
+                                st.write(f"**🎯 Kategorie:** {kategorie_txt}")
                             
-                            if pd.notna(akce['popis']): st.info(f"📝 {akce['popis']}")
+                            if pd.notna(akce['popis']): 
+                                st.info(f"{akce['popis']}")
                             
                             deadline_str = akce['deadline'].strftime('%d.%m.%Y')
                             
                             if je_po_deadlinu:
-                                st.error(f"⛔ Přihlášky uzavřeny (Deadline: {deadline_str}) Pokud chceš běžet, piš na luckapetr@volny.cz, nebo volejn a +420 602 214 725")
+                                st.error(f"⛔ Přihlášky uzavřeny (Deadline: {deadline_str})")
                             elif je_dnes_deadline:
-                                st.warning(f"⚠️ Dnes je deadline! ({deadline_str}), Máš poslední šanci.")
+                                st.warning(f"⚠️ Dnes je deadline! ({deadline_str})")
                             else:
                                 st.caption(f"📅 Deadline přihlášek: {deadline_str}")
 
@@ -413,7 +430,7 @@ for tyden in month_days:
                                     form_key = f"form_{unique_key}"
                                     with st.form(key=form_key, clear_on_submit=True):
                                         if kategorie_txt and kategorie_txt.lower() != "všichni":
-                                            st.warning(f"⚠️ Opravdu splňuješ podmínku? Tato akce je určena pro: **{kategorie_txt}**")
+                                            st.warning(f"⚠️ Podmínka: **{kategorie_txt}**")
                                         vybrane_jmeno = st.selectbox("Jméno", options=seznam_jmen, index=None, placeholder="Vyber...")
                                         nove_jmeno = st.text_input("...nebo Nové jméno")
                                         poznamka_input = st.text_input("Poznámka")
@@ -465,7 +482,7 @@ for tyden in month_days:
                             else:
                                 lidi = pd.DataFrame()
 
-                            nadpis_seznam = f"👥 Zájemci o štafetu ({len(lidi)})" if je_stafeta else f"👥 Přihlášeno ({len(lidi)})"
+                            nadpis_seznam = f"👥 Zájemci ({len(lidi)})" if je_stafeta else f"👥 Přihlášeno ({len(lidi)})"
                             st.markdown(f"#### {nadpis_seznam}")
 
                             if delete_key_state in st.session_state:
@@ -493,12 +510,12 @@ for tyden in month_days:
 
                             if not lidi.empty:
                                 h1, h2, h3, h4, h5 = st.columns([0.4, 2.0, 2.0, 0.8, 0.5]) 
-                                h1.markdown("**#**")
-                                h2.markdown("**Jméno**")
-                                h3.markdown("**Poznámka**")
-                                h4.markdown("Shnáním dopravu 🚗")
+                                h1.markdown("<b style='color:#999'>#</b>", unsafe_allow_html=True)
+                                h2.markdown("<b>Jméno</b>", unsafe_allow_html=True)
+                                h3.markdown("<b>Poznámka</b>", unsafe_allow_html=True)
+                                h4.markdown("🚗", unsafe_allow_html=True)
                                 h5.markdown("") 
-                                st.markdown("<hr style='margin: 5px 0 10px 0; border-top: 2px solid #ccc;'>", unsafe_allow_html=True)
+                                st.markdown("<hr style='margin: 5px 0 10px 0; border-top: 1px solid #ddd;'>", unsafe_allow_html=True)
                                 for i, (idx, row) in enumerate(lidi.iterrows()):
                                     c1, c2, c3, c4, c5 = st.columns([0.4, 2.0, 2.0, 0.8, 0.5], vertical_alignment="center")
                                     c1.write(f"{i+1}.")
@@ -511,7 +528,7 @@ for tyden in month_days:
                                         if c5.button("🗑️", key=f"del_{unique_key}_{idx}"):
                                             st.session_state[delete_key_state] = row['jméno']
                                             st.rerun()
-                                    st.markdown("<hr style='margin: 0; border-top: 1px solid #f0f0f0;'>", unsafe_allow_html=True)
+                                    st.markdown("<hr style='margin: 0; border-top: 1px solid #f9f9f9;'>", unsafe_allow_html=True)
                             else:
                                 st.caption("Zatím nikdo.")
 
@@ -554,7 +571,7 @@ st.markdown('</div>', unsafe_allow_html=True)
 # --- PATIČKA ---
 st.markdown("---")
 st.markdown("""
-<div style='text-align: center; color: #aaa; font-size: 0.8em; font-family: sans-serif; padding-bottom: 20px;'>
+<div style='text-align: center; color: #9CA3AF; font-size: 0.8em; font-family: sans-serif; padding-bottom: 20px;'>
     <b>Členská sekce RBK</b> • Designed by Broschman<br>
     &copy; 2026 All rights reserved
 </div>
