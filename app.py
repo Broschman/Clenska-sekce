@@ -266,10 +266,12 @@ for tyden in month_days:
                 druh_akce = str(akce['druh']).lower().strip() if 'druh' in df_akce.columns and pd.notna(akce['druh']) else "ostatní"
                 
                 je_stafeta = "štafety" in typ_udalosti
+                je_soustredeni = "soustředění" in typ_udalosti  # <--- NOVÁ PROMĚNNÁ
+                
                 zavodni_slova = ["závod", "mčr", "žebříček", "liga", "mistrovství", "štafety", "ža", "žb"]
                 je_zavod_obecne = any(s in typ_udalosti for s in zavodni_slova)
 
-                # --- BAREVNÉ ROZLIŠENÍ ---
+                # --- BAREVNÉ ROZLIŠENÍ (S UPRAVENOU PRIORITOU) ---
                 bg_style = "gray" 
                 typ_label_short = "AKCE"
 
@@ -282,6 +284,9 @@ for tyden in month_days:
                 elif "žb" in typ_udalosti or "žebříček b" in typ_udalosti:
                     bg_style = "orange"
                     typ_label_short = "ŽB"
+                elif "soustředění" in typ_udalosti:  # <--- POSUNUTO NAHORU (PŘED OBLASTNÍ)
+                    bg_style = "orange"
+                    typ_label_short = "SOUSTŘEDĚNÍ"
                 elif "oblastní" in typ_udalosti or "žebříček" in typ_udalosti:
                     bg_style = "blue"
                     typ_label_short = "OBLASTNÍ"
@@ -294,14 +299,11 @@ for tyden in month_days:
                 elif "trénink" in typ_udalosti:
                     bg_style = "green"
                     typ_label_short = "TRÉNINK"
-                elif "soustředění" in typ_udalosti:
-                    bg_style = "orange"
-                    typ_label_short = "SOUSTŘEDĚNÍ"
                 elif je_zavod_obecne:
                     bg_style = "blue"
                     typ_label_short = "ZÁVOD"
 
-                # --- EMOJI LOGIKA (FIX: BĚŽEC JAKO DEFAULT) ---
+                # --- EMOJI LOGIKA ---
                 ikony_mapa = {
                     "les": "🌲", 
                     "krátká trať": "🌲", 
@@ -309,7 +311,6 @@ for tyden in month_days:
                     "sprint": "🏙️", 
                     "nočák": "🌗"
                 }
-                # Pokud nenajde klíč, vrátí běžce 🏃
                 emoji_druh = ikony_mapa.get(druh_akce, "🏃")
 
                 # Název a Zobrazení
@@ -370,7 +371,8 @@ for tyden in month_days:
                     with col_form:
                         delete_key_state = f"confirm_delete_{unique_key}"
                         
-                        if (not je_zavod_obecne or je_stafeta):
+                        # --- ZDE JE TA ZMĚNA LOGIKY ZOBRAZENÍ FORMULÁŘE ---
+                        if (not je_zavod_obecne or je_stafeta or je_soustredeni):
                             if not je_po_deadlinu and delete_key_state not in st.session_state:
                                 nadpis_form = "✍️ Přihláška"
                                 st.markdown(f"#### {nadpis_form}")
@@ -429,7 +431,7 @@ for tyden in month_days:
 
                     st.divider()
 
-                    if not je_zavod_obecne or je_stafeta:
+                    if not je_zavod_obecne or je_stafeta or je_soustredeni:
                         if akce_id_str:
                             lidi = df_prihlasky[df_prihlasky['id_akce'] == akce_id_str].copy()
                         else:
