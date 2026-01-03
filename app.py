@@ -602,7 +602,7 @@ for tyden in month_days:
                                         {{
                                             background-color: {bg_color};
                                             border-radius: 6px;
-                                            padding: 12px 5px 35px 5px !important; /* ROZTAŽENÍ DOLŮ (bottom padding) */
+                                            padding: 12px 5px 30px 5px !important; /* ROZTAŽENÍ DOLŮ (bottom padding) */
                                             margin-bottom: 2px;
                                             display: flex;
                                             align-items: center;
