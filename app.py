@@ -133,7 +133,7 @@ try:
     df_akce['deadline'] = pd.to_datetime(df_akce['deadline'], dayfirst=True, errors='coerce').dt.date
     df_akce = df_akce.dropna(subset=['datum'])
     
-    # ID na string pro bezpečné porovnání
+    # ID na string
     if 'id' in df_akce.columns:
         df_akce['id'] = df_akce['id'].astype(str).str.replace(r'\.0$', '', regex=True)
     
@@ -272,6 +272,7 @@ for tyden in month_days:
                 
                 # --- POPOVER (DETAIL) ---
                 with st.popover(label_tlacitka, use_container_width=True):
+                    # Zde rozdělíme obsah na 2 sloupce
                     col_info, col_form = st.columns([1.2, 1], gap="medium")
                     
                     # ----------------------------------------
@@ -287,7 +288,7 @@ for tyden in month_days:
                         st.caption(f"Typ akce: {typ_label} ({druh_akce.upper()})")
                         st.write(f"**📍 Místo:** {akce['místo']}")
                         
-                        # --- NOVÉ: Zobrazení KATEGORIE ---
+                        # Zobrazení kategorie v levém sloupci
                         kategorie_txt = str(akce['kategorie']).strip() if 'kategorie' in df_akce.columns and pd.notna(akce['kategorie']) else ""
                         if kategorie_txt:
                             st.write(f"**🎯 Tato akce je určena pro:** {kategorie_txt}")
@@ -330,6 +331,12 @@ for tyden in month_days:
                                 
                                 form_key = f"form_{akce_id_str}"
                                 with st.form(key=form_key, clear_on_submit=True):
+                                    
+                                    # --- NOVÉ: VAROVÁNÍ VE FORMULÁŘI ---
+                                    # Pokud kategorie NENÍ prázdná a NENÍ "všichni"
+                                    if kategorie_txt and kategorie_txt.lower() != "všichni":
+                                        st.warning(f"⚠️ Opravdu splňuješ podmínku? Tato akce je určena pro: **{kategorie_txt}**")
+                                    
                                     vybrane_jmeno = st.selectbox("Jméno", options=seznam_jmen, index=None, placeholder="Vyber...")
                                     nove_jmeno = st.text_input("...nebo Nové jméno")
                                     poznamka_input = st.text_input("Poznámka")
