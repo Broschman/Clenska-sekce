@@ -9,7 +9,7 @@ import time
 # --- 1. NASTAVENÍ STRÁNKY ---
 st.set_page_config(page_title="Kalendář RBK", page_icon="🌲", layout="wide")
 
-# --- CSS VZHLED (DESIGN 3.8 - FINAL PIXEL PERFECT) ---
+# --- CSS VZHLED (DESIGN 4.0 - ASYMMETRIC ZEBRA) ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
@@ -496,7 +496,7 @@ for tyden in month_days:
                                             
                                             st.markdown("<br>", unsafe_allow_html=True)
                                             
-                                            # --- ZELENÉ TLAČÍTKO POSUNUTÉ O -10px ---
+                                            # --- TLAČÍTKO V PŮVODNÍM STAVU (-10px) ---
                                             with stylable_container(
                                                 key=f"submit_btn_{unique_key}",
                                                 css_styles="""
@@ -552,7 +552,7 @@ for tyden in month_days:
                             elif je_zavod_obecne:
                                 st.markdown("<div style='height: 50px;'></div>", unsafe_allow_html=True)
 
-                        # --- SPODNÍ ČÁST: SEZNAM PŘIHLÁŠENÝCH (POSUN DOLŮ O 10px) ---
+                        # --- SPODNÍ ČÁST: SEZNAM PŘIHLÁŠENÝCH (ASYMETRICKÉ ZEBRA STRIPES) ---
                         st.markdown("<br>", unsafe_allow_html=True)
                         st.divider()
 
@@ -599,16 +599,20 @@ for tyden in month_days:
                                 st.markdown("<hr style='margin: 5px 0 10px 0; border-top: 1px solid #E5E7EB;'>", unsafe_allow_html=True)
                                 
                                 for i, (idx, row) in enumerate(lidi.iterrows()):
-                                    bg_color = "#F3F4F6" if i % 2 == 0 else "white"
+                                    is_gray = (i % 2 == 0)
+                                    bg_color = "#F3F4F6" if is_gray else "white"
                                     
-                                    # PŘESNÉ PADDINGY: VĚTŠÍ DOLNÍ PADDING POSUNE VIZUÁL DOLŮ
+                                    # POKUD JE ŠEDÝ (is_gray), DÁME MU VELKÝ SPODNÍ PADDING
+                                    # POKUD JE BÍLÝ, DÁME MU STANDARDNÍ
+                                    padding_style = "10px 5px 25px 5px !important" if is_gray else "10px 5px !important"
+                                    
                                     with stylable_container(
                                         key=f"row_{unique_key}_{idx}",
                                         css_styles=f"""
                                         {{
                                             background-color: {bg_color};
                                             border-radius: 6px;
-                                            padding: 10px 5px 20px 5px !important; /* ASYMETRICKÝ PADDING PRO POSUN DOLŮ */
+                                            padding: {padding_style}; /* ZDE SE TO LIŠÍ */
                                             margin-bottom: 2px;
                                             display: flex;
                                             align-items: center;
