@@ -103,19 +103,23 @@ with col_help:
         st.info("📱 **Mobil:** Otoč telefon na šířku.")
         
         st.markdown("""
+        **Barevné rozlišení:**
+        * 🟩 **Trénink**
+        * 🟥 **Závody** (ŽA, ŽB, Oblastní)
+        * 🟨 **MČR** (Mistrovství)
+        * 🟧 **Štafety**
+        * 🟪 **Soustředění**
+        * 🟦 **Zimní liga**
+        
         **Tipy:**
         * **🚗 Doprava:** Pokud nemáš odvoz, zaškrtni *"Sháním odvoz"*.
         * **🗑️ Odhlášení:** Klikni na koš a pak potvrď tlačítkem **ANO**.
-        * **🏆 Štafety:** Hlas se v ORISu i ZDE (kvůli soupiskám).
+        * **🏆 Štafety:** Hlas se v ORISu i ZDE.
         * **⚠️ Deadline:** Pokud je deadline dnes, máš poslední šanci!
         """)
         
         st.divider()
-        st.markdown("**Legenda:**")
-        st.markdown("🏆 **Závod / Štafety**")
-        st.markdown("🌲 Les | 🏙️ Sprint | 🌗 Nočák")
-        st.markdown("🚗 Shání odvoz")
-        st.markdown("🔒 Uzavřeno")
+        st.markdown("**Terén:** 🌲 Les | 🏙️ Sprint | 🌗 Nočák")
 
 
 # --- 2. PŘIPOJENÍ A NAČTENÍ DAT ---
@@ -133,7 +137,7 @@ try:
     df_akce['deadline'] = pd.to_datetime(df_akce['deadline'], dayfirst=True, errors='coerce').dt.date
     df_akce = df_akce.dropna(subset=['datum'])
     
-    # --- FIX PRO CHYBĚJÍCÍ DEADLINE (AUTOMATICKY 14 DNÍ PŘED AKCÍ) ---
+    # --- FIX PRO CHYBĚJÍCÍ DEADLINE ---
     def get_deadline(row):
         if pd.isna(row['deadline']):
             return row['datum'] - timedelta(days=14)
@@ -201,7 +205,7 @@ st.markdown("<hr style='margin: 0 0 20px 0; border: 0; border-top: 1px solid #ee
 
 dnes = date.today()
 
-# INLINE CSS PRO TLAČÍTKA KALENDÁŘE
+# --- CSS ÚPRAVA TLAČÍTEK (VĚTŠÍ PÍSMO PRO BAREVNÉ ČTVEREČKY) ---
 st.markdown("""
 <style>
 div[data-testid="column"] button {
@@ -211,18 +215,17 @@ div[data-testid="column"] button {
     min-height: 55px !important;
     background-color: #ffffff !important;
     border: 1px solid #e0e0e0 !important;
+    /* Zrušen zelený border, aby vynikly barvy */
     text-align: left !important;
     color: #333 !important;
     padding: 8px 10px !important;
     line-height: 1.3 !important;
-}
-div[data-testid="column"] button {
-    border-left: 5px solid #4CAF50 !important;
+    font-size: 15px !important; /* ZVĚTŠENÍ PÍSMA */
 }
 div[data-testid="column"] button:hover {
     transform: translateY(-2px);
     box-shadow: 0 5px 15px rgba(0,0,0,0.1) !important;
-    border-color: #2E7D32 !important;
+    border-color: #aaa !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -257,25 +260,40 @@ for tyden in month_days:
                 druh_akce = str(akce['druh']).lower().strip() if 'druh' in df_akce.columns and pd.notna(akce['druh']) else "ostatní"
                 
                 je_stafeta = "štafety" in typ_udalosti
-                je_zavod = "závod" in typ_udalosti
-                ma_pohar = je_zavod or je_stafeta
+                
+                # Závodní klíčová slova
+                zavodni_slova = ["závod", "mčr", "žebříček", "liga", "mistrovství", "štafety"]
+                je_zavod = any(s in typ_udalosti for s in zavodni_slova)
 
+                # --- BAREVNÉ ROZLIŠENÍ (ČTVERCE) ---
+                color_icon = "📅" # Default
+                
+                if "trénink" in typ_udalosti:
+                    color_icon = "🟩"
+                elif "soustředění" in typ_udalosti:
+                    color_icon = "🟪"
+                elif "štafety" in typ_udalosti:
+                    color_icon = "🟧"
+                elif "mčr" in typ_udalosti or "mistrovství" in typ_udalosti:
+                    color_icon = "🟨" # Zlatá/Žlutá
+                elif "zimní liga" in typ_udalosti:
+                    color_icon = "🟦" # Modrá
+                elif je_zavod:
+                    color_icon = "🟥" # Ostatní závody
+
+                # --- TERÉN ---
                 ikony_mapa = {
-                    "les": "🌲",
-                    "krátká trať": "🌲",
-                    "klasická trať": "🌲",
-                    "sprint": "🏙️",
-                    "nočák": "🌗"
+                    "les": "🌲", "krátká trať": "🌲", "klasická trať": "🌲",
+                    "sprint": "🏙️", "nočák": "🌗"
                 }
-                emoji_druh = ikony_mapa.get(druh_akce, "🏃")
-                
-                if ma_pohar: emoji_final = f"🏆{emoji_druh}"
-                else: emoji_final = emoji_druh
-                
-                if je_po_deadlinu: display_ikona = f"🔒 {emoji_final}"
-                else: display_ikona = emoji_final
+                emoji_druh = ikony_mapa.get(druh_akce, "")
 
-                # TLAČÍTKO
+                # ZOBRAZENÍ
+                if je_po_deadlinu:
+                    display_ikona = f"🔒 {color_icon}{emoji_druh}"
+                else:
+                    display_ikona = f"{color_icon} {emoji_druh}"
+
                 nazev_full = akce['název']
                 if '-' in nazev_full:
                     display_text = nazev_full.split('-')[0].strip()
@@ -294,8 +312,10 @@ for tyden in month_days:
                     with col_info:
                         st.markdown(f"### {nazev_full}")
                         
-                        if je_stafeta: typ_label = "ŠTAFETY 🏆"
-                        elif je_zavod: typ_label = "ZÁVOD 🏆"
+                        if je_stafeta: typ_label = "ŠTAFETY"
+                        elif "mčr" in typ_udalosti: typ_label = "MČR"
+                        elif je_zavod: typ_label = "ZÁVOD"
+                        elif "soustředění" in typ_udalosti: typ_label = "SOUSTŘEDĚNÍ"
                         else: typ_label = "TRÉNINK"
                         
                         st.caption(f"Typ akce: {typ_label} ({druh_akce.upper()})")
@@ -316,7 +336,7 @@ for tyden in month_days:
                         else:
                             st.caption(f"📅 Deadline přihlášek: {deadline_str}")
 
-                        if je_zavod or je_stafeta:
+                        if je_zavod:
                             st.markdown("---")
                             st.markdown("**Informace k závodu:**")
                             
