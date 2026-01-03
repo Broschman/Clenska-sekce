@@ -496,7 +496,6 @@ for tyden in month_days:
                                             
                                             st.markdown("<br>", unsafe_allow_html=True)
                                             
-                                            # --- TLAČÍTKO V PŮVODNÍM STAVU (-10px) ---
                                             with stylable_container(
                                                 key=f"submit_btn_{unique_key}",
                                                 css_styles="""
@@ -504,7 +503,7 @@ for tyden in month_days:
                                                         background-color: #16A34A !important;
                                                         color: white !important;
                                                         border: none !important;
-                                                        transform: translateY(-15px) !important;
+                                                        transform: translateY(-10px) !important;
                                                         margin-top: 0px !important;
                                                     }
                                                     button:hover {
@@ -518,34 +517,50 @@ for tyden in month_days:
                                             if odeslat_btn:
                                                 finalni_jmeno = nove_jmeno.strip() if nove_jmeno else vybrane_jmeno
                                                 if finalni_jmeno:
-                                                    uspesne_zapsano = False
-                                                    hodnota_dopravy = "Ano 🚗" if doprava_input else ""
-                                                    novy_zaznam = pd.DataFrame([{
-                                                        "id_akce": akce_id_str,
-                                                        "název": akce['název'],
-                                                        "jméno": finalni_jmeno,
-                                                        "poznámka": poznamka_input,
-                                                        "doprava": hodnota_dopravy,
-                                                        "čas zápisu": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                                                    }])
+                                                    # --- KONTROLA DUPLICITY ZAČÁTEK ---
                                                     try:
                                                         aktualni = conn.read(worksheet="prihlasky", ttl=0)
-                                                        updated = pd.concat([aktualni, novy_zaznam], ignore_index=True)
-                                                        conn.update(worksheet="prihlasky", data=updated)
-                                                        if finalni_jmeno not in seznam_jmen:
-                                                            try:
-                                                                aktualni_jmena = conn.read(worksheet="jmena", ttl=0)
-                                                                novy_clen = pd.DataFrame([{"jméno": finalni_jmeno}])
-                                                                updated_jmena = pd.concat([aktualni_jmena, novy_clen], ignore_index=True)
-                                                                conn.update(worksheet="jmena", data=updated_jmena)
-                                                            except: pass
-                                                        uspesne_zapsano = True
+                                                        # Normalizace pro jistotu
+                                                        aktualni['id_akce'] = aktualni['id_akce'].astype(str).str.replace(r'\.0$', '', regex=True)
+                                                        
+                                                        duplicita = not aktualni[
+                                                            (aktualni['id_akce'] == akce_id_str) & 
+                                                            (aktualni['jméno'] == finalni_jmeno)
+                                                        ].empty
+                                                        
+                                                        if duplicita:
+                                                            st.warning(f"⚠️ {finalni_jmeno}, na této akci už jsi!")
+                                                        else:
+                                                            # --- ULOŽENÍ POKUD NENÍ DUPLICITA ---
+                                                            uspesne_zapsano = False
+                                                            hodnota_dopravy = "Ano 🚗" if doprava_input else ""
+                                                            novy_zaznam = pd.DataFrame([{
+                                                                "id_akce": akce_id_str,
+                                                                "název": akce['název'],
+                                                                "jméno": finalni_jmeno,
+                                                                "poznámka": poznamka_input,
+                                                                "doprava": hodnota_dopravy,
+                                                                "čas zápisu": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                                                            }])
+                                                            
+                                                            updated = pd.concat([aktualni, novy_zaznam], ignore_index=True)
+                                                            conn.update(worksheet="prihlasky", data=updated)
+                                                            if finalni_jmeno not in seznam_jmen:
+                                                                try:
+                                                                    aktualni_jmena = conn.read(worksheet="jmena", ttl=0)
+                                                                    novy_clen = pd.DataFrame([{"jméno": finalni_jmeno}])
+                                                                    updated_jmena = pd.concat([aktualni_jmena, novy_clen], ignore_index=True)
+                                                                    conn.update(worksheet="jmena", data=updated_jmena)
+                                                                except: pass
+                                                            uspesne_zapsano = True
+                                                            
+                                                            if uspesne_zapsano:
+                                                                st.toast(f"✅ {finalni_jmeno} přihlášen(a)!")
+                                                                time.sleep(1)
+                                                                st.rerun()
                                                     except Exception as e:
                                                         st.error(f"Chyba: {e}")
-                                                    if uspesne_zapsano:
-                                                        st.toast(f"✅ {finalni_jmeno} přihlášen(a)!")
-                                                        time.sleep(1)
-                                                        st.rerun()
+                                                    # --- KONEC LOGIKY ---
                                                 else: st.warning("Vyplň jméno!")
                                     elif je_po_deadlinu:
                                         st.info("🔒 Přihlášky uzavřeny.")
@@ -604,7 +619,7 @@ for tyden in month_days:
                                     
                                     # POKUD JE ŠEDÝ (is_gray), DÁME MU VELKÝ SPODNÍ PADDING
                                     # POKUD JE BÍLÝ, DÁME MU O 10px MENŠÍ HORNÍ PADDING (0px)
-                                    padding_style = "10px 5px 28px 5px !important" if is_gray else "0px 5px 10px 5px !important"
+                                    padding_style = "10px 5px 25px 5px !important" if is_gray else "0px 5px 10px 5px !important"
                                     
                                     with stylable_container(
                                         key=f"row_{unique_key}_{idx}",
