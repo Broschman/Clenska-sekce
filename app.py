@@ -496,6 +496,7 @@ for tyden in month_days:
                                             
                                             st.markdown("<br>", unsafe_allow_html=True)
                                             
+                                            # --- TLAČÍTKO V PŮVODNÍM STAVU (-10px) ---
                                             with stylable_container(
                                                 key=f"submit_btn_{unique_key}",
                                                 css_styles="""
@@ -503,7 +504,7 @@ for tyden in month_days:
                                                         background-color: #16A34A !important;
                                                         color: white !important;
                                                         border: none !important;
-                                                        transform: translateY(-10px) !important;
+                                                        transform: translateY(-15px) !important;
                                                         margin-top: 0px !important;
                                                     }
                                                     button:hover {
@@ -520,7 +521,6 @@ for tyden in month_days:
                                                     # --- KONTROLA DUPLICITY ZAČÁTEK ---
                                                     try:
                                                         aktualni = conn.read(worksheet="prihlasky", ttl=0)
-                                                        # Normalizace pro jistotu
                                                         aktualni['id_akce'] = aktualni['id_akce'].astype(str).str.replace(r'\.0$', '', regex=True)
                                                         
                                                         duplicita = not aktualni[
@@ -531,7 +531,6 @@ for tyden in month_days:
                                                         if duplicita:
                                                             st.warning(f"⚠️ {finalni_jmeno}, na této akci už jsi!")
                                                         else:
-                                                            # --- ULOŽENÍ POKUD NENÍ DUPLICITA ---
                                                             uspesne_zapsano = False
                                                             hodnota_dopravy = "Ano 🚗" if doprava_input else ""
                                                             novy_zaznam = pd.DataFrame([{
@@ -703,7 +702,7 @@ st.markdown('</div>', unsafe_allow_html=True)
 st.markdown("---")
 st.markdown("""
 <div style='text-align: center; color: #9CA3AF; font-size: 0.8em; font-family: sans-serif; padding-bottom: 20px;'>
-    <b>Členská sekce RBK</b> • Designed by Broschman<br>
+    <b>Členská sekce RBK</b> • Designed by Broschman • v1.2<br>
     &copy; 2026 All rights reserved
 </div>
 """, unsafe_allow_html=True)
