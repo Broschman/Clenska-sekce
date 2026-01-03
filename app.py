@@ -118,7 +118,7 @@ with col_help:
         st.markdown("🔒 Uzavřeno")
 
 
-# --- 2. PŘIPOJENÍ A NAČTENÍ DAT ---
+# --- 2. PŘIPOJENÍ A NAČTENÍ DAT (OPRAVENO) ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 SHEET_ID = "1lW6DpUQBSm5heSO_HH9lDzm0x7t1eo8dn6FpJHh2y6U"
 
@@ -129,9 +129,20 @@ url_navrhy = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out
 
 try:
     df_akce = pd.read_csv(url_akce)
-    df_akce['datum'] = pd.to_datetime(df_akce['datum'], dayfirst=True, errors='coerce').dt.date
-    df_akce['deadline'] = pd.to_datetime(df_akce['deadline'], dayfirst=True, errors='coerce').dt.date
+    
+    # 1. Převod na datetime (zatím ne .dt.date, abychom mohli použít fillna)
+    df_akce['datum'] = pd.to_datetime(df_akce['datum'], dayfirst=True, errors='coerce')
+    df_akce['deadline'] = pd.to_datetime(df_akce['deadline'], dayfirst=True, errors='coerce')
+    
+    # 2. Vyhodit řádky bez data konání
     df_akce = df_akce.dropna(subset=['datum'])
+    
+    # 3. POJISTKA PROTI CHYBĚ: Pokud chybí deadline, doplníme ho jako datum akce
+    df_akce['deadline'] = df_akce['deadline'].fillna(df_akce['datum'])
+    
+    # 4. Až teď převod na čisté datum (.date)
+    df_akce['datum'] = df_akce['datum'].dt.date
+    df_akce['deadline'] = df_akce['deadline'].dt.date
     
     # ID na string pro bezpečné porovnání
     if 'id' in df_akce.columns:
@@ -240,8 +251,6 @@ for tyden in month_days:
             akce_dne = df_akce[df_akce['datum'] == aktualni_den]
             for _, akce in akce_dne.iterrows():
                 # --- LOGIKA DEADLINE ---
-                # Je po deadlinu jen když je DNEŠEK VĚTŠÍ než DEADLINE.
-                # Pokud se rovnají, je to ještě OK.
                 je_po_deadlinu = dnes > akce['deadline']
                 je_dnes_deadline = dnes == akce['deadline']
                 
