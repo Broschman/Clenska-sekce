@@ -348,9 +348,9 @@ for tyden in month_days:
                         deadline_str = akce['deadline'].strftime('%d.%m.%Y')
                         
                         if je_po_deadlinu:
-                            st.error(f"⛔ Přihlášky uzavřeny (Deadline: {deadline_str})")
+                            st.error(f"⛔ Přihlášky uzavřeny (Deadline: {deadline_str}) Pokud chceš běžet, piš na luckapetr@volny.cz, nebo volejn a +420 602 214 725")
                         elif je_dnes_deadline:
-                            st.warning(f"⚠️ Dnes je deadline! ({deadline_str})")
+                            st.warning(f"⚠️ Dnes je deadline! ({deadline_str}), Máš poslední šanci.")
                         else:
                             st.caption(f"📅 Deadline přihlášek: {deadline_str}")
 
@@ -372,7 +372,7 @@ for tyden in month_days:
                         
                         if (not je_zavod_obecne or je_stafeta):
                             if not je_po_deadlinu and delete_key_state not in st.session_state:
-                                nadpis_form = "✍️ Soupiska" if je_stafeta else "✍️ Přihláška"
+                                nadpis_form = "✍️ Přihláška"
                                 st.markdown(f"#### {nadpis_form}")
                                 
                                 # Unikátní klíč formuláře
