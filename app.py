@@ -8,7 +8,7 @@ import time
 # --- 1. NASTAVENÍ STRÁNKY ---
 st.set_page_config(page_title="Kalendář RBK", page_icon="🌲", layout="wide")
 
-# --- CSS VZHLED (Čistý a jednoduchý) ---
+# --- CSS VZHLED (Čistý a funkční) ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
@@ -87,7 +87,6 @@ st.markdown("""
     }
     
     /* === VZHLED TLAČÍTEK V KALENDÁŘI === */
-    /* Jen jemná úprava, aby tlačítka nebyla zbytečně velká */
     div[data-testid="column"] button {
         border: 1px solid #eee !important;
         background-color: white !important;
@@ -254,35 +253,29 @@ for tyden in month_days:
                 zavodni_slova = ["závod", "mčr", "žebříček", "liga", "mistrovství", "štafety", "ža", "žb"]
                 je_zavod_obecne = any(s in typ_udalosti for s in zavodni_slova)
 
-                # --- NATIVNÍ BAREVNÉ ROZLIŠENÍ (Stabilní) ---
-                bg_style = "gray" # Default
+                # --- NATIVNÍ BAREVNÉ ROZLIŠENÍ ---
+                bg_style = "gray"
                 typ_label_short = "AKCE"
 
-                # 1. MČR
+                # Prioritní barvy
                 if "mčr" in typ_udalosti or "mistrovství" in typ_udalosti:
                     bg_style = "rainbow"
                     typ_label_short = "MČR"
-                # 2. ŽA
                 elif "ža" in typ_udalosti or "žebříček a" in typ_udalosti:
                     bg_style = "red"
                     typ_label_short = "ŽA"
-                # 3. ŽB
                 elif "žb" in typ_udalosti or "žebříček b" in typ_udalosti:
                     bg_style = "orange"
                     typ_label_short = "ŽB"
-                # 4. Štafety
                 elif "štafety" in typ_udalosti:
                     bg_style = "violet"
                     typ_label_short = "ŠTAFETY"
-                # 5. Ostatní závody
                 elif je_zavod_obecne or "zimní liga" in typ_udalosti or "žebříček" in typ_udalosti:
                     bg_style = "blue"
                     typ_label_short = "ZÁVOD"
-                # 6. Trénink
                 elif "trénink" in typ_udalosti:
                     bg_style = "green"
                     typ_label_short = "TRÉNINK"
-                # 7. Soustředění
                 elif "soustředění" in typ_udalosti:
                     bg_style = "gray"
                     typ_label_short = "SOUSTŘEDĚNÍ"
@@ -293,7 +286,6 @@ for tyden in month_days:
                 }
                 emoji_druh = ikony_mapa.get(druh_akce, "")
 
-                # Zkrácení názvu
                 nazev_full = akce['název']
                 if '-' in nazev_full:
                     display_text = nazev_full.split('-')[0].strip()
@@ -304,7 +296,6 @@ for tyden in month_days:
                 if je_po_deadlinu:
                     final_text = "🔒 " + final_text
                 
-                # POUŽITÍ NATIVNÍHO STREAMLIT BACKGROUNDU
                 label_tlacitka = f":{bg_style}-background[{final_text}]"
                 
                 # --- POPOVER ---
@@ -313,8 +304,15 @@ for tyden in month_days:
                     
                     with col_info:
                         st.markdown(f"### {nazev_full}")
-                        
                         st.caption(f"Typ akce: {typ_label_short} ({druh_akce.upper()})")
+                        
+                        # --- PŘIDÁNO ZOBRAZENÍ DATA ---
+                        dny_cz = ["Pondělí", "Úterý", "Středa", "Čtvrtek", "Pátek", "Sobota", "Neděle"]
+                        den_txt = dny_cz[akce['datum'].weekday()]
+                        datum_txt = akce['datum'].strftime('%d.%m.%Y')
+                        st.write(f"**📅 Datum:** {den_txt} {datum_txt}")
+                        # ------------------------------
+                        
                         st.write(f"**📍 Místo:** {akce['místo']}")
                         
                         kategorie_txt = str(akce['kategorie']).strip() if 'kategorie' in df_akce.columns and pd.notna(akce['kategorie']) else ""
@@ -348,7 +346,6 @@ for tyden in month_days:
                     with col_form:
                         delete_key_state = f"confirm_delete_{akce_id_str}"
                         
-                        # Formulář: Pouze pro NE-závody nebo Štafety
                         if (not je_zavod_obecne or je_stafeta):
                             if not je_po_deadlinu and delete_key_state not in st.session_state:
                                 nadpis_form = "✍️ Soupiska" if je_stafeta else "✍️ Přihláška"
