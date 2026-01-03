@@ -9,7 +9,7 @@ import time
 # --- 1. NASTAVENÍ STRÁNKY ---
 st.set_page_config(page_title="Kalendář RBK", page_icon="🌲", layout="wide")
 
-# --- CSS VZHLED (DESIGN 3.5 - SYMETRIE) ---
+# --- CSS VZHLED (DESIGN 3.6 - PERFECT ALIGNMENT) ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
@@ -19,6 +19,7 @@ st.markdown("""
         color: #1f2937;
     }
 
+    /* Nadpis aplikace */
     h1 {
         background: -webkit-linear-gradient(45deg, #166534, #15803d);
         -webkit-background-clip: text;
@@ -29,6 +30,12 @@ st.markdown("""
         letter-spacing: -1px;
         margin: 0;
         padding-bottom: 20px;
+    }
+
+    h3 {
+        font-weight: 700;
+        color: #111;
+        margin-bottom: 0.5rem;
     }
 
     /* === ŠIROKÁ BUBLINA (POPOVER) === */
@@ -113,43 +120,43 @@ BARVY_AKCI = {
         "shadow": "0 4px 6px rgba(0,0,0,0.15)"
     },
     "za": {
-        "bg": "#DC2626", # Červená
+        "bg": "#DC2626", 
         "color": "white",
         "border": "none",
         "shadow": "0 2px 4px rgba(220, 38, 38, 0.3)"
     },
     "zb": {
-        "bg": "#EA580C", # Oranžová
+        "bg": "#EA580C", 
         "color": "white",
         "border": "none",
         "shadow": "0 2px 4px rgba(234, 88, 12, 0.3)"
     },
     "soustredeni": {
-        "bg": "#D97706", # Zlatá
+        "bg": "#D97706", 
         "color": "white",
         "border": "none",
         "shadow": "0 2px 4px rgba(217, 119, 6, 0.3)"
     },
     "oblastni": {
-        "bg": "#2563EB", # Modrá
+        "bg": "#2563EB", 
         "color": "white",
         "border": "none",
         "shadow": "0 2px 4px rgba(37, 99, 235, 0.3)"
     },
     "zimni_liga": {
-        "bg": "#4B5563", # Šedá
+        "bg": "#4B5563", 
         "color": "white",
         "border": "none",
         "shadow": "0 2px 4px rgba(75, 85, 99, 0.3)"
     },
     "stafety": {
-        "bg": "#9333EA", # Fialová
+        "bg": "#9333EA", 
         "color": "white",
         "border": "none",
         "shadow": "0 2px 4px rgba(147, 51, 234, 0.3)"
     },
     "trenink": {
-        "bg": "#16A34A", # Zelená
+        "bg": "#16A34A", 
         "color": "white",
         "border": "none",
         "shadow": "0 2px 4px rgba(22, 163, 74, 0.3)"
@@ -498,7 +505,7 @@ for tyden in month_days:
                                                         background-color: #16A34A !important;
                                                         color: white !important;
                                                         border: none !important;
-                                                        transform: translateY(-15px) !important; /* NOVÝ POSUN */
+                                                        transform: translateY(-15px) !important;
                                                         margin-top: 0px !important;
                                                     }
                                                     button:hover {
@@ -546,7 +553,7 @@ for tyden in month_days:
                             elif je_zavod_obecne:
                                 st.markdown("<div style='height: 50px;'></div>", unsafe_allow_html=True)
 
-                        # --- SPODNÍ ČÁST: SEZNAM PŘIHLÁŠENÝCH (ROZTAŽENÉ OBĚ BARVY) ---
+                        # --- SPODNÍ ČÁST: SEZNAM PŘIHLÁŠENÝCH (SYMETRICKÉ ŘÁDKY) ---
                         st.markdown("<br>", unsafe_allow_html=True)
                         st.divider()
 
@@ -595,18 +602,18 @@ for tyden in month_days:
                                 for i, (idx, row) in enumerate(lidi.iterrows()):
                                     bg_color = "#F3F4F6" if i % 2 == 0 else "white"
                                     
-                                    # Stylujeme KAŽDÝ řádek (i bílý), aby měly stejné paddingy
+                                    # TEĎ MAJÍ OBĚ VARIANTY STEJNÉ PADDINGY
                                     with stylable_container(
                                         key=f"row_{unique_key}_{idx}",
                                         css_styles=f"""
                                         {{
                                             background-color: {bg_color};
                                             border-radius: 6px;
-                                            padding: 12px 5px 30px 5px !important; /* ROZTAŽENÍ DOLŮ (bottom padding) */
-                                            margin-bottom: 2px;
+                                            padding: 8px 10px;
+                                            margin-bottom: 4px;
                                             display: flex;
                                             align-items: center;
-                                            min-height: 50px;
+                                            min-height: 40px;
                                         }}
                                         """
                                     ):
