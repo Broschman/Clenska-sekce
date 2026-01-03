@@ -504,7 +504,7 @@ for tyden in month_days:
                                                         background-color: #16A34A !important;
                                                         color: white !important;
                                                         border: none !important;
-                                                        transform: translateY(-10px) !important;
+                                                        transform: translateY(-15px) !important;
                                                         margin-top: 0px !important;
                                                     }
                                                     button:hover {
@@ -604,7 +604,7 @@ for tyden in month_days:
                                     
                                     # POKUD JE ŠEDÝ (is_gray), DÁME MU VELKÝ SPODNÍ PADDING
                                     # POKUD JE BÍLÝ, DÁME MU O 10px MENŠÍ HORNÍ PADDING (0px)
-                                    padding_style = "10px 5px 25px 5px !important" if is_gray else "0px 5px 10px 5px !important"
+                                    padding_style = "10px 5px 30px 5px !important" if is_gray else "0px 5px 10px 5px !important"
                                     
                                     with stylable_container(
                                         key=f"row_{unique_key}_{idx}",
