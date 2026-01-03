@@ -99,14 +99,22 @@ with col_title:
 
 with col_help:
     with st.popover("❔", help="Nápověda k aplikaci"):
-        st.markdown("### 💡 Nápověda")
-        st.info("📱 **Mobil:** Otoč telefon na šířku.")
+        st.markdown("### 💡 Tipy a triky")
+        
+        st.info("📱 **Na mobilu:** Otoč telefon na šířku, uvidíš kalendář mnohem lépe!")
+        
+        st.markdown("""
+        **Jak to funguje:**
+        * **🚗 Doprava:** Pokud nemáš odvoz, zaškrtni při přihlášení *"Sháním odvoz"*. U jména se ti objeví ikonka auta.
+        * **🗑️ Odhlášení:** Klikni na koš u svého jména. Pak musíš nahoře kliknout na **"ANO"** pro potvrzení.
+        * **🏆 Štafety:** U štafet se musíš přihlásit **zde v aplikaci** (kvůli soupiskám) a zároveň v ORISu.
+        * **🔒 Zámek:** Znamená, že je po termínu přihlášek (deadline).
+        """)
+        
         st.divider()
         st.markdown("**Legenda:**")
-        st.markdown("🏆 **Závod / Štafety**")
         st.markdown("🌲 Les | 🏙️ Sprint | 🌗 Nočák")
-        st.markdown("🚗 Shání odvoz")
-        st.markdown("🔒 Uzavřeno")
+        st.markdown("🏆 Závod / Štafety")
 
 
 # --- 2. PŘIPOJENÍ A NAČTENÍ DAT ---
@@ -255,6 +263,7 @@ for tyden in month_days:
                 
                 # --- POPOVER (DETAIL) ---
                 with st.popover(label_tlacitka, use_container_width=True):
+                    # Zde rozdělíme obsah na 2 sloupce
                     col_info, col_form = st.columns([1.2, 1], gap="medium")
                     
                     # ----------------------------------------
@@ -277,6 +286,7 @@ for tyden in month_days:
                         else:
                             st.caption(f"📅 Deadline přihlášek: {deadline_str}")
 
+                        # ORIS ODKAZ (Zobrazuje se vlevo pod info)
                         if je_zavod or je_stafeta:
                             st.markdown("---")
                             st.markdown("**Informace k závodu:**")
@@ -288,17 +298,19 @@ for tyden in month_days:
                             if je_stafeta:
                                 st.warning("⚠️ **ŠTAFETY:** Přihlaš se **I ZDE (vpravo)** kvůli soupiskám!")
                             
+                            # ZMĚNA TEXTU ODKAZU
                             st.markdown(f"👉 [**ℹ️ Stránka závodu v ORISu**]({link_target})")
 
                     # ----------------------------------------
                     # PRAVÝ SLOUPEC: FORMULÁŘ
                     # ----------------------------------------
                     with col_form:
+                        
                         delete_key_state = f"confirm_delete_{akce['název']}"
                         
                         if (not je_zavod or je_stafeta):
                             if not je_po_deadlinu and delete_key_state not in st.session_state:
-                                nadpis_form = "✍️ Přihláška"
+                                nadpis_form = "✍️ Soupiska" if je_stafeta else "✍️ Přihláška"
                                 st.markdown(f"#### {nadpis_form}")
                                 
                                 form_key = f"form_{akce['název']}_{aktualni_den}"
@@ -317,14 +329,14 @@ for tyden in month_days:
                                         if finalni_jmeno:
                                             uspesne_zapsano = False
                                             
-                                            # ZDE SE UKLÁDÁ TEXT "Ano"
-                                            hodnota_dopravy = "Ano" if doprava_input else ""
+                                            # ZDE SE UKLÁDÁ TEXT "Ano 🚗"
+                                            hodnota_dopravy = "Ano 🚗" if doprava_input else ""
                                             
                                             novy_zaznam = pd.DataFrame([{
                                                 "název": akce['název'],
                                                 "jméno": finalni_jmeno,
                                                 "poznámka": poznamka_input,
-                                                "doprava": hodnota_dopravy, 
+                                                "doprava": hodnota_dopravy,
                                                 "čas zápisu": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                                             }])
                                             try:
@@ -349,8 +361,11 @@ for tyden in month_days:
                                         else: st.warning("Vyplň jméno!")
                             elif je_po_deadlinu:
                                 st.info("Přihlašování bylo ukončeno.")
+                        
                         elif je_zavod:
+                            # Prázdno pro běžný závod
                             pass
+
 
                     # ----------------------------------------
                     # SPODEK: SEZNAM PŘIHLÁŠENÝCH (TABULKA)
