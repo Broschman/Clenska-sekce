@@ -88,13 +88,13 @@ st.markdown("""
         text-align: center;
     }
     
-    /* ZÁKLADNÍ VZHLED TLAČÍTKA V KALENDÁŘI (Barvy se dodají přes JS) */
+    /* VÝCHOZÍ STYL TLAČÍTKA V KALENDÁŘI (JS ho pak přebarví) */
     div[data-testid="column"] button {
         border-radius: 6px !important;
         width: 100% !important;
         height: auto !important;
         min-height: 50px !important;
-        border: 1px solid #ddd !important;
+        border: 1px solid #ddd !important; /* Neutrální okraj */
         text-align: left !important;
         color: #333 !important;
         padding: 6px 10px !important;
@@ -107,6 +107,7 @@ st.markdown("""
         transform: scale(1.02);
         z-index: 2;
         border-color: #999 !important;
+        filter: brightness(0.97); /* Jemné ztmavení při najetí */
     }
     
     footer {visibility: hidden;}
@@ -125,14 +126,15 @@ with col_help:
         st.markdown("### 💡 Nápověda")
         st.info("📱 **Mobil:** Otoč telefon na šířku.")
         
+        # Legendu děláme pomocí HTML spanů s barvami
         st.markdown("""
-        **Barevné rozlišení:**
-        * <span style='color:#2E7D32'><b>■</b></span> **Trénink**
-        * <span style='color:#C62828'><b>■</b></span> **Závody** (ŽA, ŽB, Oblastní)
-        * <span style='color:#F57F17'><b>■</b></span> **MČR** (Mistrovství)
-        * <span style='color:#E65100'><b>■</b></span> **Štafety**
-        * <span style='color:#6A1B9A'><b>■</b></span> **Soustředění**
-        * <span style='color:#1565C0'><b>■</b></span> **Zimní liga**
+        **Typy akcí (barvy):**
+        * <span style='background-color:#E8F5E9; border-left:4px solid #2E7D32; padding: 2px 5px;'><b>Trénink</b></span>
+        * <span style='background-color:#FFEBEE; border-left:4px solid #C62828; padding: 2px 5px;'><b>Závody</b></span>
+        * <span style='background-color:#FFF8E1; border-left:4px solid #FFD700; padding: 2px 5px;'><b>MČR</b></span>
+        * <span style='background-color:#FFF3E0; border-left:4px solid #EF6C00; padding: 2px 5px;'><b>Štafety</b></span>
+        * <span style='background-color:#F3E5F5; border-left:4px solid #8E24AA; padding: 2px 5px;'><b>Soustředění</b></span>
+        * <span style='background-color:#E3F2FD; border-left:4px solid #1565C0; padding: 2px 5px;'><b>Zimní liga</b></span>
         
         **Tipy:**
         * **🚗 Doprava:** Pokud nemáš odvoz, zaškrtni *"Sháním odvoz"*.
@@ -226,7 +228,7 @@ st.markdown("<hr style='margin: 0 0 20px 0; border: 0; border-top: 1px solid #ee
 
 dnes = date.today()
 
-# Zde budeme sbírat styly pro všechna tlačítka, abychom je pak poslali do JS
+# Zde budeme sbírat styly: Python zjistí typ, přiřadí barvu a pošle to JS
 buttons_to_style = []
 
 for tyden in month_days:
@@ -253,7 +255,7 @@ for tyden in month_days:
                 
                 akce_id_str = str(akce['id']) if 'id' in df_akce.columns else ""
 
-                # DATA
+                # --- URČENÍ TYPU A BAREV ---
                 typ_udalosti = str(akce['typ']).lower().strip() if 'typ' in df_akce.columns and pd.notna(akce['typ']) else ""
                 druh_akce = str(akce['druh']).lower().strip() if 'druh' in df_akce.columns and pd.notna(akce['druh']) else "ostatní"
                 
@@ -261,14 +263,14 @@ for tyden in month_days:
                 zavodni_slova = ["závod", "mčr", "žebříček", "liga", "mistrovství", "štafety"]
                 je_zavod = any(s in typ_udalosti for s in zavodni_slova)
 
-                # --- URČENÍ BARVY POZADÍ (BEZ EMOJI) ---
-                bg_color = "#f0f0f0" # Default šedá
+                # Definice barev (Pozadí, Okraj, Text)
+                bg_color = "#f0f0f0" 
                 border_color = "#ccc"
                 text_color = "#333"
 
                 if "trénink" in typ_udalosti:
-                    bg_color = "#E8F5E9" # Světle zelená
-                    border_color = "#2E7D32" # Tmavě zelená
+                    bg_color = "#E8F5E9" # Zelená
+                    border_color = "#2E7D32" 
                     text_color = "#1B5E20"
                 elif "soustředění" in typ_udalosti:
                     bg_color = "#F3E5F5" # Fialová
@@ -297,17 +299,17 @@ for tyden in month_days:
                 }
                 emoji_druh = ikony_mapa.get(druh_akce, "")
 
-                # TEXT TLAČÍTKA (ČISTÝ, BEZ BARVY)
-                display_text_full = f"{emoji_druh} {akce['název']}".strip()
+                # TEXT TLAČÍTKA (bez emoji barviček, jen terén a název)
+                display_text = f"{emoji_druh} {akce['název']}".strip()
                 if je_po_deadlinu: 
-                    display_text_full = "🔒 " + display_text_full
+                    display_text = "🔒 " + display_text
                 
-                # Zkrácení pro zobrazení
-                label_tlacitka = display_text_full
+                # Zkrácení názvu pro tlačítko
+                label_tlacitka = display_text
                 if '-' in label_tlacitka:
                     label_tlacitka = label_tlacitka.split('-')[0].strip()
 
-                # ULOŽENÍ STYLU PRO JS (Podle přesného textu)
+                # PŘIDÁNÍ DO SEZNAMU PRO OBARVENÍ
                 buttons_to_style.append({
                     "text": label_tlacitka,
                     "bg": bg_color,
@@ -315,7 +317,7 @@ for tyden in month_days:
                     "color": text_color
                 })
 
-                # --- POPOVER ---
+                # --- POPOVER (DETAIL) ---
                 with st.popover(label_tlacitka, use_container_width=True):
                     col_info, col_form = st.columns([1.2, 1], gap="medium")
                     
@@ -369,7 +371,6 @@ for tyden in month_days:
                                 
                                 form_key = f"form_{akce_id_str}"
                                 with st.form(key=form_key, clear_on_submit=True):
-                                    
                                     if kategorie_txt and kategorie_txt.lower() != "všichni":
                                         st.warning(f"⚠️ Opravdu splňuješ podmínku? Tato akce je určena pro: **{kategorie_txt}**")
                                     
@@ -465,7 +466,6 @@ for tyden in month_days:
                             
                             for i, (idx, row) in enumerate(lidi.iterrows()):
                                 c1, c2, c3, c4, c5 = st.columns([0.4, 2.0, 2.0, 0.8, 0.5], vertical_alignment="center")
-                                
                                 c1.write(f"{i+1}.")
                                 c2.markdown(f"**{row['jméno']}**")
                                 poznamka_txt = row['poznámka'] if pd.notna(row['poznámka']) else ""
@@ -518,8 +518,7 @@ with st.popover("💡 Návrh na zlepšení"):
 
 st.markdown('</div>', unsafe_allow_html=True)
 
-# --- 6. JS INJECTION: BARVENÍ TLAČÍTEK ---
-# Převedeme seznam stylů na JSON, aby mu JS rozuměl
+# --- 6. JS INJECTION: BARVENÍ TLAČÍTEK PODLE TEXTU ---
 styles_json = json.dumps(buttons_to_style)
 
 js_code = f"""
@@ -530,7 +529,8 @@ js_code = f"""
         const buttons = window.parent.document.querySelectorAll('div[data-testid="column"] button');
         
         buttons.forEach(btn => {{
-            // Najdeme odpovídající styl podle textu tlačítka
+            // Hledáme styl podle textu tlačítka
+            // Používáme includes, protože text může obsahovat '🔒 ' nebo emoji terénu
             const match = styles.find(s => btn.innerText.includes(s.text));
             
             if (match) {{
