@@ -8,7 +8,7 @@ import time
 # --- 1. NASTAVENÍ STRÁNKY ---
 st.set_page_config(page_title="Kalendář RBK", page_icon="🌲", layout="wide")
 
-# --- CSS VZHLED (Čistý a funkční) ---
+# --- CSS VZHLED ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
@@ -137,7 +137,7 @@ with col_help:
         """)
         
         st.divider()
-        st.markdown("**Terén:** 🌲 Les | 🏙️ Sprint | 🌗 Nočák")
+        st.markdown("**Terén:** 🌲 Les | 🏙️ Sprint | 🌗 Nočák | 🏃 Ostatní")
 
 
 # --- 2. PŘIPOJENÍ A NAČTENÍ DAT ---
@@ -156,15 +156,13 @@ try:
     df_akce = df_akce.dropna(subset=['datum'])
     
     # --- FIX: ZPRACOVÁNÍ VÍCEDENNÍCH AKCÍ ---
-    # Pokud sloupec datum_do neexistuje, vytvoříme ho
     if 'datum_do' not in df_akce.columns:
         df_akce['datum_do'] = df_akce['datum']
     else:
-        # Převedeme na datum a doplníme prázdná místa startovním datem
         df_akce['datum_do'] = pd.to_datetime(df_akce['datum_do'], dayfirst=True, errors='coerce').dt.date
         df_akce['datum_do'] = df_akce['datum_do'].fillna(df_akce['datum'])
 
-    # --- FIX PRO CHYBĚJÍCÍ DEADLINE (14 DNÍ PŘEDEM) ---
+    # --- FIX PRO CHYBĚJÍCÍ DEADLINE ---
     def get_deadline(row):
         if pd.isna(row['deadline']):
             return row['datum'] - timedelta(days=14)
@@ -247,7 +245,6 @@ for tyden in month_days:
                 st.markdown(f"<span class='day-number'>{den_cislo}</span>", unsafe_allow_html=True)
 
             # --- FILTROVÁNÍ AKCÍ (VÍCEDENNÍ LOGIKA) ---
-            # Akce se zobrazí, pokud aktuální den spadá do intervalu <datum, datum_do>
             maska_akce = (df_akce['datum'] <= aktualni_den) & (df_akce['datum_do'] >= aktualni_den)
             akce_dne = df_akce[maska_akce]
             
@@ -265,7 +262,7 @@ for tyden in month_days:
                 zavodni_slova = ["závod", "mčr", "žebříček", "liga", "mistrovství", "štafety", "ža", "žb"]
                 je_zavod_obecne = any(s in typ_udalosti for s in zavodni_slova)
 
-                # --- NATIVNÍ BAREVNÉ ROZLIŠENÍ ---
+                # --- BAREVNÉ ROZLIŠENÍ ---
                 bg_style = "gray"
                 typ_label_short = "AKCE"
 
@@ -291,11 +288,13 @@ for tyden in month_days:
                     bg_style = "gray"
                     typ_label_short = "SOUSTŘEDĚNÍ"
 
+                # --- EMOJI TERÉNU (S FALLBACKEM 🏃) ---
                 ikony_mapa = {
                     "les": "🌲", "krátká trať": "🌲", "klasická trať": "🌲",
                     "sprint": "🏙️", "nočák": "🌗"
                 }
-                emoji_druh = ikony_mapa.get(druh_akce, "")
+                # Pokud druh_akce není ve slovníku (nebo je prázdný), vrátíme běžce 🏃
+                emoji_druh = ikony_mapa.get(druh_akce, "🏃")
 
                 nazev_full = akce['název']
                 if '-' in nazev_full:
@@ -317,7 +316,7 @@ for tyden in month_days:
                         st.markdown(f"### {nazev_full}")
                         st.caption(f"Typ akce: {typ_label_short} ({druh_akce.upper()})")
                         
-                        # Zobrazení data (pokud je vícedenní, ukážeme interval)
+                        # Zobrazení data (s dnem v týdnu)
                         dny_cz = ["Pondělí", "Úterý", "Středa", "Čtvrtek", "Pátek", "Sobota", "Neděle"]
                         if akce['datum'] == akce['datum_do']:
                             den_txt = dny_cz[akce['datum'].weekday()]
