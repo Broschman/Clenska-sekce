@@ -8,10 +8,10 @@ import time
 # --- 1. NASTAVENÍ STRÁNKY ---
 st.set_page_config(page_title="Kalendář RBK", page_icon="🌲", layout="wide")
 
-# --- CSS VZHLED (FULL BUTTON FILL) ---
+# --- CSS VZHLED (Čistý a jednoduchý) ---
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
 
     html, body, [class*="css"] {
         font-family: 'Roboto', sans-serif;
@@ -86,56 +86,25 @@ st.markdown("""
         text-align: center;
     }
     
-    /* === TRANSFORMACE TLAČÍTEK NA BAREVNÉ CIHLIČKY === */
-    
-    /* 1. Reset samotného tlačítka - odstraníme padding a border */
+    /* === VZHLED TLAČÍTEK V KALENDÁŘI === */
+    /* Jen jemná úprava, aby tlačítka nebyla zbytečně velká */
     div[data-testid="column"] button {
-        border: none !important;
-        padding: 0 !important; 
-        background-color: transparent !important; /* Průhledné, aby vynikla barva textu */
+        border: 1px solid #eee !important;
+        background-color: white !important;
         width: 100% !important;
-        margin-bottom: 4px !important;
-        overflow: hidden !important; /* Oříznutí obsahu */
-        border-radius: 6px !important;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        padding: 4px !important;
+        border-radius: 8px !important;
+        text-align: left !important;
         transition: transform 0.1s;
     }
     
     div[data-testid="column"] button:hover {
-        transform: scale(1.02);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-        z-index: 5;
-    }
-
-    /* 2. Roztáhnutí vnitřního kontejneru */
-    div[data-testid="column"] button div[data-testid="stMarkdownContainer"] p {
-        margin: 0 !important;
-        padding: 0 !important;
-        width: 100%;
-        height: 100%;
-    }
-
-    /* 3. HLAVNÍ TRIK: Roztáhnutí barevného SPANU na 100% velikosti tlačítka */
-    div[data-testid="column"] button p span {
-        display: block !important;
-        width: 100% !important;
-        min-height: 50px !important; /* Výška tlačítka */
-        padding: 8px 6px !important; /* Vnitřní odsazení textu */
-        
-        /* Text styling */
-        color: white !important; /* Bílý text pro většinu */
-        font-weight: 700 !important;
-        font-size: 13px !important;
-        line-height: 1.2 !important;
-        text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+        border-color: #ccc !important;
+        z-index: 2;
     }
     
-    /* Speciální úprava pro MČR (Rainbow) - černý text, aby byl vidět */
-    div[data-testid="column"] button p span[style*="linear-gradient"] {
-        color: black !important;
-        text-shadow: none !important;
-    }
-
     footer {visibility: hidden;}
     #MainMenu {visibility: hidden;}
 </style>
@@ -152,9 +121,8 @@ with col_help:
         st.markdown("### 💡 Nápověda")
         st.info("📱 **Mobil:** Otoč telefon na šířku.")
         
-        # Legenda s ukázkou barev
         st.markdown("""
-        **Typy akcí:**
+        **Barevné rozlišení:**
         * :rainbow-background[MČR / Mistrovství]
         * :red-background[Závod ŽA] (Žebříček A)
         * :orange-background[Závod ŽB] (Žebříček B)
@@ -165,7 +133,7 @@ with col_help:
         
         **Tipy:**
         * **🚗 Doprava:** Pokud nemáš odvoz, zaškrtni *"Sháním odvoz"*.
-        * **🏆 Štafety:** Hlas se v ORISu i ZDE.
+        * **🗑️ Odhlášení:** Klikni na koš a pak potvrď tlačítkem **ANO**.
         * **⚠️ Deadline:** Pokud je deadline dnes, máš poslední šanci!
         """)
         
@@ -188,7 +156,7 @@ try:
     df_akce['deadline'] = pd.to_datetime(df_akce['deadline'], dayfirst=True, errors='coerce').dt.date
     df_akce = df_akce.dropna(subset=['datum'])
     
-    # --- FIX PRO CHYBĚJÍCÍ DEADLINE ---
+    # --- FIX PRO CHYBĚJÍCÍ DEADLINE (14 DNÍ PŘEDEM) ---
     def get_deadline(row):
         if pd.isna(row['deadline']):
             return row['datum'] - timedelta(days=14)
@@ -286,35 +254,35 @@ for tyden in month_days:
                 zavodni_slova = ["závod", "mčr", "žebříček", "liga", "mistrovství", "štafety", "ža", "žb"]
                 je_zavod_obecne = any(s in typ_udalosti for s in zavodni_slova)
 
-                # --- BAREVNÉ ROZLIŠENÍ (POUŽITÍ BAREVNÉHO PODKLADU) ---
+                # --- NATIVNÍ BAREVNÉ ROZLIŠENÍ (Stabilní) ---
                 bg_style = "gray" # Default
                 typ_label_short = "AKCE"
 
-                # 1. MČR (Rainbow)
+                # 1. MČR
                 if "mčr" in typ_udalosti or "mistrovství" in typ_udalosti:
                     bg_style = "rainbow"
                     typ_label_short = "MČR"
-                # 2. ŽA (Červená)
+                # 2. ŽA
                 elif "ža" in typ_udalosti or "žebříček a" in typ_udalosti:
                     bg_style = "red"
                     typ_label_short = "ŽA"
-                # 3. ŽB (Oranžová)
+                # 3. ŽB
                 elif "žb" in typ_udalosti or "žebříček b" in typ_udalosti:
                     bg_style = "orange"
                     typ_label_short = "ŽB"
-                # 4. Štafety (Fialová)
+                # 4. Štafety
                 elif "štafety" in typ_udalosti:
                     bg_style = "violet"
                     typ_label_short = "ŠTAFETY"
-                # 5. Ostatní závody (Modrá)
+                # 5. Ostatní závody
                 elif je_zavod_obecne or "zimní liga" in typ_udalosti or "žebříček" in typ_udalosti:
                     bg_style = "blue"
                     typ_label_short = "ZÁVOD"
-                # 6. Trénink (Zelená)
+                # 6. Trénink
                 elif "trénink" in typ_udalosti:
                     bg_style = "green"
                     typ_label_short = "TRÉNINK"
-                # 7. Soustředění (Šedá)
+                # 7. Soustředění
                 elif "soustředění" in typ_udalosti:
                     bg_style = "gray"
                     typ_label_short = "SOUSTŘEDĚNÍ"
@@ -325,7 +293,7 @@ for tyden in month_days:
                 }
                 emoji_druh = ikony_mapa.get(druh_akce, "")
 
-                # Text
+                # Zkrácení názvu
                 nazev_full = akce['název']
                 if '-' in nazev_full:
                     display_text = nazev_full.split('-')[0].strip()
@@ -336,8 +304,7 @@ for tyden in month_days:
                 if je_po_deadlinu:
                     final_text = "🔒 " + final_text
                 
-                # VLOŽÍME DO BAREVNÉHO PODKLADU
-                # Díky CSS se tento podklad roztáhne na celé tlačítko
+                # POUŽITÍ NATIVNÍHO STREAMLIT BACKGROUNDU
                 label_tlacitka = f":{bg_style}-background[{final_text}]"
                 
                 # --- POPOVER ---
@@ -381,7 +348,7 @@ for tyden in month_days:
                     with col_form:
                         delete_key_state = f"confirm_delete_{akce_id_str}"
                         
-                        # Formulář
+                        # Formulář: Pouze pro NE-závody nebo Štafety
                         if (not je_zavod_obecne or je_stafeta):
                             if not je_po_deadlinu and delete_key_state not in st.session_state:
                                 nadpis_form = "✍️ Soupiska" if je_stafeta else "✍️ Přihláška"
