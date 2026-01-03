@@ -8,7 +8,7 @@ import time
 # --- 1. NASTAVENÍ STRÁNKY ---
 st.set_page_config(page_title="Kalendář RBK", page_icon="🌲", layout="wide")
 
-# --- CSS VZHLED ---
+# --- CSS VZHLED (Čistý a jednoduchý) ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
@@ -87,6 +87,7 @@ st.markdown("""
     }
     
     /* === VZHLED TLAČÍTEK V KALENDÁŘI === */
+    /* Jen jemná úprava, aby tlačítka nebyla zbytečně velká */
     div[data-testid="column"] button {
         border: 1px solid #eee !important;
         background-color: white !important;
@@ -155,14 +156,7 @@ try:
     df_akce['deadline'] = pd.to_datetime(df_akce['deadline'], dayfirst=True, errors='coerce').dt.date
     df_akce = df_akce.dropna(subset=['datum'])
     
-    # --- FIX: ZPRACOVÁNÍ VÍCEDENNÍCH AKCÍ ---
-    if 'datum_do' not in df_akce.columns:
-        df_akce['datum_do'] = df_akce['datum']
-    else:
-        df_akce['datum_do'] = pd.to_datetime(df_akce['datum_do'], dayfirst=True, errors='coerce').dt.date
-        df_akce['datum_do'] = df_akce['datum_do'].fillna(df_akce['datum'])
-
-    # --- FIX PRO CHYBĚJÍCÍ DEADLINE ---
+    # --- FIX PRO CHYBĚJÍCÍ DEADLINE (14 DNÍ PŘEDEM) ---
     def get_deadline(row):
         if pd.isna(row['deadline']):
             return row['datum'] - timedelta(days=14)
@@ -244,10 +238,8 @@ for tyden in month_days:
             else:
                 st.markdown(f"<span class='day-number'>{den_cislo}</span>", unsafe_allow_html=True)
 
-            # --- FILTROVÁNÍ AKCÍ (VÍCEDENNÍ LOGIKA) ---
-            maska_akce = (df_akce['datum'] <= aktualni_den) & (df_akce['datum_do'] >= aktualni_den)
-            akce_dne = df_akce[maska_akce]
-            
+            # AKCE
+            akce_dne = df_akce[df_akce['datum'] == aktualni_den]
             for _, akce in akce_dne.iterrows():
                 je_po_deadlinu = dnes > akce['deadline']
                 je_dnes_deadline = dnes == akce['deadline']
@@ -262,28 +254,35 @@ for tyden in month_days:
                 zavodni_slova = ["závod", "mčr", "žebříček", "liga", "mistrovství", "štafety", "ža", "žb"]
                 je_zavod_obecne = any(s in typ_udalosti for s in zavodni_slova)
 
-                # --- BAREVNÉ ROZLIŠENÍ ---
-                bg_style = "gray"
+                # --- NATIVNÍ BAREVNÉ ROZLIŠENÍ (Stabilní) ---
+                bg_style = "gray" # Default
                 typ_label_short = "AKCE"
 
+                # 1. MČR
                 if "mčr" in typ_udalosti or "mistrovství" in typ_udalosti:
                     bg_style = "rainbow"
                     typ_label_short = "MČR"
+                # 2. ŽA
                 elif "ža" in typ_udalosti or "žebříček a" in typ_udalosti:
                     bg_style = "red"
                     typ_label_short = "ŽA"
+                # 3. ŽB
                 elif "žb" in typ_udalosti or "žebříček b" in typ_udalosti:
                     bg_style = "orange"
                     typ_label_short = "ŽB"
+                # 4. Štafety
                 elif "štafety" in typ_udalosti:
                     bg_style = "violet"
                     typ_label_short = "ŠTAFETY"
+                # 5. Ostatní závody
                 elif je_zavod_obecne or "zimní liga" in typ_udalosti or "žebříček" in typ_udalosti:
                     bg_style = "blue"
                     typ_label_short = "ZÁVOD"
+                # 6. Trénink
                 elif "trénink" in typ_udalosti:
                     bg_style = "green"
                     typ_label_short = "TRÉNINK"
+                # 7. Soustředění
                 elif "soustředění" in typ_udalosti:
                     bg_style = "gray"
                     typ_label_short = "SOUSTŘEDĚNÍ"
@@ -292,8 +291,9 @@ for tyden in month_days:
                     "les": "🌲", "krátká trať": "🌲", "klasická trať": "🌲",
                     "sprint": "🏙️", "nočák": "🌗"
                 }
-                emoji_druh = ikony_mapa.get(druh_akce, "🏃")
+                emoji_druh = ikony_mapa.get(druh_akce, "")
 
+                # Zkrácení názvu
                 nazev_full = akce['název']
                 if '-' in nazev_full:
                     display_text = nazev_full.split('-')[0].strip()
@@ -304,6 +304,7 @@ for tyden in month_days:
                 if je_po_deadlinu:
                     final_text = "🔒 " + final_text
                 
+                # POUŽITÍ NATIVNÍHO STREAMLIT BACKGROUNDU
                 label_tlacitka = f":{bg_style}-background[{final_text}]"
                 
                 # --- POPOVER ---
@@ -312,18 +313,8 @@ for tyden in month_days:
                     
                     with col_info:
                         st.markdown(f"### {nazev_full}")
-                        st.caption(f"Typ akce: {typ_label_short} ({druh_akce.upper()})")
                         
-                        dny_cz = ["Pondělí", "Úterý", "Středa", "Čtvrtek", "Pátek", "Sobota", "Neděle"]
-                        if akce['datum'] == akce['datum_do']:
-                            den_txt = dny_cz[akce['datum'].weekday()]
-                            datum_format = akce['datum'].strftime('%d.%m.%Y')
-                            st.write(f"**📅 Datum:** {den_txt} {datum_format}")
-                        else:
-                            datum_od = akce['datum'].strftime('%d.%m.')
-                            datum_do = akce['datum_do'].strftime('%d.%m.%Y')
-                            st.write(f"**📅 Datum:** {datum_od} – {datum_do}")
-
+                        st.caption(f"Typ akce: {typ_label_short} ({druh_akce.upper()})")
                         st.write(f"**📍 Místo:** {akce['místo']}")
                         
                         kategorie_txt = str(akce['kategorie']).strip() if 'kategorie' in df_akce.columns and pd.notna(akce['kategorie']) else ""
@@ -355,18 +346,15 @@ for tyden in month_days:
                             st.markdown(f"👉 [**ℹ️ Stránka závodu v ORISu**]({link_target})")
 
                     with col_form:
-                        # --- FIX: UNIKÁTNÍ KLÍČE PRO KAŽDÝ DEN ---
-                        # Pokud je akce vícedenní, vykreslí se vícekrát. Klíče widgetů musí být unikátní!
-                        # Přidáme aktualni_den do klíče.
                         delete_key_state = f"confirm_delete_{akce_id_str}"
                         
+                        # Formulář: Pouze pro NE-závody nebo Štafety
                         if (not je_zavod_obecne or je_stafeta):
                             if not je_po_deadlinu and delete_key_state not in st.session_state:
                                 nadpis_form = "✍️ Soupiska" if je_stafeta else "✍️ Přihláška"
                                 st.markdown(f"#### {nadpis_form}")
                                 
-                                # UNIKÁTNÍ KLÍČ FORMULÁŘE
-                                form_key = f"form_{akce_id_str}_{aktualni_den}"
+                                form_key = f"form_{akce_id_str}"
                                 with st.form(key=form_key, clear_on_submit=True):
                                     if kategorie_txt and kategorie_txt.lower() != "všichni":
                                         st.warning(f"⚠️ Opravdu splňuješ podmínku? Tato akce je určena pro: **{kategorie_txt}**")
@@ -432,8 +420,7 @@ for tyden in month_days:
                             clovek_ke_smazani = st.session_state[delete_key_state]
                             st.warning(f"⚠️ Opravdu odhlásit: **{clovek_ke_smazani}**?")
                             col_conf1, col_conf2 = st.columns(2)
-                            # UNIKÁTNÍ KLÍČE PRO POTVRZOVACÍ TLAČÍTKA
-                            if col_conf1.button("✅ ANO", key=f"yes_{akce_id_str}_{aktualni_den}"):
+                            if col_conf1.button("✅ ANO", key=f"yes_{akce_id_str}"):
                                 smazano_ok = False
                                 try:
                                     df_curr = conn.read(worksheet="prihlasky", ttl=0)
@@ -448,7 +435,7 @@ for tyden in month_days:
                                     st.success("Smazáno!")
                                     time.sleep(0.5)
                                     st.rerun()
-                            if col_conf2.button("❌ ZPĚT", key=f"no_{akce_id_str}_{aktualni_den}"):
+                            if col_conf2.button("❌ ZPĚT", key=f"no_{akce_id_str}"):
                                 del st.session_state[delete_key_state]
                                 st.rerun()
 
@@ -473,8 +460,7 @@ for tyden in month_days:
                                 c4.write(doprava_val)
                                 
                                 if not je_po_deadlinu:
-                                    # UNIKÁTNÍ KLÍČ PRO MAZACÍ TLAČÍTKO
-                                    if c5.button("🗑️", key=f"del_{akce_id_str}_{idx}_{aktualni_den}"):
+                                    if c5.button("🗑️", key=f"del_{akce_id_str}_{idx}"):
                                         st.session_state[delete_key_state] = row['jméno']
                                         st.rerun()
                                 
