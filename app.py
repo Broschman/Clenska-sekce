@@ -8,10 +8,10 @@ import time
 # --- 1. NASTAVENÍ STRÁNKY ---
 st.set_page_config(page_title="Kalendář RBK", page_icon="🌲", layout="wide")
 
-# --- CSS VZHLED (HARDCORE BOOST BAREV) ---
+# --- CSS VZHLED (Jen pro zarovnání) ---
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
 
     html, body, [class*="css"] {
         font-family: 'Roboto', sans-serif;
@@ -86,61 +86,40 @@ st.markdown("""
         text-align: center;
     }
     
-    /* === VZHLED TLAČÍTEK V KALENDÁŘI === */
-    
-    /* 1. Reset samotného tlačítka (aby nerušil rámeček) */
+    /* === ČISTKA TLAČÍTEK === */
+    /* Odstraníme rámečky, aby vynikl jen náš LaTeX štítek */
     div[data-testid="column"] button {
-        border: 1px solid #eee !important;
-        background-color: white !important;
+        border: none !important;
+        background: transparent !important;
         width: 100% !important;
-        padding: 4px !important;
-        border-radius: 8px !important;
-        transition: all 0.2s;
+        padding: 2px 0px !important;
+        margin: 0 !important;
     }
     
     div[data-testid="column"] button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.15) !important;
-        border-color: #999 !important;
+        transform: scale(1.02);
         z-index: 5;
     }
-
-    /* 2. AGRESIVNÍ OBARVENÍ VNITŘKU TLAČÍTKA */
-    /* Cílíme na span uvnitř paragrafu uvnitř markdown kontejneru v tlačítku */
-    button div[data-testid="stMarkdownContainer"] p span {
-        display: flex !important;
-        justify-content: center;
-        align-items: center;
-        width: 100% !important;
-        height: 100% !important;
-        min-height: 45px !important;
-        padding: 8px !important;
-        border-radius: 6px !important;
-        
-        /* TOTO JE KLÍČ: Zvedneme sytost o 300% a kontrast */
-        filter: saturate(3) contrast(1.1) brightness(0.95) !important;
-        
-        /* Text */
-        color: #000 !important; /* Černý text pro maximální kontrast na sytých barvách (nebo white) */
-        font-weight: 900 !important;
-        font-size: 14px !important;
-        line-height: 1.2 !important;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        text-align: center;
-    }
     
-    /* Speciální úprava pro MČR (Rainbow), aby nebyl filtr tak agresivní */
-    button div[data-testid="stMarkdownContainer"] p span[style*="linear-gradient"] {
-        filter: brightness(1.1) !important;
-        color: white !important;
-        text-shadow: 0 1px 2px rgba(0,0,0,0.5);
-    }
-
+    /* Zvětšení fontu uvnitř LaTeXu */
+    .katex { font-size: 1.1em !important; }
+    
     footer {visibility: hidden;}
     #MainMenu {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
+
+# --- FUNKCE PRO GENEROVÁNÍ BAREVNÝCH ŠTÍTKŮ (LaTeX) ---
+def vytvorit_stitek(text, bg_hex, text_hex="white"):
+    # LaTeX nesnáší mezery, musíme je nahradit vlnovkou (~) pro pevnou mezeru
+    # \sf = sans-serif font (aby to nevypadalo jako rovnice)
+    # \colorbox = barva pozadí
+    # \textcolor = barva písma
+    # \textbf = tučné písmo
+    clean_text = text.replace(" ", "~")
+    # Přidáme ~ na začátek a konec pro padding
+    formatted_text = f"~{clean_text}~" 
+    return fr"$\sf\colorbox{{{bg_hex}}}{{\textcolor{{{text_hex}}}{{\textbf{{{formatted_text}}}}}}}$"
 
 # --- HLAVIČKA ---
 col_dummy, col_title, col_help = st.columns([1, 10, 1], vertical_alignment="center")
@@ -153,25 +132,23 @@ with col_help:
         st.markdown("### 💡 Nápověda")
         st.info("📱 **Mobil:** Otoč telefon na šířku.")
         
-        # Legenda s ukázkou barev
-        st.markdown("""
-        **Typy akcí:**
-        * :rainbow-background[MČR / Mistrovství]
-        * :red-background[Závod ŽA] (Žebříček A)
-        * :orange-background[Závod ŽB] (Žebříček B)
-        * :blue-background[Oblastní / Liga]
-        * :violet-background[Štafety]
-        * :green-background[Trénink]
-        * :gray-background[Soustředění]
-        
-        **Tipy:**
-        * **🚗 Doprava:** Pokud nemáš odvoz, zaškrtni *"Sháním odvoz"*.
-        * **🏆 Štafety:** Hlas se v ORISu i ZDE.
-        * **⚠️ Deadline:** Pokud je deadline dnes, máš poslední šanci!
-        """)
+        # Legenda pomocí naší LaTeX funkce
+        st.write("**Legenda barev:**")
+        st.markdown(vytvorit_stitek("MČR / Mistrovství", "#FFD700", "black"), unsafe_allow_html=True)
+        st.markdown(vytvorit_stitek("Závod ŽA (Žebříček A)", "#D32F2F"), unsafe_allow_html=True)
+        st.markdown(vytvorit_stitek("Závod ŽB (Žebříček B)", "#F57C00"), unsafe_allow_html=True)
+        st.markdown(vytvorit_stitek("Oblastní / Liga", "#1976D2"), unsafe_allow_html=True)
+        st.markdown(vytvorit_stitek("Štafety", "#7B1FA2"), unsafe_allow_html=True)
+        st.markdown(vytvorit_stitek("Trénink", "#2E7D32"), unsafe_allow_html=True)
+        st.markdown(vytvorit_stitek("Soustředění", "#455A64"), unsafe_allow_html=True)
         
         st.divider()
-        st.markdown("**Terén:** 🌲 Les | 🏙️ Sprint | 🌗 Nočák")
+        st.markdown("""
+        **Tipy:**
+        * **🚗 Doprava:** Pokud nemáš odvoz, zaškrtni *"Sháním odvoz"*.
+        * **🗑️ Odhlášení:** Klikni na koš a pak potvrď tlačítkem **ANO**.
+        * **⚠️ Deadline:** Pokud je deadline dnes, máš poslední šanci!
+        """)
 
 
 # --- 2. PŘIPOJENÍ A NAČTENÍ DAT ---
@@ -287,37 +264,40 @@ for tyden in month_days:
                 zavodni_slova = ["závod", "mčr", "žebříček", "liga", "mistrovství", "štafety", "ža", "žb"]
                 je_zavod_obecne = any(s in typ_udalosti for s in zavodni_slova)
 
-                # --- BAREVNÉ ROZLIŠENÍ (NATIVNÍ STREAMLIT STYLY) ---
-                bg_style = "gray" # Default
+                # --- BAREVNÉ ROZLIŠENÍ (HEX KÓDY PRO LaTeX) ---
+                # Zde používáme přesné HEX kódy pro syté barvy
+                hex_bg = "#9E9E9E" # Default šedá
+                hex_text = "white"
                 typ_label_short = "AKCE"
 
-                # 1. MČR
+                # 1. MČR (Zlatá s černým textem)
                 if "mčr" in typ_udalosti or "mistrovství" in typ_udalosti:
-                    bg_style = "rainbow"
+                    hex_bg = "#FFD700" # Zlatá
+                    hex_text = "black"
                     typ_label_short = "MČR"
-                # 2. ŽA
+                # 2. ŽA (Sytá červená)
                 elif "ža" in typ_udalosti or "žebříček a" in typ_udalosti:
-                    bg_style = "red"
+                    hex_bg = "#D32F2F"
                     typ_label_short = "ŽA"
-                # 3. ŽB
+                # 3. ŽB (Sytá oranžová)
                 elif "žb" in typ_udalosti or "žebříček b" in typ_udalosti:
-                    bg_style = "orange"
+                    hex_bg = "#F57C00"
                     typ_label_short = "ŽB"
-                # 4. Štafety
+                # 4. Štafety (Fialová)
                 elif "štafety" in typ_udalosti:
-                    bg_style = "violet"
+                    hex_bg = "#7B1FA2"
                     typ_label_short = "ŠTAFETY"
-                # 5. Ostatní závody
+                # 5. Ostatní závody (Modrá)
                 elif je_zavod_obecne or "zimní liga" in typ_udalosti or "žebříček" in typ_udalosti:
-                    bg_style = "blue"
+                    hex_bg = "#1976D2"
                     typ_label_short = "ZÁVOD"
-                # 6. Trénink
+                # 6. Trénink (Zelená)
                 elif "trénink" in typ_udalosti:
-                    bg_style = "green"
+                    hex_bg = "#2E7D32"
                     typ_label_short = "TRÉNINK"
-                # 7. Soustředění
+                # 7. Soustředění (Modro-šedá)
                 elif "soustředění" in typ_udalosti:
-                    bg_style = "gray"
+                    hex_bg = "#455A64"
                     typ_label_short = "SOUSTŘEDĚNÍ"
 
                 ikony_mapa = {
@@ -333,13 +313,13 @@ for tyden in month_days:
                 else:
                     display_text = nazev_full
 
-                # Finální text
+                # Finální text s ikonou
                 final_text = f"{emoji_druh} {display_text}".strip()
                 if je_po_deadlinu:
                     final_text = "🔒 " + final_text
                 
-                # ZDE JE KOUZLO: Obalíme text do barvy
-                label_tlacitka = f":{bg_style}-background[{final_text}]"
+                # --- GENERACE LATEX ŠTÍTKU ---
+                label_tlacitka = vytvorit_stitek(final_text, hex_bg, hex_text)
                 
                 # --- POPOVER ---
                 with st.popover(label_tlacitka, use_container_width=True):
@@ -382,7 +362,7 @@ for tyden in month_days:
                     with col_form:
                         delete_key_state = f"confirm_delete_{akce_id_str}"
                         
-                        # Formulář
+                        # Formulář: Pouze pro NE-závody nebo Štafety
                         if (not je_zavod_obecne or je_stafeta):
                             if not je_po_deadlinu and delete_key_state not in st.session_state:
                                 nadpis_form = "✍️ Soupiska" if je_stafeta else "✍️ Přihláška"
