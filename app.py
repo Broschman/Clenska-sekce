@@ -118,7 +118,7 @@ with col_help:
         st.markdown("🔒 Uzavřeno")
 
 
-# --- 2. PŘIPOJENÍ A NAČTENÍ DAT (OPRAVENO) ---
+# --- 2. PŘIPOJENÍ A NAČTENÍ DAT ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 SHEET_ID = "1lW6DpUQBSm5heSO_HH9lDzm0x7t1eo8dn6FpJHh2y6U"
 
@@ -130,21 +130,33 @@ url_navrhy = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out
 try:
     df_akce = pd.read_csv(url_akce)
     
-    # 1. Převod na datetime (zatím ne .dt.date, abychom mohli použít fillna)
+    # 1. Datumy na datetime (prozatím)
     df_akce['datum'] = pd.to_datetime(df_akce['datum'], dayfirst=True, errors='coerce')
+    
+    # --- NOVÉ: Zpracování sloupce 'datum_do' ---
+    if 'datum_do' in df_akce.columns:
+        df_akce['datum_do'] = pd.to_datetime(df_akce['datum_do'], dayfirst=True, errors='coerce')
+        # Pokud chybí datum_do, doplníme ho jako datum (začátek = konec)
+        df_akce['datum_do'] = df_akce['datum_do'].fillna(df_akce['datum'])
+    else:
+        # Pokud sloupec v tabulce vůbec není, vytvoříme ho jako kopii data
+        df_akce['datum_do'] = df_akce['datum']
+
+    # Zpracování deadline
     df_akce['deadline'] = pd.to_datetime(df_akce['deadline'], dayfirst=True, errors='coerce')
     
-    # 2. Vyhodit řádky bez data konání
+    # Vyhodit řádky bez data konání
     df_akce = df_akce.dropna(subset=['datum'])
     
-    # 3. POJISTKA PROTI CHYBĚ: Pokud chybí deadline, doplníme ho jako datum akce
+    # Pojistka proti prázdnému deadlinu (doplníme datum akce)
     df_akce['deadline'] = df_akce['deadline'].fillna(df_akce['datum'])
     
-    # 4. Až teď převod na čisté datum (.date)
+    # 4. Finální převod na .date objekty pro porovnávání
     df_akce['datum'] = df_akce['datum'].dt.date
+    df_akce['datum_do'] = df_akce['datum_do'].dt.date
     df_akce['deadline'] = df_akce['deadline'].dt.date
     
-    # ID na string pro bezpečné porovnání
+    # ID na string
     if 'id' in df_akce.columns:
         df_akce['id'] = df_akce['id'].astype(str).str.replace(r'\.0$', '', regex=True)
     
@@ -247,8 +259,11 @@ for tyden in month_days:
             else:
                 st.markdown(f"<span class='day-number'>{den_cislo}</span>", unsafe_allow_html=True)
 
-            # AKCE
-            akce_dne = df_akce[df_akce['datum'] == aktualni_den]
+            # AKCE - FILTROVÁNÍ VÍCEDENNÍCH AKCÍ
+            # Zobrazíme akci, pokud aktuální den spadá do intervalu <datum, datum_do>
+            maska_dne = (df_akce['datum'] <= aktualni_den) & (df_akce['datum_do'] >= aktualni_den)
+            akce_dne = df_akce[maska_dne]
+            
             for _, akce in akce_dne.iterrows():
                 # --- LOGIKA DEADLINE ---
                 je_po_deadlinu = dnes > akce['deadline']
@@ -298,7 +313,15 @@ for tyden in month_days:
                         elif je_zavod: typ_label = "ZÁVOD 🏆"
                         else: typ_label = "TRÉNINK"
                         
-                        st.caption(f"Typ akce: {typ_label} ({druh_akce.upper()})")
+                        # Zobrazení data (pokud je vícedenní, ukážeme rozsah)
+                        str_od = akce['datum'].strftime('%d.%m.')
+                        str_do = akce['datum_do'].strftime('%d.%m.')
+                        if akce['datum'] == akce['datum_do']:
+                            str_termin = str_od
+                        else:
+                            str_termin = f"{str_od} - {str_do}"
+                        
+                        st.caption(f"Termín: {str_termin} | Typ: {typ_label} ({druh_akce.upper()})")
                         st.write(f"**📍 Místo:** {akce['místo']}")
                         if pd.notna(akce['popis']): st.info(f"📝 {akce['popis']}")
                         
@@ -338,7 +361,9 @@ for tyden in month_days:
                                 nadpis_form = "✍️ Soupiska" if je_stafeta else "✍️ Přihláška"
                                 st.markdown(f"#### {nadpis_form}")
                                 
-                                form_key = f"form_{akce_id_str}"
+                                # Unikátní klíč pro formulář (id akce + aktuální den v kalendáři)
+                                form_key = f"form_{akce_id_str}_{aktualni_den}"
+                                
                                 with st.form(key=form_key, clear_on_submit=True):
                                     vybrane_jmeno = st.selectbox("Jméno", options=seznam_jmen, index=None, placeholder="Vyber...")
                                     nove_jmeno = st.text_input("...nebo Nové jméno")
@@ -405,7 +430,7 @@ for tyden in month_days:
                             clovek_ke_smazani = st.session_state[delete_key_state]
                             st.warning(f"⚠️ Opravdu odhlásit: **{clovek_ke_smazani}**?")
                             col_conf1, col_conf2 = st.columns(2)
-                            if col_conf1.button("✅ ANO", key=f"yes_{akce_id_str}"):
+                            if col_conf1.button("✅ ANO", key=f"yes_{akce_id_str}_{aktualni_den}"): # Unikátní klíč
                                 smazano_ok = False
                                 try:
                                     df_curr = conn.read(worksheet="prihlasky", ttl=0)
@@ -421,7 +446,7 @@ for tyden in month_days:
                                     st.success("Smazáno!")
                                     time.sleep(0.5)
                                     st.rerun()
-                            if col_conf2.button("❌ ZPĚT", key=f"no_{akce_id_str}"):
+                            if col_conf2.button("❌ ZPĚT", key=f"no_{akce_id_str}_{aktualni_den}"): # Unikátní klíč
                                 del st.session_state[delete_key_state]
                                 st.rerun()
 
@@ -449,7 +474,7 @@ for tyden in month_days:
                                 c4.write(doprava_val)
                                 
                                 if not je_po_deadlinu:
-                                    if c5.button("🗑️", key=f"del_{akce_id_str}_{idx}"):
+                                    if c5.button("🗑️", key=f"del_{akce_id_str}_{idx}_{aktualni_den}"): # Unikátní klíč
                                         st.session_state[delete_key_state] = row['jméno']
                                         st.rerun()
                                 
