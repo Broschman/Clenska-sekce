@@ -9,7 +9,7 @@ import time
 # --- 1. NASTAVENÍ STRÁNKY ---
 st.set_page_config(page_title="Kalendář RBK", page_icon="🌲", layout="wide")
 
-# --- CSS VZHLED (DESIGN 3.1 - FIXED LAYOUT) ---
+# --- CSS VZHLED (DESIGN 3.2 - ALIGNMENT FIX) ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
@@ -38,14 +38,13 @@ st.markdown("""
         margin-bottom: 0.5rem;
     }
 
-    /* === ŠIROKÁ BUBLINA (POPOVER) - OPRAVA === */
+    /* === ŠIROKÁ BUBLINA (POPOVER) === */
     div[data-testid="stPopoverBody"] {
         width: 800px !important;      
         max-width: 95vw !important;   
         max-height: 85vh !important;
         border-radius: 12px !important;
         box-shadow: 0 20px 40px rgba(0,0,0,0.2) !important;
-        /* ZDE BYLA CHYBA: Vrátil jsem padding a povolil scroll */
         padding: 20px !important; 
         overflow-y: auto !important;
     }
@@ -112,7 +111,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- DEFINICE BAREV (SYTÉ, MODERNÍ) ---
+# --- DEFINICE BAREV ---
 BARVY_AKCI = {
     "mcr": {
         "bg": "linear-gradient(90deg, #EF4444, #F59E0B, #10B981, #3B82F6, #8B5CF6)", 
@@ -497,7 +496,23 @@ for tyden in month_days:
                                             doprava_input = st.checkbox("🚗 Sháním odvoz")
                                             
                                             st.markdown("<br>", unsafe_allow_html=True)
-                                            odeslat_btn = st.form_submit_button("✅ Závazně přihlásit", type="primary")
+                                            
+                                            # --- ZELENÉ TLAČÍTKO ---
+                                            with stylable_container(
+                                                key=f"submit_btn_{unique_key}",
+                                                css_styles="""
+                                                    button {
+                                                        background-color: #16A34A !important;
+                                                        color: white !important;
+                                                        border: none !important;
+                                                    }
+                                                    button:hover {
+                                                        background-color: #15803d !important;
+                                                        color: white !important;
+                                                    }
+                                                """
+                                            ):
+                                                odeslat_btn = st.form_submit_button("Přihlásit")
                                             
                                             if odeslat_btn:
                                                 finalni_jmeno = nove_jmeno.strip() if nove_jmeno else vybrane_jmeno
@@ -536,7 +551,7 @@ for tyden in month_days:
                             elif je_zavod_obecne:
                                 st.markdown("<div style='height: 50px;'></div>", unsafe_allow_html=True)
 
-                        # --- SPODNÍ ČÁST: SEZNAM PŘIHLÁŠENÝCH (ZEBRA DESIGN) ---
+                        # --- SPODNÍ ČÁST: SEZNAM PŘIHLÁŠENÝCH (OPRAVENÝ ALIGNMENT) ---
                         st.markdown("<br>", unsafe_allow_html=True)
                         st.divider()
 
@@ -591,8 +606,10 @@ for tyden in month_days:
                                         {{
                                             background-color: {bg_color};
                                             border-radius: 6px;
-                                            padding: 4px 0;
+                                            padding: 10px 5px; /* Zvětšeno pro správné lícování */
                                             margin-bottom: 2px;
+                                            display: flex;
+                                            align-items: center;
                                         }}
                                         """
                                     ):
