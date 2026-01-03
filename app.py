@@ -9,7 +9,7 @@ import time
 # --- 1. NASTAVENÍ STRÁNKY ---
 st.set_page_config(page_title="Kalendář RBK", page_icon="🌲", layout="wide")
 
-# --- CSS VZHLED (DESIGN 3.3 - FINETUNING) ---
+# --- CSS VZHLED (DESIGN 3.4 - AGRESIVNÍ FIX) ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
@@ -19,7 +19,6 @@ st.markdown("""
         color: #1f2937;
     }
 
-    /* Nadpis aplikace */
     h1 {
         background: -webkit-linear-gradient(45deg, #166534, #15803d);
         -webkit-background-clip: text;
@@ -30,12 +29,6 @@ st.markdown("""
         letter-spacing: -1px;
         margin: 0;
         padding-bottom: 20px;
-    }
-
-    h3 {
-        font-weight: 700;
-        color: #111;
-        margin-bottom: 0.5rem;
     }
 
     /* === ŠIROKÁ BUBLINA (POPOVER) === */
@@ -71,7 +64,7 @@ st.markdown("""
         box-shadow: 0 8px 25px rgba(37, 99, 235, 0.6) !important;
     }
 
-    /* Dnešní den - zvýraznění */
+    /* Dnešní den */
     .today-box {
         background: #DC2626;
         color: white;
@@ -497,7 +490,7 @@ for tyden in month_days:
                                             
                                             st.markdown("<br>", unsafe_allow_html=True)
                                             
-                                            # --- ZELENÉ TLAČÍTKO S POSUNEM NAHORU ---
+                                            # --- AGRESIVNÍ POSUN TLAČÍTKA NAHORU ---
                                             with stylable_container(
                                                 key=f"submit_btn_{unique_key}",
                                                 css_styles="""
@@ -505,7 +498,8 @@ for tyden in month_days:
                                                         background-color: #16A34A !important;
                                                         color: white !important;
                                                         border: none !important;
-                                                        margin-top: -15px !important; /* POSUN TLAČÍTKA NAHORU */
+                                                        transform: translateY(-20px) !important; /* VIZUÁLNÍ POSUN */
+                                                        margin-top: 0px !important;
                                                     }
                                                     button:hover {
                                                         background-color: #15803d !important;
@@ -552,7 +546,7 @@ for tyden in month_days:
                             elif je_zavod_obecne:
                                 st.markdown("<div style='height: 50px;'></div>", unsafe_allow_html=True)
 
-                        # --- SPODNÍ ČÁST: SEZNAM PŘIHLÁŠENÝCH (ROZTAŽENÉ ZEBRA STRIPES) ---
+                        # --- SPODNÍ ČÁST: SEZNAM PŘIHLÁŠENÝCH (VÍCE PADDINGU PRO ZEBRA) ---
                         st.markdown("<br>", unsafe_allow_html=True)
                         st.divider()
 
@@ -607,10 +601,11 @@ for tyden in month_days:
                                         {{
                                             background-color: {bg_color};
                                             border-radius: 6px;
-                                            padding: 12px 5px; /* VÍCE VÝŠKY, ABY TO NEBYLO ÚZKÉ */
+                                            padding: 16px 5px !important; /* MASIVNÍ PADDING PRO ODTAŽENÍ */
                                             margin-bottom: 2px;
                                             display: flex;
                                             align-items: center;
+                                            min-height: 50px; /* GARANCE VÝŠKY */
                                         }}
                                         """
                                     ):
