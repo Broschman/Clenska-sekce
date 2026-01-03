@@ -9,7 +9,7 @@ import time
 # --- 1. NASTAVENÍ STRÁNKY ---
 st.set_page_config(page_title="Kalendář RBK", page_icon="🌲", layout="wide")
 
-# --- CSS VZHLED (DESIGN 3.7 - FINAL ROW FIX) ---
+# --- CSS VZHLED (DESIGN 3.8 - FINAL PIXEL PERFECT) ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
@@ -496,7 +496,7 @@ for tyden in month_days:
                                             
                                             st.markdown("<br>", unsafe_allow_html=True)
                                             
-                                            # --- TLAČÍTKO POSUNUTÉ NAHORU O -15px ---
+                                            # --- ZELENÉ TLAČÍTKO POSUNUTÉ O -10px ---
                                             with stylable_container(
                                                 key=f"submit_btn_{unique_key}",
                                                 css_styles="""
@@ -504,7 +504,7 @@ for tyden in month_days:
                                                         background-color: #16A34A !important;
                                                         color: white !important;
                                                         border: none !important;
-                                                        transform: translateY(-15px) !important;
+                                                        transform: translateY(-10px) !important;
                                                         margin-top: 0px !important;
                                                     }
                                                     button:hover {
@@ -552,7 +552,7 @@ for tyden in month_days:
                             elif je_zavod_obecne:
                                 st.markdown("<div style='height: 50px;'></div>", unsafe_allow_html=True)
 
-                        # --- SPODNÍ ČÁST: SEZNAM PŘIHLÁŠENÝCH (SYMETRICKÉ ŘÁDKY) ---
+                        # --- SPODNÍ ČÁST: SEZNAM PŘIHLÁŠENÝCH (POSUN DOLŮ O 10px) ---
                         st.markdown("<br>", unsafe_allow_html=True)
                         st.divider()
 
@@ -601,18 +601,18 @@ for tyden in month_days:
                                 for i, (idx, row) in enumerate(lidi.iterrows()):
                                     bg_color = "#F3F4F6" if i % 2 == 0 else "white"
                                     
-                                    # STEJNÉ NASTAVENÍ PRO OBĚ BARVY
+                                    # PŘESNÉ PADDINGY: VĚTŠÍ DOLNÍ PADDING POSUNE VIZUÁL DOLŮ
                                     with stylable_container(
                                         key=f"row_{unique_key}_{idx}",
                                         css_styles=f"""
                                         {{
                                             background-color: {bg_color};
                                             border-radius: 6px;
-                                            padding: 12px 10px; /* SYMETRICKÝ PADDING PRO ŠEDÝ I BÍLÝ */
+                                            padding: 10px 5px 20px 5px !important; /* ASYMETRICKÝ PADDING PRO POSUN DOLŮ */
                                             margin-bottom: 2px;
                                             display: flex;
                                             align-items: center;
-                                            min-height: 56px; /* ZVĚTŠENÁ VÝŠKA PRO KOŠ */
+                                            min-height: 40px;
                                         }}
                                         """
                                     ):
@@ -625,8 +625,7 @@ for tyden in month_days:
                                         c4.write(doprava_val)
                                         
                                         if not je_po_deadlinu:
-                                            # --- ÚPRAVA TLAČÍTKA V SEZNAMU (KOŠ) ---
-                                            # Odstraníme margin, který tlačí koš dolů
+                                            # KOŠ BEZ MARGINŮ
                                             with stylable_container(
                                                 key=f"del_btn_cont_{unique_key}_{idx}",
                                                 css_styles="""
