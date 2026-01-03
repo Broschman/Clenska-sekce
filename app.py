@@ -87,7 +87,6 @@ st.markdown("""
     }
     
     /* === VZHLED TLAČÍTEK V KALENDÁŘI === */
-    /* Jen jemná úprava, aby tlačítka nebyla zbytečně velká */
     div[data-testid="column"] button {
         border: 1px solid #eee !important;
         background-color: white !important;
@@ -126,10 +125,11 @@ with col_help:
         * :rainbow-background[MČR / Mistrovství]
         * :red-background[Závod ŽA] (Žebříček A)
         * :orange-background[Závod ŽB] (Žebříček B)
-        * :blue-background[Oblastní / Liga]
+        * :blue-background[Oblastní žebříček]
+        * :gray-background[Zimní liga (BZL)]
         * :violet-background[Štafety]
+        * :yellow-background[Soustředění]
         * :green-background[Trénink]
-        * :gray-background[Soustředění]
         
         **Tipy:**
         * **🚗 Doprava:** Pokud nemáš odvoz, zaškrtni *"Sháním odvoz"*.
@@ -250,12 +250,13 @@ for tyden in month_days:
                 typ_udalosti = str(akce['typ']).lower().strip() if 'typ' in df_akce.columns and pd.notna(akce['typ']) else ""
                 druh_akce = str(akce['druh']).lower().strip() if 'druh' in df_akce.columns and pd.notna(akce['druh']) else "ostatní"
                 
+                # Pomocné proměnné
                 je_stafeta = "štafety" in typ_udalosti
                 zavodni_slova = ["závod", "mčr", "žebříček", "liga", "mistrovství", "štafety", "ža", "žb"]
                 je_zavod_obecne = any(s in typ_udalosti for s in zavodni_slova)
 
-                # --- NATIVNÍ BAREVNÉ ROZLIŠENÍ (Stabilní) ---
-                bg_style = "gray" # Default
+                # --- BAREVNÉ ROZLIŠENÍ ---
+                bg_style = "gray" # Default (pokud se nic nenajde)
                 typ_label_short = "AKCE"
 
                 # 1. MČR
@@ -270,22 +271,30 @@ for tyden in month_days:
                 elif "žb" in typ_udalosti or "žebříček b" in typ_udalosti:
                     bg_style = "orange"
                     typ_label_short = "ŽB"
-                # 4. Štafety
+                # 4. OBLASTNÍ ŽEBŘÍČEK (MODRÁ)
+                elif "oblastní" in typ_udalosti or "žebříček" in typ_udalosti:
+                    bg_style = "blue"
+                    typ_label_short = "OBLASTNÍ"
+                # 5. ZIMNÍ LIGA / BZL (ŠEDÁ)
+                elif "zimní liga" in typ_udalosti or "bzl" in typ_udalosti:
+                    bg_style = "gray"
+                    typ_label_short = "ZIMNÍ LIGA"
+                # 6. ŠTAFETY (FIALOVÁ)
                 elif "štafety" in typ_udalosti:
                     bg_style = "violet"
                     typ_label_short = "ŠTAFETY"
-                # 5. Ostatní závody
-                elif je_zavod_obecne or "zimní liga" in typ_udalosti or "žebříček" in typ_udalosti:
-                    bg_style = "blue"
-                    typ_label_short = "ZÁVOD"
-                # 6. Trénink
+                # 7. TRÉNINK (ZELENÁ)
                 elif "trénink" in typ_udalosti:
                     bg_style = "green"
                     typ_label_short = "TRÉNINK"
-                # 7. Soustředění
+                # 8. SOUSTŘEDĚNÍ (ŽLUTÁ)
                 elif "soustředění" in typ_udalosti:
-                    bg_style = "gray"
+                    bg_style = "yellow"
                     typ_label_short = "SOUSTŘEDĚNÍ"
+                # Ostatní závody (pokud nepropadly výše)
+                elif je_zavod_obecne:
+                    bg_style = "blue"
+                    typ_label_short = "ZÁVOD"
 
                 ikony_mapa = {
                     "les": "🌲", "krátká trať": "🌲", "klasická trať": "🌲",
@@ -304,7 +313,7 @@ for tyden in month_days:
                 if je_po_deadlinu:
                     final_text = "🔒 " + final_text
                 
-                # POUŽITÍ NATIVNÍHO STREAMLIT BACKGROUNDU
+                # ZDE JE KOUZLO: Obalíme text do barvy
                 label_tlacitka = f":{bg_style}-background[{final_text}]"
                 
                 # --- POPOVER ---
