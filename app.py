@@ -155,6 +155,15 @@ try:
     df_akce['deadline'] = pd.to_datetime(df_akce['deadline'], dayfirst=True, errors='coerce').dt.date
     df_akce = df_akce.dropna(subset=['datum'])
     
+    # --- FIX: ZPRACOVÁNÍ VÍCEDENNÍCH AKCÍ ---
+    # Pokud sloupec datum_do neexistuje, vytvoříme ho
+    if 'datum_do' not in df_akce.columns:
+        df_akce['datum_do'] = df_akce['datum']
+    else:
+        # Převedeme na datum a doplníme prázdná místa startovním datem
+        df_akce['datum_do'] = pd.to_datetime(df_akce['datum_do'], dayfirst=True, errors='coerce').dt.date
+        df_akce['datum_do'] = df_akce['datum_do'].fillna(df_akce['datum'])
+
     # --- FIX PRO CHYBĚJÍCÍ DEADLINE (14 DNÍ PŘEDEM) ---
     def get_deadline(row):
         if pd.isna(row['deadline']):
@@ -237,8 +246,11 @@ for tyden in month_days:
             else:
                 st.markdown(f"<span class='day-number'>{den_cislo}</span>", unsafe_allow_html=True)
 
-            # AKCE
-            akce_dne = df_akce[df_akce['datum'] == aktualni_den]
+            # --- FILTROVÁNÍ AKCÍ (VÍCEDENNÍ LOGIKA) ---
+            # Akce se zobrazí, pokud aktuální den spadá do intervalu <datum, datum_do>
+            maska_akce = (df_akce['datum'] <= aktualni_den) & (df_akce['datum_do'] >= aktualni_den)
+            akce_dne = df_akce[maska_akce]
+            
             for _, akce in akce_dne.iterrows():
                 je_po_deadlinu = dnes > akce['deadline']
                 je_dnes_deadline = dnes == akce['deadline']
@@ -257,7 +269,6 @@ for tyden in month_days:
                 bg_style = "gray"
                 typ_label_short = "AKCE"
 
-                # Prioritní barvy
                 if "mčr" in typ_udalosti or "mistrovství" in typ_udalosti:
                     bg_style = "rainbow"
                     typ_label_short = "MČR"
@@ -306,13 +317,17 @@ for tyden in month_days:
                         st.markdown(f"### {nazev_full}")
                         st.caption(f"Typ akce: {typ_label_short} ({druh_akce.upper()})")
                         
-                        # --- PŘIDÁNO ZOBRAZENÍ DATA ---
+                        # Zobrazení data (pokud je vícedenní, ukážeme interval)
                         dny_cz = ["Pondělí", "Úterý", "Středa", "Čtvrtek", "Pátek", "Sobota", "Neděle"]
-                        den_txt = dny_cz[akce['datum'].weekday()]
-                        datum_txt = akce['datum'].strftime('%d.%m.%Y')
-                        st.write(f"**📅 Datum:** {den_txt} {datum_txt}")
-                        # ------------------------------
-                        
+                        if akce['datum'] == akce['datum_do']:
+                            den_txt = dny_cz[akce['datum'].weekday()]
+                            datum_format = akce['datum'].strftime('%d.%m.%Y')
+                            st.write(f"**📅 Datum:** {den_txt} {datum_format}")
+                        else:
+                            datum_od = akce['datum'].strftime('%d.%m.')
+                            datum_do = akce['datum_do'].strftime('%d.%m.%Y')
+                            st.write(f"**📅 Datum:** {datum_od} – {datum_do}")
+
                         st.write(f"**📍 Místo:** {akce['místo']}")
                         
                         kategorie_txt = str(akce['kategorie']).strip() if 'kategorie' in df_akce.columns and pd.notna(akce['kategorie']) else ""
