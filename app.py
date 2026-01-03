@@ -137,7 +137,7 @@ with col_help:
         """)
         
         st.divider()
-        st.markdown("**Terén:** 🌲 Les | 🏙️ Sprint | 🌗 Nočák | 🏃 Ostatní")
+        st.markdown("**Terén:** 🌲 Les | 🏙️ Sprint | 🌗 Nočák")
 
 
 # --- 2. PŘIPOJENÍ A NAČTENÍ DAT ---
@@ -288,12 +288,10 @@ for tyden in month_days:
                     bg_style = "gray"
                     typ_label_short = "SOUSTŘEDĚNÍ"
 
-                # --- EMOJI TERÉNU (S FALLBACKEM 🏃) ---
                 ikony_mapa = {
                     "les": "🌲", "krátká trať": "🌲", "klasická trať": "🌲",
                     "sprint": "🏙️", "nočák": "🌗"
                 }
-                # Pokud druh_akce není ve slovníku (nebo je prázdný), vrátíme běžce 🏃
                 emoji_druh = ikony_mapa.get(druh_akce, "🏃")
 
                 nazev_full = akce['název']
@@ -316,7 +314,6 @@ for tyden in month_days:
                         st.markdown(f"### {nazev_full}")
                         st.caption(f"Typ akce: {typ_label_short} ({druh_akce.upper()})")
                         
-                        # Zobrazení data (s dnem v týdnu)
                         dny_cz = ["Pondělí", "Úterý", "Středa", "Čtvrtek", "Pátek", "Sobota", "Neděle"]
                         if akce['datum'] == akce['datum_do']:
                             den_txt = dny_cz[akce['datum'].weekday()]
@@ -358,6 +355,9 @@ for tyden in month_days:
                             st.markdown(f"👉 [**ℹ️ Stránka závodu v ORISu**]({link_target})")
 
                     with col_form:
+                        # --- FIX: UNIKÁTNÍ KLÍČE PRO KAŽDÝ DEN ---
+                        # Pokud je akce vícedenní, vykreslí se vícekrát. Klíče widgetů musí být unikátní!
+                        # Přidáme aktualni_den do klíče.
                         delete_key_state = f"confirm_delete_{akce_id_str}"
                         
                         if (not je_zavod_obecne or je_stafeta):
@@ -365,7 +365,8 @@ for tyden in month_days:
                                 nadpis_form = "✍️ Soupiska" if je_stafeta else "✍️ Přihláška"
                                 st.markdown(f"#### {nadpis_form}")
                                 
-                                form_key = f"form_{akce_id_str}"
+                                # UNIKÁTNÍ KLÍČ FORMULÁŘE
+                                form_key = f"form_{akce_id_str}_{aktualni_den}"
                                 with st.form(key=form_key, clear_on_submit=True):
                                     if kategorie_txt and kategorie_txt.lower() != "všichni":
                                         st.warning(f"⚠️ Opravdu splňuješ podmínku? Tato akce je určena pro: **{kategorie_txt}**")
@@ -431,7 +432,8 @@ for tyden in month_days:
                             clovek_ke_smazani = st.session_state[delete_key_state]
                             st.warning(f"⚠️ Opravdu odhlásit: **{clovek_ke_smazani}**?")
                             col_conf1, col_conf2 = st.columns(2)
-                            if col_conf1.button("✅ ANO", key=f"yes_{akce_id_str}"):
+                            # UNIKÁTNÍ KLÍČE PRO POTVRZOVACÍ TLAČÍTKA
+                            if col_conf1.button("✅ ANO", key=f"yes_{akce_id_str}_{aktualni_den}"):
                                 smazano_ok = False
                                 try:
                                     df_curr = conn.read(worksheet="prihlasky", ttl=0)
@@ -446,7 +448,7 @@ for tyden in month_days:
                                     st.success("Smazáno!")
                                     time.sleep(0.5)
                                     st.rerun()
-                            if col_conf2.button("❌ ZPĚT", key=f"no_{akce_id_str}"):
+                            if col_conf2.button("❌ ZPĚT", key=f"no_{akce_id_str}_{aktualni_den}"):
                                 del st.session_state[delete_key_state]
                                 st.rerun()
 
@@ -471,7 +473,8 @@ for tyden in month_days:
                                 c4.write(doprava_val)
                                 
                                 if not je_po_deadlinu:
-                                    if c5.button("🗑️", key=f"del_{akce_id_str}_{idx}"):
+                                    # UNIKÁTNÍ KLÍČ PRO MAZACÍ TLAČÍTKO
+                                    if c5.button("🗑️", key=f"del_{akce_id_str}_{idx}_{aktualni_den}"):
                                         st.session_state[delete_key_state] = row['jméno']
                                         st.rerun()
                                 
