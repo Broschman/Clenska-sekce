@@ -252,7 +252,14 @@ for tyden in month_days:
                 je_zavod = "závod" in typ_udalosti
                 ma_pohar = je_zavod or je_stafeta
 
-                ikony_mapa = {"les": "🌲", "sprint": "🏙️", "nočák": "🌗"}
+                # --- ÚPRAVA IKON (PŘIDÁNY NOVÉ DRUHY) ---
+                ikony_mapa = {
+                    "les": "🌲",
+                    "krátká trať": "🌲",
+                    "klasická trať": "🌲",
+                    "sprint": "🏙️",
+                    "nočák": "🌗"
+                }
                 emoji_druh = ikony_mapa.get(druh_akce, "🏃")
                 
                 if ma_pohar: emoji_final = f"🏆{emoji_druh}"
@@ -272,7 +279,6 @@ for tyden in month_days:
                 
                 # --- POPOVER (DETAIL) ---
                 with st.popover(label_tlacitka, use_container_width=True):
-                    # Zde rozdělíme obsah na 2 sloupce
                     col_info, col_form = st.columns([1.2, 1], gap="medium")
                     
                     # ----------------------------------------
@@ -332,8 +338,7 @@ for tyden in month_days:
                                 form_key = f"form_{akce_id_str}"
                                 with st.form(key=form_key, clear_on_submit=True):
                                     
-                                    # --- NOVÉ: VAROVÁNÍ VE FORMULÁŘI ---
-                                    # Pokud kategorie NENÍ prázdná a NENÍ "všichni"
+                                    # VAROVÁNÍ VE FORMULÁŘI
                                     if kategorie_txt and kategorie_txt.lower() != "všichni":
                                         st.warning(f"⚠️ Opravdu splňuješ podmínku? Tato akce je určena pro: **{kategorie_txt}**")
                                     
