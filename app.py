@@ -9,7 +9,7 @@ import time
 # --- 1. NASTAVENÍ STRÁNKY ---
 st.set_page_config(page_title="Kalendář RBK", page_icon="🌲", layout="wide")
 
-# --- CSS VZHLED (DESIGN 3.2 - ALIGNMENT FIX) ---
+# --- CSS VZHLED (DESIGN 3.3 - FINAL POLISH) ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
@@ -45,7 +45,7 @@ st.markdown("""
         max-height: 85vh !important;
         border-radius: 12px !important;
         box-shadow: 0 20px 40px rgba(0,0,0,0.2) !important;
-        padding: 20px !important; 
+        padding: 24px !important; 
         overflow-y: auto !important;
     }
 
@@ -104,6 +104,15 @@ st.markdown("""
     .stTextInput input:focus, .stSelectbox div[data-baseweb="select"]:focus-within {
         border-color: #2563EB !important;
         box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2) !important;
+    }
+    
+    /* Zarovnání tlačítek v tabulce (Koš) */
+    div[data-testid="column"] button {
+        margin-top: 0px !important;
+        padding-top: 0px !important;
+        padding-bottom: 0px !important;
+        height: auto !important;
+        min-height: 38px !important;
     }
 
     footer {visibility: hidden;}
@@ -505,6 +514,9 @@ for tyden in month_days:
                                                         background-color: #16A34A !important;
                                                         color: white !important;
                                                         border: none !important;
+                                                        width: 100% !important;
+                                                        display: block !important;
+                                                        margin-top: 10px !important;
                                                     }
                                                     button:hover {
                                                         background-color: #15803d !important;
@@ -606,10 +618,11 @@ for tyden in month_days:
                                         {{
                                             background-color: {bg_color};
                                             border-radius: 6px;
-                                            padding: 10px 5px; /* Zvětšeno pro správné lícování */
+                                            padding: 12px 5px; /* UPRAVENO: Více místa, aby se to zarovnalo */
                                             margin-bottom: 2px;
                                             display: flex;
-                                            align-items: center;
+                                            align-items: center; /* Vertikální centr */
+                                            min-height: 44px; /* Fixní výška řádku */
                                         }}
                                         """
                                     ):
