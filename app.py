@@ -87,7 +87,6 @@ st.markdown("""
     }
     
     /* === VZHLED TLAČÍTEK V KALENDÁŘI === */
-    /* Odstraníme padding a border, aby vyniklo barevné pozadí textu */
     div[data-testid="column"] button {
         border-radius: 8px !important;
         width: 100% !important;
@@ -96,7 +95,7 @@ st.markdown("""
         border: 1px solid #eee !important;
         background-color: white !important;
         text-align: left !important;
-        padding: 4px !important; /* Malý padding kolem */
+        padding: 4px !important;
         line-height: 1.3 !important;
         transition: transform 0.1s;
     }
@@ -134,15 +133,16 @@ with col_help:
         st.markdown("### 💡 Nápověda")
         st.info("📱 **Mobil:** Otoč telefon na šířku.")
         
-        # Legenda s použitím nových barev
+        # Aktualizovaná legenda s novými barvami
         st.markdown("""
         **Barevné rozlišení:**
+        * :rainbow-background[MČR / Mistrovství]
+        * :red-background[Závod ŽA] (Žebříček A)
+        * :orange-background[Závod ŽB] (Žebříček B)
+        * :blue-background[Oblastní / Zimní liga]
+        * :violet-background[Štafety]
+        * :gray-background[Soustředění]
         * :green-background[Trénink]
-        * :red-background[Závody] (ŽA, ŽB, Oblastní)
-        * :orange-background[Štafety]
-        * :violet-background[Soustředění]
-        * :blue-background[Zimní liga]
-        * :rainbow-background[MČR]
         
         **Tipy:**
         * **🚗 Doprava:** Pokud nemáš odvoz, zaškrtni *"Sháním odvoz"*.
@@ -263,28 +263,44 @@ for tyden in month_days:
                 typ_udalosti = str(akce['typ']).lower().strip() if 'typ' in df_akce.columns and pd.notna(akce['typ']) else ""
                 druh_akce = str(akce['druh']).lower().strip() if 'druh' in df_akce.columns and pd.notna(akce['druh']) else "ostatní"
                 
+                # Pomocné proměnné pro logiku
                 je_stafeta = "štafety" in typ_udalosti
-                zavodni_slova = ["závod", "mčr", "žebříček", "liga", "mistrovství", "štafety"]
-                je_zavod = any(s in typ_udalosti for s in zavodni_slova)
+                zavodni_slova = ["závod", "mčr", "žebříček", "liga", "mistrovství", "štafety", "ža", "žb"]
+                je_zavod_obecne = any(s in typ_udalosti for s in zavodni_slova)
 
                 # --- BAREVNÉ ROZLIŠENÍ (NATIVNÍ STREAMLIT) ---
-                # Používáme syntaxi :color-background[text]
-                bg_style = "" 
-                
-                if "trénink" in typ_udalosti:
-                    bg_style = "green"
-                elif "soustředění" in typ_udalosti:
-                    bg_style = "violet"
-                elif "štafety" in typ_udalosti:
-                    bg_style = "orange"
-                elif "mčr" in typ_udalosti or "mistrovství" in typ_udalosti:
-                    bg_style = "rainbow" # Duhová pro MČR!
-                elif "zimní liga" in typ_udalosti:
-                    bg_style = "blue"
-                elif je_zavod:
+                # Hierarchie je důležitá! Kontrolujeme od nejspecifičtějšího po nejobecnější.
+                bg_style = "gray" # Default
+                typ_label_short = "AKCE"
+
+                # 1. MČR (Nejvyšší priorita)
+                if "mčr" in typ_udalosti or "mistrovství" in typ_udalosti:
+                    bg_style = "rainbow"
+                    typ_label_short = "MČR"
+                # 2. ŽA (Vysoká priorita)
+                elif "ža" in typ_udalosti or "žebříček a" in typ_udalosti:
                     bg_style = "red"
-                else:
+                    typ_label_short = "ŽA"
+                # 3. ŽB (Střední priorita)
+                elif "žb" in typ_udalosti or "žebříček b" in typ_udalosti:
+                    bg_style = "orange"
+                    typ_label_short = "ŽB"
+                # 4. Štafety (Specifická kategorie)
+                elif "štafety" in typ_udalosti:
+                    bg_style = "violet"
+                    typ_label_short = "ŠTAFETY"
+                # 5. Ostatní závody (Oblastní, liga, pouťáky)
+                elif je_zavod_obecne or "zimní liga" in typ_udalosti or "žebříček" in typ_udalosti:
+                    bg_style = "blue"
+                    typ_label_short = "ZÁVOD"
+                # 6. Soustředění
+                elif "soustředění" in typ_udalosti:
                     bg_style = "gray"
+                    typ_label_short = "SOUSTŘEDĚNÍ"
+                # 7. Trénink (Základ)
+                elif "trénink" in typ_udalosti:
+                    bg_style = "green"
+                    typ_label_short = "TRÉNINK"
 
                 ikony_mapa = {
                     "les": "🌲", "krátká trať": "🌲", "klasická trať": "🌲",
@@ -304,7 +320,7 @@ for tyden in month_days:
                 if je_po_deadlinu:
                     final_text = "🔒 " + final_text
                 
-                # ZDE JE KOUZLO: Obalíme text do barvy
+                # Obalíme text do barvy
                 label_tlacitka = f":{bg_style}-background[{final_text}]"
                 
                 # --- POPOVER ---
@@ -314,13 +330,8 @@ for tyden in month_days:
                     with col_info:
                         st.markdown(f"### {nazev_full}")
                         
-                        if je_stafeta: typ_label = "ŠTAFETY"
-                        elif "mčr" in typ_udalosti: typ_label = "MČR"
-                        elif je_zavod: typ_label = "ZÁVOD"
-                        elif "soustředění" in typ_udalosti: typ_label = "SOUSTŘEDĚNÍ"
-                        else: typ_label = "TRÉNINK"
-                        
-                        st.caption(f"Typ akce: {typ_label} ({druh_akce.upper()})")
+                        # Detailnější popisek v bublině
+                        st.caption(f"Typ akce: {typ_label_short} ({druh_akce.upper()})")
                         st.write(f"**📍 Místo:** {akce['místo']}")
                         
                         kategorie_txt = str(akce['kategorie']).strip() if 'kategorie' in df_akce.columns and pd.notna(akce['kategorie']) else ""
@@ -338,7 +349,7 @@ for tyden in month_days:
                         else:
                             st.caption(f"📅 Deadline přihlášek: {deadline_str}")
 
-                        if je_zavod:
+                        if je_zavod_obecne:
                             st.markdown("---")
                             st.markdown("**Informace k závodu:**")
                             
@@ -354,7 +365,8 @@ for tyden in month_days:
                     with col_form:
                         delete_key_state = f"confirm_delete_{akce_id_str}"
                         
-                        if (not je_zavod or je_stafeta):
+                        # Formulář jen pro NE-závody (kromě štafet)
+                        if (not je_zavod_obecne or je_stafeta):
                             if not je_po_deadlinu and delete_key_state not in st.session_state:
                                 nadpis_form = "✍️ Soupiska" if je_stafeta else "✍️ Přihláška"
                                 st.markdown(f"#### {nadpis_form}")
@@ -407,12 +419,12 @@ for tyden in month_days:
                                         else: st.warning("Vyplň jméno!")
                             elif je_po_deadlinu:
                                 st.info("Přihlašování bylo ukončeno.")
-                        elif je_zavod:
+                        elif je_zavod_obecne:
                             pass
 
                     st.divider()
 
-                    if not je_zavod or je_stafeta:
+                    if not je_zavod_obecne or je_stafeta:
                         if akce_id_str:
                             lidi = df_prihlasky[df_prihlasky['id_akce'] == akce_id_str].copy()
                         else:
@@ -456,7 +468,6 @@ for tyden in month_days:
                             
                             for i, (idx, row) in enumerate(lidi.iterrows()):
                                 c1, c2, c3, c4, c5 = st.columns([0.4, 2.0, 2.0, 0.8, 0.5], vertical_alignment="center")
-                                
                                 c1.write(f"{i+1}.")
                                 c2.markdown(f"**{row['jméno']}**")
                                 poznamka_txt = row['poznámka'] if pd.notna(row['poznámka']) else ""
