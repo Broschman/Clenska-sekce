@@ -9,7 +9,7 @@ import time
 # --- 1. NASTAVENÍ STRÁNKY ---
 st.set_page_config(page_title="Kalendář RBK", page_icon="🌲", layout="wide")
 
-# --- CSS VZHLED (DESIGN 3.4 - AGRESIVNÍ FIX) ---
+# --- CSS VZHLED (DESIGN 3.5 - SYMETRIE) ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
@@ -490,7 +490,7 @@ for tyden in month_days:
                                             
                                             st.markdown("<br>", unsafe_allow_html=True)
                                             
-                                            # --- AGRESIVNÍ POSUN TLAČÍTKA NAHORU ---
+                                            # --- TLAČÍTKO POSUNUTÉ NAHORU O -15px ---
                                             with stylable_container(
                                                 key=f"submit_btn_{unique_key}",
                                                 css_styles="""
@@ -498,7 +498,7 @@ for tyden in month_days:
                                                         background-color: #16A34A !important;
                                                         color: white !important;
                                                         border: none !important;
-                                                        transform: translateY(-20px) !important; /* VIZUÁLNÍ POSUN */
+                                                        transform: translateY(-15px) !important; /* NOVÝ POSUN */
                                                         margin-top: 0px !important;
                                                     }
                                                     button:hover {
@@ -546,7 +546,7 @@ for tyden in month_days:
                             elif je_zavod_obecne:
                                 st.markdown("<div style='height: 50px;'></div>", unsafe_allow_html=True)
 
-                        # --- SPODNÍ ČÁST: SEZNAM PŘIHLÁŠENÝCH (VÍCE PADDINGU PRO ZEBRA) ---
+                        # --- SPODNÍ ČÁST: SEZNAM PŘIHLÁŠENÝCH (ROZTAŽENÉ OBĚ BARVY) ---
                         st.markdown("<br>", unsafe_allow_html=True)
                         st.divider()
 
@@ -595,17 +595,18 @@ for tyden in month_days:
                                 for i, (idx, row) in enumerate(lidi.iterrows()):
                                     bg_color = "#F3F4F6" if i % 2 == 0 else "white"
                                     
+                                    # Stylujeme KAŽDÝ řádek (i bílý), aby měly stejné paddingy
                                     with stylable_container(
                                         key=f"row_{unique_key}_{idx}",
                                         css_styles=f"""
                                         {{
                                             background-color: {bg_color};
                                             border-radius: 6px;
-                                            padding: 16px 5px !important; /* MASIVNÍ PADDING PRO ODTAŽENÍ */
+                                            padding: 12px 5px 20px 5px !important; /* ROZTAŽENÍ DOLŮ (bottom padding) */
                                             margin-bottom: 2px;
                                             display: flex;
                                             align-items: center;
-                                            min-height: 50px; /* GARANCE VÝŠKY */
+                                            min-height: 50px;
                                         }}
                                         """
                                     ):
