@@ -9,7 +9,7 @@ import time
 # --- 1. NASTAVENÍ STRÁNKY ---
 st.set_page_config(page_title="Kalendář RBK", page_icon="🌲", layout="wide")
 
-# --- CSS VZHLED (DESIGN 3.6 - PERFECT ALIGNMENT) ---
+# --- CSS VZHLED (DESIGN 3.7 - FINAL ROW FIX) ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
@@ -19,7 +19,6 @@ st.markdown("""
         color: #1f2937;
     }
 
-    /* Nadpis aplikace */
     h1 {
         background: -webkit-linear-gradient(45deg, #166534, #15803d);
         -webkit-background-clip: text;
@@ -602,18 +601,18 @@ for tyden in month_days:
                                 for i, (idx, row) in enumerate(lidi.iterrows()):
                                     bg_color = "#F3F4F6" if i % 2 == 0 else "white"
                                     
-                                    # TEĎ MAJÍ OBĚ VARIANTY STEJNÉ PADDINGY
+                                    # STEJNÉ NASTAVENÍ PRO OBĚ BARVY
                                     with stylable_container(
                                         key=f"row_{unique_key}_{idx}",
                                         css_styles=f"""
                                         {{
                                             background-color: {bg_color};
                                             border-radius: 6px;
-                                            padding: 8px 10px;
-                                            margin-bottom: 4px;
+                                            padding: 12px 10px; /* SYMETRICKÝ PADDING PRO ŠEDÝ I BÍLÝ */
+                                            margin-bottom: 2px;
                                             display: flex;
                                             align-items: center;
-                                            min-height: 40px;
+                                            min-height: 56px; /* ZVĚTŠENÁ VÝŠKA PRO KOŠ */
                                         }}
                                         """
                                     ):
@@ -626,9 +625,23 @@ for tyden in month_days:
                                         c4.write(doprava_val)
                                         
                                         if not je_po_deadlinu:
-                                            if c5.button("🗑️", key=f"del_{unique_key}_{idx}"):
-                                                st.session_state[delete_key_state] = row['jméno']
-                                                st.rerun()
+                                            # --- ÚPRAVA TLAČÍTKA V SEZNAMU (KOŠ) ---
+                                            # Odstraníme margin, který tlačí koš dolů
+                                            with stylable_container(
+                                                key=f"del_btn_cont_{unique_key}_{idx}",
+                                                css_styles="""
+                                                    button {
+                                                        margin: 0px !important;
+                                                        padding-top: 0px !important;
+                                                        padding-bottom: 0px !important;
+                                                        height: auto !important;
+                                                        min-height: 0px !important;
+                                                    }
+                                                """
+                                            ):
+                                                if c5.button("🗑️", key=f"del_{unique_key}_{idx}"):
+                                                    st.session_state[delete_key_state] = row['jméno']
+                                                    st.rerun()
                             else:
                                 st.caption("Zatím nikdo. Buď první!")
 
