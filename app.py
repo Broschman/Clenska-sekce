@@ -1,11 +1,9 @@
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
-import streamlit.components.v1 as components
 import pandas as pd
 from datetime import datetime, date, timedelta
 import calendar
 import time
-import json
 
 # --- 1. NASTAVENÍ STRÁNKY ---
 st.set_page_config(page_title="Kalendář RBK", page_icon="🌲", layout="wide")
@@ -88,26 +86,36 @@ st.markdown("""
         text-align: center;
     }
     
-    /* VÝCHOZÍ STYL TLAČÍTKA V KALENDÁŘI (JS ho pak přebarví) */
+    /* === VZHLED TLAČÍTEK V KALENDÁŘI === */
+    /* Odstraníme padding a border, aby vyniklo barevné pozadí textu */
     div[data-testid="column"] button {
-        border-radius: 6px !important;
+        border-radius: 8px !important;
         width: 100% !important;
         height: auto !important;
-        min-height: 50px !important;
-        border: 1px solid #ddd !important; /* Neutrální okraj */
+        min-height: 55px !important;
+        border: 1px solid #eee !important;
+        background-color: white !important;
         text-align: left !important;
-        color: #333 !important;
-        padding: 6px 10px !important;
-        line-height: 1.2 !important;
-        font-size: 14px !important;
-        font-weight: 500 !important;
+        padding: 4px !important; /* Malý padding kolem */
+        line-height: 1.3 !important;
         transition: transform 0.1s;
     }
+    
     div[data-testid="column"] button:hover {
-        transform: scale(1.02);
-        z-index: 2;
-        border-color: #999 !important;
-        filter: brightness(0.97); /* Jemné ztmavení při najetí */
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+        border-color: #ccc !important;
+    }
+
+    /* Úprava barevných štítků uvnitř tlačítka */
+    div[data-testid="column"] button p {
+        font-size: 14px !important;
+        font-weight: 600 !important;
+        margin: 0 !important;
+        padding: 4px 8px !important;
+        border-radius: 6px !important;
+        width: 100%;
+        display: block;
     }
     
     footer {visibility: hidden;}
@@ -126,22 +134,21 @@ with col_help:
         st.markdown("### 💡 Nápověda")
         st.info("📱 **Mobil:** Otoč telefon na šířku.")
         
-        # Legendu děláme pomocí HTML spanů s barvami
+        # Legenda s použitím nových barev
         st.markdown("""
-        **Typy akcí (barvy):**
-        * <span style='background-color:#E8F5E9; border-left:4px solid #2E7D32; padding: 2px 5px;'><b>Trénink</b></span>
-        * <span style='background-color:#FFEBEE; border-left:4px solid #C62828; padding: 2px 5px;'><b>Závody</b></span>
-        * <span style='background-color:#FFF8E1; border-left:4px solid #FFD700; padding: 2px 5px;'><b>MČR</b></span>
-        * <span style='background-color:#FFF3E0; border-left:4px solid #EF6C00; padding: 2px 5px;'><b>Štafety</b></span>
-        * <span style='background-color:#F3E5F5; border-left:4px solid #8E24AA; padding: 2px 5px;'><b>Soustředění</b></span>
-        * <span style='background-color:#E3F2FD; border-left:4px solid #1565C0; padding: 2px 5px;'><b>Zimní liga</b></span>
+        **Barevné rozlišení:**
+        * :green-background[Trénink]
+        * :red-background[Závody] (ŽA, ŽB, Oblastní)
+        * :orange-background[Štafety]
+        * :violet-background[Soustředění]
+        * :blue-background[Zimní liga]
+        * :rainbow-background[MČR]
         
         **Tipy:**
         * **🚗 Doprava:** Pokud nemáš odvoz, zaškrtni *"Sháním odvoz"*.
-        * **🗑️ Odhlášení:** Klikni na koš a pak potvrď tlačítkem **ANO**.
         * **🏆 Štafety:** Hlas se v ORISu i ZDE.
         * **⚠️ Deadline:** Pokud je deadline dnes, máš poslední šanci!
-        """, unsafe_allow_html=True)
+        """)
         
         st.divider()
         st.markdown("**Terén:** 🌲 Les | 🏙️ Sprint | 🌗 Nočák")
@@ -228,9 +235,6 @@ st.markdown("<hr style='margin: 0 0 20px 0; border: 0; border-top: 1px solid #ee
 
 dnes = date.today()
 
-# Zde budeme sbírat styly: Python zjistí typ, přiřadí barvu a pošle to JS
-buttons_to_style = []
-
 for tyden in month_days:
     cols = st.columns(7, gap="small")
     
@@ -255,7 +259,7 @@ for tyden in month_days:
                 
                 akce_id_str = str(akce['id']) if 'id' in df_akce.columns else ""
 
-                # --- URČENÍ TYPU A BAREV ---
+                # DATA
                 typ_udalosti = str(akce['typ']).lower().strip() if 'typ' in df_akce.columns and pd.notna(akce['typ']) else ""
                 druh_akce = str(akce['druh']).lower().strip() if 'druh' in df_akce.columns and pd.notna(akce['druh']) else "ostatní"
                 
@@ -263,35 +267,24 @@ for tyden in month_days:
                 zavodni_slova = ["závod", "mčr", "žebříček", "liga", "mistrovství", "štafety"]
                 je_zavod = any(s in typ_udalosti for s in zavodni_slova)
 
-                # Definice barev (Pozadí, Okraj, Text)
-                bg_color = "#f0f0f0" 
-                border_color = "#ccc"
-                text_color = "#333"
-
+                # --- BAREVNÉ ROZLIŠENÍ (NATIVNÍ STREAMLIT) ---
+                # Používáme syntaxi :color-background[text]
+                bg_style = "" 
+                
                 if "trénink" in typ_udalosti:
-                    bg_color = "#E8F5E9" # Zelená
-                    border_color = "#2E7D32" 
-                    text_color = "#1B5E20"
+                    bg_style = "green"
                 elif "soustředění" in typ_udalosti:
-                    bg_color = "#F3E5F5" # Fialová
-                    border_color = "#8E24AA"
-                    text_color = "#4A148C"
+                    bg_style = "violet"
                 elif "štafety" in typ_udalosti:
-                    bg_color = "#FFF3E0" # Oranžová
-                    border_color = "#EF6C00"
-                    text_color = "#E65100"
+                    bg_style = "orange"
                 elif "mčr" in typ_udalosti or "mistrovství" in typ_udalosti:
-                    bg_color = "#FFF8E1" # Zlatá
-                    border_color = "#FFD700"
-                    text_color = "#F57F17"
+                    bg_style = "rainbow" # Duhová pro MČR!
                 elif "zimní liga" in typ_udalosti:
-                    bg_color = "#E3F2FD" # Modrá
-                    border_color = "#1565C0"
-                    text_color = "#0D47A1"
+                    bg_style = "blue"
                 elif je_zavod:
-                    bg_color = "#FFEBEE" # Červená
-                    border_color = "#C62828"
-                    text_color = "#B71C1C"
+                    bg_style = "red"
+                else:
+                    bg_style = "gray"
 
                 ikony_mapa = {
                     "les": "🌲", "krátká trať": "🌲", "klasická trať": "🌲",
@@ -299,30 +292,27 @@ for tyden in month_days:
                 }
                 emoji_druh = ikony_mapa.get(druh_akce, "")
 
-                # TEXT TLAČÍTKA (bez emoji barviček, jen terén a název)
-                display_text = f"{emoji_druh} {akce['název']}".strip()
-                if je_po_deadlinu: 
-                    display_text = "🔒 " + display_text
+                # Zkrácení názvu
+                nazev_full = akce['název']
+                if '-' in nazev_full:
+                    display_text = nazev_full.split('-')[0].strip()
+                else:
+                    display_text = nazev_full
+
+                # Finální text do tlačítka s barvou
+                final_text = f"{emoji_druh} {display_text}".strip()
+                if je_po_deadlinu:
+                    final_text = "🔒 " + final_text
                 
-                # Zkrácení názvu pro tlačítko
-                label_tlacitka = display_text
-                if '-' in label_tlacitka:
-                    label_tlacitka = label_tlacitka.split('-')[0].strip()
-
-                # PŘIDÁNÍ DO SEZNAMU PRO OBARVENÍ
-                buttons_to_style.append({
-                    "text": label_tlacitka,
-                    "bg": bg_color,
-                    "border": border_color,
-                    "color": text_color
-                })
-
-                # --- POPOVER (DETAIL) ---
+                # ZDE JE KOUZLO: Obalíme text do barvy
+                label_tlacitka = f":{bg_style}-background[{final_text}]"
+                
+                # --- POPOVER ---
                 with st.popover(label_tlacitka, use_container_width=True):
                     col_info, col_form = st.columns([1.2, 1], gap="medium")
                     
                     with col_info:
-                        st.markdown(f"### {akce['název']}")
+                        st.markdown(f"### {nazev_full}")
                         
                         if je_stafeta: typ_label = "ŠTAFETY"
                         elif "mčr" in typ_udalosti: typ_label = "MČR"
@@ -466,6 +456,7 @@ for tyden in month_days:
                             
                             for i, (idx, row) in enumerate(lidi.iterrows()):
                                 c1, c2, c3, c4, c5 = st.columns([0.4, 2.0, 2.0, 0.8, 0.5], vertical_alignment="center")
+                                
                                 c1.write(f"{i+1}.")
                                 c2.markdown(f"**{row['jméno']}**")
                                 poznamka_txt = row['poznámka'] if pd.notna(row['poznámka']) else ""
@@ -517,36 +508,6 @@ with st.popover("💡 Návrh na zlepšení"):
                 st.toast("✅ Díky! Tvůj návrh byl uložen.")
 
 st.markdown('</div>', unsafe_allow_html=True)
-
-# --- 6. JS INJECTION: BARVENÍ TLAČÍTEK PODLE TEXTU ---
-styles_json = json.dumps(buttons_to_style)
-
-js_code = f"""
-<script>
-    const styles = {styles_json};
-
-    function applyStyles() {{
-        const buttons = window.parent.document.querySelectorAll('div[data-testid="column"] button');
-        
-        buttons.forEach(btn => {{
-            // Hledáme styl podle textu tlačítka
-            // Používáme includes, protože text může obsahovat '🔒 ' nebo emoji terénu
-            const match = styles.find(s => btn.innerText.includes(s.text));
-            
-            if (match) {{
-                btn.style.backgroundColor = match.bg;
-                btn.style.borderLeft = '6px solid ' + match.border;
-                btn.style.color = match.color;
-            }}
-        }});
-    }}
-
-    // Spustíme hned a pak opakovaně (kvůli překreslování Streamlitu)
-    applyStyles();
-    setInterval(applyStyles, 500);
-</script>
-"""
-components.html(js_code, height=0, width=0)
 
 # --- PATIČKA ---
 st.markdown("---")
