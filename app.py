@@ -133,6 +133,14 @@ try:
     df_akce['deadline'] = pd.to_datetime(df_akce['deadline'], dayfirst=True, errors='coerce').dt.date
     df_akce = df_akce.dropna(subset=['datum'])
     
+    # --- FIX PRO CHYBĚJÍCÍ DEADLINE (AUTOMATICKY 14 DNÍ PŘED AKCÍ) ---
+    def get_deadline(row):
+        if pd.isna(row['deadline']):
+            return row['datum'] - timedelta(days=14)
+        return row['deadline']
+
+    df_akce['deadline'] = df_akce.apply(get_deadline, axis=1)
+
     # ID na string
     if 'id' in df_akce.columns:
         df_akce['id'] = df_akce['id'].astype(str).str.replace(r'\.0$', '', regex=True)
@@ -252,7 +260,6 @@ for tyden in month_days:
                 je_zavod = "závod" in typ_udalosti
                 ma_pohar = je_zavod or je_stafeta
 
-                # --- ÚPRAVA IKON (PŘIDÁNY NOVÉ DRUHY) ---
                 ikony_mapa = {
                     "les": "🌲",
                     "krátká trať": "🌲",
@@ -294,7 +301,6 @@ for tyden in month_days:
                         st.caption(f"Typ akce: {typ_label} ({druh_akce.upper()})")
                         st.write(f"**📍 Místo:** {akce['místo']}")
                         
-                        # Zobrazení kategorie v levém sloupci
                         kategorie_txt = str(akce['kategorie']).strip() if 'kategorie' in df_akce.columns and pd.notna(akce['kategorie']) else ""
                         if kategorie_txt:
                             st.write(f"**🎯 Tato akce je určena pro:** {kategorie_txt}")
@@ -338,7 +344,6 @@ for tyden in month_days:
                                 form_key = f"form_{akce_id_str}"
                                 with st.form(key=form_key, clear_on_submit=True):
                                     
-                                    # VAROVÁNÍ VE FORMULÁŘI
                                     if kategorie_txt and kategorie_txt.lower() != "všichni":
                                         st.warning(f"⚠️ Opravdu splňuješ podmínku? Tato akce je určena pro: **{kategorie_txt}**")
                                     
