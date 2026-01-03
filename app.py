@@ -9,7 +9,7 @@ import time
 # --- 1. NASTAVENÍ STRÁNKY ---
 st.set_page_config(page_title="Kalendář RBK", page_icon="🌲", layout="wide")
 
-# --- CSS VZHLED (DESIGN 3.0 - VIBRANT MODERN) ---
+# --- CSS VZHLED (DESIGN 3.1 - FIXED LAYOUT) ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
@@ -19,6 +19,7 @@ st.markdown("""
         color: #1f2937;
     }
 
+    /* Nadpis aplikace */
     h1 {
         background: -webkit-linear-gradient(45deg, #166534, #15803d);
         -webkit-background-clip: text;
@@ -37,17 +38,17 @@ st.markdown("""
         margin-bottom: 0.5rem;
     }
 
-    /* === ŠIROKÁ BUBLINA === */
+    /* === ŠIROKÁ BUBLINA (POPOVER) - OPRAVA === */
     div[data-testid="stPopoverBody"] {
         width: 800px !important;      
         max-width: 95vw !important;   
-        border-radius: 16px !important;
+        max-height: 85vh !important;
+        border-radius: 12px !important;
         box-shadow: 0 20px 40px rgba(0,0,0,0.2) !important;
-        padding: 0 !important; /* Reset padding pro vlastní layout */
-        overflow: hidden;
+        /* ZDE BYLA CHYBA: Vrátil jsem padding a povolil scroll */
+        padding: 20px !important; 
+        overflow-y: auto !important;
     }
-    
-    /* Vlastní hlavička v popoveru (pokud bychom ji chtěli stylovat přes CSS, ale děláme to v Pythonu) */
 
     /* Plovoucí tlačítko */
     .floating-container {
@@ -96,7 +97,7 @@ st.markdown("""
         padding: 2px;
     }
     
-    /* Stylování inputů ve formuláři */
+    /* Inputy */
     .stTextInput input, .stSelectbox div[data-baseweb="select"] {
         border-radius: 8px !important;
         border: 1px solid #E5E7EB;
@@ -111,54 +112,52 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- DEFINICE BAREV (MID-TONE VIBRANT) ---
-# Syté pozadí, bílý text. Žádné vybledlé pastely.
+# --- DEFINICE BAREV (SYTÉ, MODERNÍ) ---
 BARVY_AKCI = {
     "mcr": {
-        # POŘÁDNÁ DUHA
         "bg": "linear-gradient(90deg, #EF4444, #F59E0B, #10B981, #3B82F6, #8B5CF6)", 
         "color": "white",
         "border": "none",
         "shadow": "0 4px 6px rgba(0,0,0,0.15)"
     },
     "za": {
-        "bg": "#DC2626", # Sytá červená (Red 600)
+        "bg": "#DC2626", # Červená
         "color": "white",
         "border": "none",
         "shadow": "0 2px 4px rgba(220, 38, 38, 0.3)"
     },
     "zb": {
-        "bg": "#EA580C", # Sytá oranžová (Orange 600)
+        "bg": "#EA580C", # Oranžová
         "color": "white",
         "border": "none",
         "shadow": "0 2px 4px rgba(234, 88, 12, 0.3)"
     },
     "soustredeni": {
-        "bg": "#D97706", # Zlatá/Amber (Amber 600)
+        "bg": "#D97706", # Zlatá
         "color": "white",
         "border": "none",
         "shadow": "0 2px 4px rgba(217, 119, 6, 0.3)"
     },
     "oblastni": {
-        "bg": "#2563EB", # Královská modrá (Blue 600)
+        "bg": "#2563EB", # Modrá
         "color": "white",
         "border": "none",
         "shadow": "0 2px 4px rgba(37, 99, 235, 0.3)"
     },
     "zimni_liga": {
-        "bg": "#4B5563", # Tmavě šedá (Gray 600)
+        "bg": "#4B5563", # Šedá
         "color": "white",
         "border": "none",
         "shadow": "0 2px 4px rgba(75, 85, 99, 0.3)"
     },
     "stafety": {
-        "bg": "#9333EA", # Fialová (Purple 600)
+        "bg": "#9333EA", # Fialová
         "color": "white",
         "border": "none",
         "shadow": "0 2px 4px rgba(147, 51, 234, 0.3)"
     },
     "trenink": {
-        "bg": "#16A34A", # Zelená (Green 600)
+        "bg": "#16A34A", # Zelená
         "color": "white",
         "border": "none",
         "shadow": "0 2px 4px rgba(22, 163, 74, 0.3)"
@@ -171,7 +170,7 @@ BARVY_AKCI = {
     }
 }
 
-# --- POMOCNÉ FUNKCE PRO UI ---
+# --- POMOCNÉ FUNKCE ---
 def badge(text, bg="#f3f4f6", color="#111"):
     return f"<span style='background-color: {bg}; color: {color}; padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; margin-right: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);'>{text}</span>"
 
@@ -414,15 +413,11 @@ for tyden in month_days:
                 ):
                     with st.popover(final_text, use_container_width=True):
                         
-                        # --- ROZLOŽENÍ POPOVERU ---
                         col_info, col_form = st.columns([1.2, 1], gap="large")
                         
-                        # --- LEVÁ ČÁST: INFO ---
                         with col_info:
-                            st.markdown("<div style='padding: 10px 0;'>", unsafe_allow_html=True)
                             st.markdown(f"### {nazev_full}")
                             
-                            # Metadata Badges
                             st.markdown(
                                 badge(typ_label_short, bg="#F3F4F6", color="#333") + 
                                 badge(druh_akce.upper(), bg="#E5E7EB", color="#555"), 
@@ -471,14 +466,11 @@ for tyden in month_days:
                                     </div>
                                 </a>
                                 """, unsafe_allow_html=True)
-                            st.markdown("</div>", unsafe_allow_html=True)
 
-                        # --- PRAVÁ ČÁST: FORMULÁŘ ---
                         with col_form:
                             delete_key_state = f"confirm_delete_{unique_key}"
                             
                             if (not je_zavod_obecne or je_stafeta or je_soustredeni):
-                                # Container pro formulář s designem
                                 with stylable_container(
                                     key=f"form_cont_{unique_key}",
                                     css_styles="""
@@ -557,7 +549,6 @@ for tyden in month_days:
                             nadpis_seznam = f"👥 Zájemci ({len(lidi)})" if je_stafeta else f"👥 Přihlášeno ({len(lidi)})"
                             st.markdown(f"#### {nadpis_seznam}")
 
-                            # Potvrzení smazání (nad tabulkou)
                             if delete_key_state in st.session_state:
                                 clovek_ke_smazani = st.session_state[delete_key_state]
                                 with st.container():
@@ -583,7 +574,6 @@ for tyden in month_days:
                                         st.rerun()
 
                             if not lidi.empty:
-                                # Hlavička tabulky
                                 h1, h2, h3, h4, h5 = st.columns([0.4, 2.0, 2.0, 0.8, 0.5]) 
                                 h1.markdown("<b style='color:#9CA3AF'>#</b>", unsafe_allow_html=True)
                                 h2.markdown("<b>Jméno</b>", unsafe_allow_html=True)
@@ -592,9 +582,7 @@ for tyden in month_days:
                                 h5.markdown("") 
                                 st.markdown("<hr style='margin: 5px 0 10px 0; border-top: 1px solid #E5E7EB;'>", unsafe_allow_html=True)
                                 
-                                # Iterace s "Zebra" stylováním
                                 for i, (idx, row) in enumerate(lidi.iterrows()):
-                                    # Střídání barev pozadí
                                     bg_color = "#F3F4F6" if i % 2 == 0 else "white"
                                     
                                     with stylable_container(
@@ -617,7 +605,6 @@ for tyden in month_days:
                                         c4.write(doprava_val)
                                         
                                         if not je_po_deadlinu:
-                                            # Tlačítko koše musí být nativní, aby fungovalo
                                             if c5.button("🗑️", key=f"del_{unique_key}_{idx}"):
                                                 st.session_state[delete_key_state] = row['jméno']
                                                 st.rerun()
