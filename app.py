@@ -130,16 +130,14 @@ url_navrhy = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out
 try:
     df_akce = pd.read_csv(url_akce)
     
-    # 1. Datumy na datetime (prozatím)
+    # 1. Datumy na datetime
     df_akce['datum'] = pd.to_datetime(df_akce['datum'], dayfirst=True, errors='coerce')
     
-    # --- NOVÉ: Zpracování sloupce 'datum_do' ---
+    # Zpracování sloupce 'datum_do'
     if 'datum_do' in df_akce.columns:
         df_akce['datum_do'] = pd.to_datetime(df_akce['datum_do'], dayfirst=True, errors='coerce')
-        # Pokud chybí datum_do, doplníme ho jako datum (začátek = konec)
         df_akce['datum_do'] = df_akce['datum_do'].fillna(df_akce['datum'])
     else:
-        # Pokud sloupec v tabulce vůbec není, vytvoříme ho jako kopii data
         df_akce['datum_do'] = df_akce['datum']
 
     # Zpracování deadline
@@ -148,10 +146,11 @@ try:
     # Vyhodit řádky bez data konání
     df_akce = df_akce.dropna(subset=['datum'])
     
-    # Pojistka proti prázdnému deadlinu (doplníme datum akce)
-    df_akce['deadline'] = df_akce['deadline'].fillna(df_akce['datum'])
+    # --- LOGIKA DEADLINE: Pokud chybí, nastavíme ho na 14 dní před akcí ---
+    default_deadline = df_akce['datum'] - pd.Timedelta(days=14)
+    df_akce['deadline'] = df_akce['deadline'].fillna(default_deadline)
     
-    # 4. Finální převod na .date objekty pro porovnávání
+    # Finální převod na .date
     df_akce['datum'] = df_akce['datum'].dt.date
     df_akce['datum_do'] = df_akce['datum_do'].dt.date
     df_akce['deadline'] = df_akce['deadline'].dt.date
@@ -259,8 +258,7 @@ for tyden in month_days:
             else:
                 st.markdown(f"<span class='day-number'>{den_cislo}</span>", unsafe_allow_html=True)
 
-            # AKCE - FILTROVÁNÍ VÍCEDENNÍCH AKCÍ
-            # Zobrazíme akci, pokud aktuální den spadá do intervalu <datum, datum_do>
+            # AKCE - FILTROVÁNÍ VÍCEDENNÍCH
             maska_dne = (df_akce['datum'] <= aktualni_den) & (df_akce['datum_do'] >= aktualni_den)
             akce_dne = df_akce[maska_dne]
             
@@ -269,10 +267,8 @@ for tyden in month_days:
                 je_po_deadlinu = dnes > akce['deadline']
                 je_dnes_deadline = dnes == akce['deadline']
                 
-                # ID AKCE
                 akce_id_str = str(akce['id']) if 'id' in df_akce.columns else ""
 
-                # DATA
                 typ_udalosti = str(akce['typ']).lower().strip() if 'typ' in df_akce.columns and pd.notna(akce['typ']) else ""
                 druh_akce = str(akce['druh']).lower().strip() if 'druh' in df_akce.columns and pd.notna(akce['druh']) else "ostatní"
                 
@@ -289,7 +285,6 @@ for tyden in month_days:
                 if je_po_deadlinu: display_ikona = f"🔒 {emoji_final}"
                 else: display_ikona = emoji_final
 
-                # TLAČÍTKO
                 nazev_full = akce['název']
                 if '-' in nazev_full:
                     display_text = nazev_full.split('-')[0].strip()
@@ -298,14 +293,10 @@ for tyden in month_days:
                 
                 label_tlacitka = f"{display_ikona} {display_text}"
                 
-                # --- POPOVER (DETAIL) ---
+                # --- POPOVER ---
                 with st.popover(label_tlacitka, use_container_width=True):
-                    # Zde rozdělíme obsah na 2 sloupce
                     col_info, col_form = st.columns([1.2, 1], gap="medium")
                     
-                    # ----------------------------------------
-                    # LEVÝ SLOUPEC: INFORMACE
-                    # ----------------------------------------
                     with col_info:
                         st.markdown(f"### {nazev_full}")
                         
@@ -313,13 +304,9 @@ for tyden in month_days:
                         elif je_zavod: typ_label = "ZÁVOD 🏆"
                         else: typ_label = "TRÉNINK"
                         
-                        # Zobrazení data (pokud je vícedenní, ukážeme rozsah)
                         str_od = akce['datum'].strftime('%d.%m.')
                         str_do = akce['datum_do'].strftime('%d.%m.')
-                        if akce['datum'] == akce['datum_do']:
-                            str_termin = str_od
-                        else:
-                            str_termin = f"{str_od} - {str_do}"
+                        str_termin = str_od if akce['datum'] == akce['datum_do'] else f"{str_od} - {str_do}"
                         
                         st.caption(f"Termín: {str_termin} | Typ: {typ_label} ({druh_akce.upper()})")
                         st.write(f"**📍 Místo:** {akce['místo']}")
@@ -327,7 +314,6 @@ for tyden in month_days:
                         
                         deadline_str = akce['deadline'].strftime('%d.%m.%Y')
                         
-                        # --- ZOBRAZENÍ STAVU DEADLINE ---
                         if je_po_deadlinu:
                             st.error(f"⛔ Přihlášky uzavřeny (Deadline: {deadline_str})")
                         elif je_dnes_deadline:
@@ -335,7 +321,6 @@ for tyden in month_days:
                         else:
                             st.caption(f"📅 Deadline přihlášek: {deadline_str}")
 
-                        # ORIS ODKAZ
                         if je_zavod or je_stafeta:
                             st.markdown("---")
                             st.markdown("**Informace k závodu:**")
@@ -349,11 +334,7 @@ for tyden in month_days:
                             
                             st.markdown(f"👉 [**ℹ️ Stránka závodu v ORISu**]({link_target})")
 
-                    # ----------------------------------------
-                    # PRAVÝ SLOUPEC: FORMULÁŘ
-                    # ----------------------------------------
                     with col_form:
-                        
                         delete_key_state = f"confirm_delete_{akce_id_str}"
                         
                         if (not je_zavod or je_stafeta):
@@ -361,9 +342,7 @@ for tyden in month_days:
                                 nadpis_form = "✍️ Soupiska" if je_stafeta else "✍️ Přihláška"
                                 st.markdown(f"#### {nadpis_form}")
                                 
-                                # Unikátní klíč pro formulář (id akce + aktuální den v kalendáři)
                                 form_key = f"form_{akce_id_str}_{aktualni_den}"
-                                
                                 with st.form(key=form_key, clear_on_submit=True):
                                     vybrane_jmeno = st.selectbox("Jméno", options=seznam_jmen, index=None, placeholder="Vyber...")
                                     nove_jmeno = st.text_input("...nebo Nové jméno")
@@ -411,9 +390,6 @@ for tyden in month_days:
                         elif je_zavod:
                             pass
 
-                    # ----------------------------------------
-                    # SPODEK: SEZNAM PŘIHLÁŠENÝCH
-                    # ----------------------------------------
                     st.divider()
 
                     if not je_zavod or je_stafeta:
@@ -425,17 +401,15 @@ for tyden in month_days:
                         nadpis_seznam = f"👥 Zájemci o štafetu ({len(lidi)})" if je_stafeta else f"👥 Přihlášeno ({len(lidi)})"
                         st.markdown(f"#### {nadpis_seznam}")
 
-                        # Potvrzení mazání
                         if delete_key_state in st.session_state:
                             clovek_ke_smazani = st.session_state[delete_key_state]
                             st.warning(f"⚠️ Opravdu odhlásit: **{clovek_ke_smazani}**?")
                             col_conf1, col_conf2 = st.columns(2)
-                            if col_conf1.button("✅ ANO", key=f"yes_{akce_id_str}_{aktualni_den}"): # Unikátní klíč
+                            if col_conf1.button("✅ ANO", key=f"yes_{akce_id_str}_{aktualni_den}"):
                                 smazano_ok = False
                                 try:
                                     df_curr = conn.read(worksheet="prihlasky", ttl=0)
                                     df_curr['id_akce'] = df_curr['id_akce'].astype(str).str.replace(r'\.0$', '', regex=True)
-                                    
                                     mask = (df_curr['id_akce'] == akce_id_str) & (df_curr['jméno'] == clovek_ke_smazani)
                                     df_clean = df_curr[~mask]
                                     conn.update(worksheet="prihlasky", data=df_clean)
@@ -446,11 +420,10 @@ for tyden in month_days:
                                     st.success("Smazáno!")
                                     time.sleep(0.5)
                                     st.rerun()
-                            if col_conf2.button("❌ ZPĚT", key=f"no_{akce_id_str}_{aktualni_den}"): # Unikátní klíč
+                            if col_conf2.button("❌ ZPĚT", key=f"no_{akce_id_str}_{aktualni_den}"):
                                 del st.session_state[delete_key_state]
                                 st.rerun()
 
-                        # Výpis lidí
                         if not lidi.empty:
                             h1, h2, h3, h4, h5 = st.columns([0.4, 2.0, 2.0, 0.8, 0.5]) 
                             h1.markdown("**#**")
@@ -463,23 +436,18 @@ for tyden in month_days:
                             
                             for i, (idx, row) in enumerate(lidi.iterrows()):
                                 c1, c2, c3, c4, c5 = st.columns([0.4, 2.0, 2.0, 0.8, 0.5], vertical_alignment="center")
-                                
                                 c1.write(f"{i+1}.")
                                 c2.markdown(f"**{row['jméno']}**")
-                                
                                 poznamka_txt = row['poznámka'] if pd.notna(row['poznámka']) else ""
                                 c3.caption(poznamka_txt)
-                                
                                 doprava_val = str(row['doprava']) if pd.notna(row.get('doprava')) else ""
                                 c4.write(doprava_val)
                                 
                                 if not je_po_deadlinu:
-                                    if c5.button("🗑️", key=f"del_{akce_id_str}_{idx}_{aktualni_den}"): # Unikátní klíč
+                                    if c5.button("🗑️", key=f"del_{akce_id_str}_{idx}_{aktualni_den}"):
                                         st.session_state[delete_key_state] = row['jméno']
                                         st.rerun()
-                                
                                 st.markdown("<hr style='margin: 0; border-top: 1px solid #f0f0f0;'>", unsafe_allow_html=True)
-                                
                         else:
                             st.caption("Zatím nikdo.")
 
