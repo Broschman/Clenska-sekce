@@ -8,7 +8,7 @@ import time
 # --- 1. NASTAVENÍ STRÁNKY ---
 st.set_page_config(page_title="Kalendář RBK", page_icon="🌲", layout="wide")
 
-# --- CSS VZHLED (HARDCORE BARVY) ---
+# --- CSS VZHLED (HARDCORE BOOST BAREV) ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap');
@@ -87,54 +87,54 @@ st.markdown("""
     }
     
     /* === VZHLED TLAČÍTEK V KALENDÁŘI === */
-    /* Zrušíme defaultní rámečky tlačítka */
+    
+    /* 1. Reset samotného tlačítka (aby nerušil rámeček) */
     div[data-testid="column"] button {
-        border: none !important;
-        background: transparent !important;
+        border: 1px solid #eee !important;
+        background-color: white !important;
         width: 100% !important;
-        padding: 0 !important;
-        margin: 0 !important;
-        overflow: hidden; /* Aby barva nepřetekla */
+        padding: 4px !important;
         border-radius: 8px !important;
+        transition: all 0.2s;
     }
     
-    /* Hover efekt celého tlačítka */
     div[data-testid="column"] button:hover {
         transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(0,0,0,0.2) !important;
-        z-index: 10;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15) !important;
+        border-color: #999 !important;
+        z-index: 5;
     }
 
-    /* === MAGIE BAREV === */
-    /* Cílíme na vnitřní SPAN element, který nese barvu od Streamlitu */
-    div[data-testid="column"] button p span {
+    /* 2. AGRESIVNÍ OBARVENÍ VNITŘKU TLAČÍTKA */
+    /* Cílíme na span uvnitř paragrafu uvnitř markdown kontejneru v tlačítku */
+    button div[data-testid="stMarkdownContainer"] p span {
         display: flex !important;
-        justify-content: center; /* Text na střed */
+        justify-content: center;
         align-items: center;
         width: 100% !important;
-        min-height: 55px !important; /* Výška tlačítka */
+        height: 100% !important;
+        min-height: 45px !important;
         padding: 8px !important;
+        border-radius: 6px !important;
         
-        /* TADY TO JE: Vypálíme barvy naplno! */
-        /* saturate(5) = 5x sytější barva */
-        /* contrast(1.2) = vyšší kontrast */
-        /* brightness(0.95) = trochu ztmavit, aby vynikl bílý text */
-        filter: saturate(5) contrast(1.2) brightness(0.95) !important;
+        /* TOTO JE KLÍČ: Zvedneme sytost o 300% a kontrast */
+        filter: saturate(3) contrast(1.1) brightness(0.95) !important;
         
-        /* Text uvnitř */
-        color: #FFFFFF !important; /* Vynutíme bílou barvu textu */
-        font-weight: 900 !important; /* Extra tučné */
+        /* Text */
+        color: #000 !important; /* Černý text pro maximální kontrast na sytých barvách (nebo white) */
+        font-weight: 900 !important;
         font-size: 14px !important;
-        text-shadow: 0px 1px 3px rgba(0,0,0,0.6); /* Stín pod textem pro čitelnost */
-        border-radius: 8px !important; /* Zaoblení rohů */
-        
-        /* Hack pro MČR (rainbow) - aby se filtr nezbláznil */
-        mix-blend-mode: multiply; /* Trochu ztmaví pozadí */
+        line-height: 1.2 !important;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        text-align: center;
     }
     
-    /* Fix pro text uvnitř, aby nebyl ovlivněn blend modem */
-    div[data-testid="column"] button p span {
-        mix-blend-mode: normal !important;
+    /* Speciální úprava pro MČR (Rainbow), aby nebyl filtr tak agresivní */
+    button div[data-testid="stMarkdownContainer"] p span[style*="linear-gradient"] {
+        filter: brightness(1.1) !important;
+        color: white !important;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.5);
     }
 
     footer {visibility: hidden;}
@@ -153,7 +153,7 @@ with col_help:
         st.markdown("### 💡 Nápověda")
         st.info("📱 **Mobil:** Otoč telefon na šířku.")
         
-        # Legenda s HTML pro zobrazení reálných barev
+        # Legenda s ukázkou barev
         st.markdown("""
         **Typy akcí:**
         * :rainbow-background[MČR / Mistrovství]
@@ -288,10 +288,10 @@ for tyden in month_days:
                 je_zavod_obecne = any(s in typ_udalosti for s in zavodni_slova)
 
                 # --- BAREVNÉ ROZLIŠENÍ (NATIVNÍ STREAMLIT STYLY) ---
-                bg_style = "gray" # Default (šedá)
+                bg_style = "gray" # Default
                 typ_label_short = "AKCE"
 
-                # 1. MČR (Nejvyšší priorita)
+                # 1. MČR
                 if "mčr" in typ_udalosti or "mistrovství" in typ_udalosti:
                     bg_style = "rainbow"
                     typ_label_short = "MČR"
@@ -307,7 +307,7 @@ for tyden in month_days:
                 elif "štafety" in typ_udalosti:
                     bg_style = "violet"
                     typ_label_short = "ŠTAFETY"
-                # 5. Ostatní závody (Liga, oblastní...)
+                # 5. Ostatní závody
                 elif je_zavod_obecne or "zimní liga" in typ_udalosti or "žebříček" in typ_udalosti:
                     bg_style = "blue"
                     typ_label_short = "ZÁVOD"
@@ -333,7 +333,7 @@ for tyden in month_days:
                 else:
                     display_text = nazev_full
 
-                # Finální text s ikonou
+                # Finální text
                 final_text = f"{emoji_druh} {display_text}".strip()
                 if je_po_deadlinu:
                     final_text = "🔒 " + final_text
@@ -382,7 +382,7 @@ for tyden in month_days:
                     with col_form:
                         delete_key_state = f"confirm_delete_{akce_id_str}"
                         
-                        # Formulář: Pouze pro NE-závody nebo Štafety
+                        # Formulář
                         if (not je_zavod_obecne or je_stafeta):
                             if not je_po_deadlinu and delete_key_state not in st.session_state:
                                 nadpis_form = "✍️ Soupiska" if je_stafeta else "✍️ Přihláška"
