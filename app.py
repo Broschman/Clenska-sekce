@@ -9,7 +9,7 @@ import time
 # --- 1. NASTAVENÍ STRÁNKY ---
 st.set_page_config(page_title="Kalendář RBK", page_icon="🌲", layout="wide")
 
-# --- CSS VZHLED (DESIGN 4.0 - ASYMMETRIC ZEBRA) ---
+# --- CSS VZHLED (DESIGN 4.1 - COMPACT WHITE ROWS) ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
@@ -603,8 +603,8 @@ for tyden in month_days:
                                     bg_color = "#F3F4F6" if is_gray else "white"
                                     
                                     # POKUD JE ŠEDÝ (is_gray), DÁME MU VELKÝ SPODNÍ PADDING
-                                    # POKUD JE BÍLÝ, DÁME MU STANDARDNÍ
-                                    padding_style = "10px 5px 25px 5px !important" if is_gray else "10px 5px !important"
+                                    # POKUD JE BÍLÝ, DÁME MU O 10px MENŠÍ HORNÍ PADDING (0px)
+                                    padding_style = "10px 5px 25px 5px !important" if is_gray else "0px 5px 10px 5px !important"
                                     
                                     with stylable_container(
                                         key=f"row_{unique_key}_{idx}",
