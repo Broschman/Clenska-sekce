@@ -8,7 +8,7 @@ import time
 # --- 1. NASTAVENÍ STRÁNKY ---
 st.set_page_config(page_title="Kalendář RBK", page_icon="🌲", layout="wide")
 
-# --- CSS VZHLED (BOOST BAREV) ---
+# --- CSS VZHLED (HARDCORE BARVY) ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap');
@@ -86,52 +86,57 @@ st.markdown("""
         text-align: center;
     }
     
-    /* === ÚPRAVA TLAČÍTEK V KALENDÁŘI === */
-    /* 1. Reset vzhledu tlačítka */
+    /* === VZHLED TLAČÍTEK V KALENDÁŘI === */
+    /* Zrušíme defaultní rámečky tlačítka */
     div[data-testid="column"] button {
         border: none !important;
         background: transparent !important;
         width: 100% !important;
-        padding: 2px !important;
+        padding: 0 !important;
         margin: 0 !important;
-        box-shadow: none !important;
+        overflow: hidden; /* Aby barva nepřetekla */
+        border-radius: 8px !important;
     }
     
-    /* 2. Cílení na barevný text uvnitř (Hackujeme Streamlit barvy) */
+    /* Hover efekt celého tlačítka */
+    div[data-testid="column"] button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2) !important;
+        z-index: 10;
+    }
+
+    /* === MAGIE BAREV === */
+    /* Cílíme na vnitřní SPAN element, který nese barvu od Streamlitu */
     div[data-testid="column"] button p span {
         display: flex !important;
-        justify-content: flex-start;
+        justify-content: center; /* Text na střed */
         align-items: center;
         width: 100% !important;
-        padding: 10px 8px !important;
-        border-radius: 6px !important;
+        min-height: 55px !important; /* Výška tlačítka */
+        padding: 8px !important;
         
-        /* MAGIE: Zvýšíme sytost barev o 300% a upravíme kontrast */
-        filter: saturate(3) contrast(1.1) !important; 
+        /* TADY TO JE: Vypálíme barvy naplno! */
+        /* saturate(5) = 5x sytější barva */
+        /* contrast(1.2) = vyšší kontrast */
+        /* brightness(0.95) = trochu ztmavit, aby vynikl bílý text */
+        filter: saturate(5) contrast(1.2) brightness(0.95) !important;
         
-        /* Text styling */
+        /* Text uvnitř */
+        color: #FFFFFF !important; /* Vynutíme bílou barvu textu */
         font-weight: 900 !important; /* Extra tučné */
         font-size: 14px !important;
-        color: #222 !important; /* Tmavý text pro kontrast na syté barvě */
-        line-height: 1.2 !important;
-        text-transform: uppercase; /* Aby to vypadalo jako štítek */
-        letter-spacing: 0.5px;
-        border: 1px solid rgba(0,0,0,0.1);
-    }
-
-    /* Duhové MČR potřebuje speciální péči, aby se filtr nezbláznil */
-    div[data-testid="column"] button p span[style*="background"] {
-       /* Tady se chytí rainbow gradient */
-       text-shadow: 0 1px 2px rgba(255,255,255,0.5);
-    }
-
-    /* Hover efekt - tlačítko se trochu zvětší */
-    div[data-testid="column"] button:hover p span {
-        transform: scale(1.02);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-        cursor: pointer;
+        text-shadow: 0px 1px 3px rgba(0,0,0,0.6); /* Stín pod textem pro čitelnost */
+        border-radius: 8px !important; /* Zaoblení rohů */
+        
+        /* Hack pro MČR (rainbow) - aby se filtr nezbláznil */
+        mix-blend-mode: multiply; /* Trochu ztmaví pozadí */
     }
     
+    /* Fix pro text uvnitř, aby nebyl ovlivněn blend modem */
+    div[data-testid="column"] button p span {
+        mix-blend-mode: normal !important;
+    }
+
     footer {visibility: hidden;}
     #MainMenu {visibility: hidden;}
 </style>
@@ -148,7 +153,7 @@ with col_help:
         st.markdown("### 💡 Nápověda")
         st.info("📱 **Mobil:** Otoč telefon na šířku.")
         
-        # Legenda s ukázkou barev
+        # Legenda s HTML pro zobrazení reálných barev
         st.markdown("""
         **Typy akcí:**
         * :rainbow-background[MČR / Mistrovství]
@@ -334,7 +339,6 @@ for tyden in month_days:
                     final_text = "🔒 " + final_text
                 
                 # ZDE JE KOUZLO: Obalíme text do barvy
-                # CSS pak tento element roztáhne na celou šířku
                 label_tlacitka = f":{bg_style}-background[{final_text}]"
                 
                 # --- POPOVER ---
@@ -481,6 +485,7 @@ for tyden in month_days:
                             
                             for i, (idx, row) in enumerate(lidi.iterrows()):
                                 c1, c2, c3, c4, c5 = st.columns([0.4, 2.0, 2.0, 0.8, 0.5], vertical_alignment="center")
+                                
                                 c1.write(f"{i+1}.")
                                 c2.markdown(f"**{row['jméno']}**")
                                 poznamka_txt = row['poznámka'] if pd.notna(row['poznámka']) else ""
