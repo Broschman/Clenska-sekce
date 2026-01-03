@@ -11,10 +11,21 @@ st.set_page_config(page_title="Kalendář RBK", page_icon="🌲", layout="wide")
 # --- CSS VZHLED ---
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap');
 
     html, body, [class*="css"] {
         font-family: 'Roboto', sans-serif;
+    }
+
+    /* === NOVÉ: PŘEPSÁNÍ BAREV STREAMLITU NA SYTĚJŠÍ === */
+    :root {
+        --red-bg-color: #D50000 !important;      /* Sytá červená (ŽA) */
+        --orange-bg-color: #FF6D00 !important;   /* Sytá oranžová (ŽB) */
+        --blue-bg-color: #0056D2 !important;     /* Sytá modrá (Ostatní) */
+        --violet-bg-color: #6200EA !important;   /* Sytá fialová (Štafety) */
+        --green-bg-color: #00C853 !important;    /* Sytá zelená (Trénink) */
+        --gray-bg-color: #546E7A !important;     /* Sytá šedá (Soustředění) */
+        /* Rainbow (MČR) si Streamlit řeší sám gradientem, který je dost sytý */
     }
 
     h1 {
@@ -88,33 +99,36 @@ st.markdown("""
     
     /* === VZHLED TLAČÍTEK V KALENDÁŘI === */
     div[data-testid="column"] button {
-        border-radius: 8px !important;
+        border-radius: 10px !important;
         width: 100% !important;
         height: auto !important;
-        min-height: 55px !important;
-        border: 1px solid #eee !important;
-        background-color: white !important;
+        min-height: 60px !important; /* Ještě trochu vyšší tlačítka */
+        border: none !important; /* Zrušíme okraj tlačítka, necháme jen barvu */
+        background-color: transparent !important;
         text-align: left !important;
-        padding: 4px !important;
+        padding: 2px !important;
         line-height: 1.3 !important;
         transition: transform 0.1s;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
     
     div[data-testid="column"] button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
-        border-color: #ccc !important;
+        transform: translateY(-3px);
+        box-shadow: 0 6px 12px rgba(0,0,0,0.15) !important;
     }
 
-    /* Úprava barevných štítků uvnitř tlačítka */
-    div[data-testid="column"] button p {
-        font-size: 14px !important;
-        font-weight: 600 !important;
-        margin: 0 !important;
-        padding: 4px 8px !important;
-        border-radius: 6px !important;
-        width: 100%;
-        display: block;
+    /* === NOVÉ: ZVĚTŠENÍ A ZVÝRAZNĚNÍ BAREVNÝCH POLÍ === */
+    /* Cílíme na span element, který dělá barevné pozadí */
+    div[data-testid="column"] button span[class*="st-"] {
+        padding: 10px 14px !important; /* VĚTŠÍ OBLAST BARVY */
+        border-radius: 8px !important;
+        font-weight: 900 !important; /* Extra tučné písmo */
+        font-size: 15px !important;
+        color: white !important; /* Bílý text pro kontrast na syté barvě */
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.4); /* Stín pro lepší čitelnost */
+        display: flex !important;
+        align-items: center;
+        height: 100%;
     }
     
     footer {visibility: hidden;}
@@ -133,7 +147,7 @@ with col_help:
         st.markdown("### 💡 Nápověda")
         st.info("📱 **Mobil:** Otoč telefon na šířku.")
         
-        # Aktualizovaná legenda s novými barvami
+        # Legenda s použitím nových barev
         st.markdown("""
         **Barevné rozlišení:**
         * :rainbow-background[MČR / Mistrovství]
@@ -268,28 +282,27 @@ for tyden in month_days:
                 zavodni_slova = ["závod", "mčr", "žebříček", "liga", "mistrovství", "štafety", "ža", "žb"]
                 je_zavod_obecne = any(s in typ_udalosti for s in zavodni_slova)
 
-                # --- BAREVNÉ ROZLIŠENÍ (NATIVNÍ STREAMLIT) ---
-                # Hierarchie je důležitá! Kontrolujeme od nejspecifičtějšího po nejobecnější.
+                # --- BAREVNÉ ROZLIŠENÍ ---
                 bg_style = "gray" # Default
                 typ_label_short = "AKCE"
 
-                # 1. MČR (Nejvyšší priorita)
+                # 1. MČR
                 if "mčr" in typ_udalosti or "mistrovství" in typ_udalosti:
                     bg_style = "rainbow"
                     typ_label_short = "MČR"
-                # 2. ŽA (Vysoká priorita)
+                # 2. ŽA
                 elif "ža" in typ_udalosti or "žebříček a" in typ_udalosti:
                     bg_style = "red"
                     typ_label_short = "ŽA"
-                # 3. ŽB (Střední priorita)
+                # 3. ŽB
                 elif "žb" in typ_udalosti or "žebříček b" in typ_udalosti:
                     bg_style = "orange"
                     typ_label_short = "ŽB"
-                # 4. Štafety (Specifická kategorie)
+                # 4. Štafety
                 elif "štafety" in typ_udalosti:
                     bg_style = "violet"
                     typ_label_short = "ŠTAFETY"
-                # 5. Ostatní závody (Oblastní, liga, pouťáky)
+                # 5. Ostatní závody
                 elif je_zavod_obecne or "zimní liga" in typ_udalosti or "žebříček" in typ_udalosti:
                     bg_style = "blue"
                     typ_label_short = "ZÁVOD"
@@ -297,7 +310,7 @@ for tyden in month_days:
                 elif "soustředění" in typ_udalosti:
                     bg_style = "gray"
                     typ_label_short = "SOUSTŘEDĚNÍ"
-                # 7. Trénink (Základ)
+                # 7. Trénink
                 elif "trénink" in typ_udalosti:
                     bg_style = "green"
                     typ_label_short = "TRÉNINK"
@@ -330,7 +343,6 @@ for tyden in month_days:
                     with col_info:
                         st.markdown(f"### {nazev_full}")
                         
-                        # Detailnější popisek v bublině
                         st.caption(f"Typ akce: {typ_label_short} ({druh_akce.upper()})")
                         st.write(f"**📍 Místo:** {akce['místo']}")
                         
@@ -365,7 +377,6 @@ for tyden in month_days:
                     with col_form:
                         delete_key_state = f"confirm_delete_{akce_id_str}"
                         
-                        # Formulář jen pro NE-závody (kromě štafet)
                         if (not je_zavod_obecne or je_stafeta):
                             if not je_po_deadlinu and delete_key_state not in st.session_state:
                                 nadpis_form = "✍️ Soupiska" if je_stafeta else "✍️ Přihláška"
