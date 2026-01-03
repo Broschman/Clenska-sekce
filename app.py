@@ -99,22 +99,23 @@ with col_title:
 
 with col_help:
     with st.popover("❔", help="Nápověda k aplikaci"):
-        st.markdown("### 💡 Tipy a triky")
-        
-        st.info("📱 **Na mobilu:** Otoč telefon na šířku, uvidíš kalendář mnohem lépe!")
+        st.markdown("### 💡 Nápověda")
+        st.info("📱 **Mobil:** Otoč telefon na šířku.")
         
         st.markdown("""
-        **Jak to funguje:**
-        * **🚗 Doprava:** Pokud nemáš odvoz, zaškrtni při přihlášení *"Sháním odvoz"*. U jména se ti objeví ikonka auta.
-        * **🗑️ Odhlášení:** Klikni na koš u svého jména. Pak musíš nahoře kliknout na **"ANO"** pro potvrzení.
-        * **🏆 Štafety:** U štafet se musíš přihlásit **zde v aplikaci** (kvůli soupiskám) a zároveň v ORISu.
-        * **🔒 Zámek:** Znamená, že je po termínu přihlášek (deadline).
+        **Tipy:**
+        * **🚗 Doprava:** Pokud nemáš odvoz, zaškrtni *"Sháním odvoz"*.
+        * **🗑️ Odhlášení:** Klikni na koš a pak potvrď tlačítkem **ANO**.
+        * **🏆 Štafety:** Hlas se v ORISu i ZDE (kvůli soupiskám).
+        * **⚠️ Deadline:** Pokud je deadline dnes, máš poslední šanci!
         """)
         
         st.divider()
         st.markdown("**Legenda:**")
+        st.markdown("🏆 **Závod / Štafety**")
         st.markdown("🌲 Les | 🏙️ Sprint | 🌗 Nočák")
-        st.markdown("🏆 Závod / Štafety")
+        st.markdown("🚗 Shání odvoz")
+        st.markdown("🔒 Uzavřeno")
 
 
 # --- 2. PŘIPOJENÍ A NAČTENÍ DAT ---
@@ -132,13 +133,18 @@ try:
     df_akce['deadline'] = pd.to_datetime(df_akce['deadline'], dayfirst=True, errors='coerce').dt.date
     df_akce = df_akce.dropna(subset=['datum'])
     
+    # ID na string pro bezpečné porovnání
+    if 'id' in df_akce.columns:
+        df_akce['id'] = df_akce['id'].astype(str).str.replace(r'\.0$', '', regex=True)
+    
     try:
         df_prihlasky = pd.read_csv(url_prihlasky)
-        # Pojistka pro sloupec doprava
-        if 'doprava' not in df_prihlasky.columns:
-            df_prihlasky['doprava'] = ""
+        if 'doprava' not in df_prihlasky.columns: df_prihlasky['doprava'] = ""
+        if 'id_akce' not in df_prihlasky.columns: df_prihlasky['id_akce'] = ""
+        
+        df_prihlasky['id_akce'] = df_prihlasky['id_akce'].astype(str).str.replace(r'\.0$', '', regex=True)
     except:
-        df_prihlasky = pd.DataFrame(columns=["název", "jméno", "poznámka", "doprava", "čas zápisu"])
+        df_prihlasky = pd.DataFrame(columns=["id_akce", "název", "jméno", "poznámka", "doprava", "čas zápisu"])
         
     try:
         df_jmena = pd.read_csv(url_jmena)
@@ -147,7 +153,7 @@ try:
         seznam_jmen = []
         
 except Exception as e:
-    st.error("⚠️ Chyba načítání dat.")
+    st.error(f"⚠️ Chyba načítání dat: {e}")
     st.stop()
 
 # --- 3. LOGIKA KALENDÁŘE ---
@@ -233,8 +239,15 @@ for tyden in month_days:
             # AKCE
             akce_dne = df_akce[df_akce['datum'] == aktualni_den]
             for _, akce in akce_dne.iterrows():
+                # --- LOGIKA DEADLINE ---
+                # Je po deadlinu jen když je DNEŠEK VĚTŠÍ než DEADLINE.
+                # Pokud se rovnají, je to ještě OK.
                 je_po_deadlinu = dnes > akce['deadline']
+                je_dnes_deadline = dnes == akce['deadline']
                 
+                # ID AKCE
+                akce_id_str = str(akce['id']) if 'id' in df_akce.columns else ""
+
                 # DATA
                 typ_udalosti = str(akce['typ']).lower().strip() if 'typ' in df_akce.columns and pd.notna(akce['typ']) else ""
                 druh_akce = str(akce['druh']).lower().strip() if 'druh' in df_akce.columns and pd.notna(akce['druh']) else "ostatní"
@@ -281,12 +294,16 @@ for tyden in month_days:
                         if pd.notna(akce['popis']): st.info(f"📝 {akce['popis']}")
                         
                         deadline_str = akce['deadline'].strftime('%d.%m.%Y')
+                        
+                        # --- ZOBRAZENÍ STAVU DEADLINE ---
                         if je_po_deadlinu:
                             st.error(f"⛔ Přihlášky uzavřeny (Deadline: {deadline_str})")
+                        elif je_dnes_deadline:
+                            st.warning(f"⚠️ Dnes je deadline! ({deadline_str})")
                         else:
                             st.caption(f"📅 Deadline přihlášek: {deadline_str}")
 
-                        # ORIS ODKAZ (Zobrazuje se vlevo pod info)
+                        # ORIS ODKAZ
                         if je_zavod or je_stafeta:
                             st.markdown("---")
                             st.markdown("**Informace k závodu:**")
@@ -298,7 +315,6 @@ for tyden in month_days:
                             if je_stafeta:
                                 st.warning("⚠️ **ŠTAFETY:** Přihlaš se **I ZDE (vpravo)** kvůli soupiskám!")
                             
-                            # ZMĚNA TEXTU ODKAZU
                             st.markdown(f"👉 [**ℹ️ Stránka závodu v ORISu**]({link_target})")
 
                     # ----------------------------------------
@@ -306,20 +322,18 @@ for tyden in month_days:
                     # ----------------------------------------
                     with col_form:
                         
-                        delete_key_state = f"confirm_delete_{akce['název']}"
+                        delete_key_state = f"confirm_delete_{akce_id_str}"
                         
                         if (not je_zavod or je_stafeta):
                             if not je_po_deadlinu and delete_key_state not in st.session_state:
                                 nadpis_form = "✍️ Soupiska" if je_stafeta else "✍️ Přihláška"
                                 st.markdown(f"#### {nadpis_form}")
                                 
-                                form_key = f"form_{akce['název']}_{aktualni_den}"
+                                form_key = f"form_{akce_id_str}"
                                 with st.form(key=form_key, clear_on_submit=True):
                                     vybrane_jmeno = st.selectbox("Jméno", options=seznam_jmen, index=None, placeholder="Vyber...")
                                     nove_jmeno = st.text_input("...nebo Nové jméno")
                                     poznamka_input = st.text_input("Poznámka")
-                                    
-                                    # CHECKBOX PRO DOPRAVU
                                     doprava_input = st.checkbox("🚗 Sháním odvoz")
                                     
                                     odeslat_btn = st.form_submit_button("Zapsat se" if je_stafeta else "Přihlásit se")
@@ -328,11 +342,10 @@ for tyden in month_days:
                                         finalni_jmeno = nove_jmeno.strip() if nove_jmeno else vybrane_jmeno
                                         if finalni_jmeno:
                                             uspesne_zapsano = False
-                                            
-                                            # ZDE SE UKLÁDÁ TEXT "Ano 🚗"
                                             hodnota_dopravy = "Ano 🚗" if doprava_input else ""
                                             
                                             novy_zaznam = pd.DataFrame([{
+                                                "id_akce": akce_id_str,
                                                 "název": akce['název'],
                                                 "jméno": finalni_jmeno,
                                                 "poznámka": poznamka_input,
@@ -361,19 +374,20 @@ for tyden in month_days:
                                         else: st.warning("Vyplň jméno!")
                             elif je_po_deadlinu:
                                 st.info("Přihlašování bylo ukončeno.")
-                        
                         elif je_zavod:
-                            # Prázdno pro běžný závod
                             pass
 
-
                     # ----------------------------------------
-                    # SPODEK: SEZNAM PŘIHLÁŠENÝCH (TABULKA)
+                    # SPODEK: SEZNAM PŘIHLÁŠENÝCH
                     # ----------------------------------------
                     st.divider()
 
                     if not je_zavod or je_stafeta:
-                        lidi = df_prihlasky[df_prihlasky['název'] == akce['název']].copy()
+                        if akce_id_str:
+                            lidi = df_prihlasky[df_prihlasky['id_akce'] == akce_id_str].copy()
+                        else:
+                            lidi = pd.DataFrame()
+
                         nadpis_seznam = f"👥 Zájemci o štafetu ({len(lidi)})" if je_stafeta else f"👥 Přihlášeno ({len(lidi)})"
                         st.markdown(f"#### {nadpis_seznam}")
 
@@ -382,11 +396,13 @@ for tyden in month_days:
                             clovek_ke_smazani = st.session_state[delete_key_state]
                             st.warning(f"⚠️ Opravdu odhlásit: **{clovek_ke_smazani}**?")
                             col_conf1, col_conf2 = st.columns(2)
-                            if col_conf1.button("✅ ANO", key=f"yes_{akce['název']}"):
+                            if col_conf1.button("✅ ANO", key=f"yes_{akce_id_str}"):
                                 smazano_ok = False
                                 try:
                                     df_curr = conn.read(worksheet="prihlasky", ttl=0)
-                                    mask = (df_curr['název'] == akce['název']) & (df_curr['jméno'] == clovek_ke_smazani)
+                                    df_curr['id_akce'] = df_curr['id_akce'].astype(str).str.replace(r'\.0$', '', regex=True)
+                                    
+                                    mask = (df_curr['id_akce'] == akce_id_str) & (df_curr['jméno'] == clovek_ke_smazani)
                                     df_clean = df_curr[~mask]
                                     conn.update(worksheet="prihlasky", data=df_clean)
                                     smazano_ok = True
@@ -396,14 +412,12 @@ for tyden in month_days:
                                     st.success("Smazáno!")
                                     time.sleep(0.5)
                                     st.rerun()
-                            if col_conf2.button("❌ ZPĚT", key=f"no_{akce['název']}"):
+                            if col_conf2.button("❌ ZPĚT", key=f"no_{akce_id_str}"):
                                 del st.session_state[delete_key_state]
                                 st.rerun()
 
-                        # Výpis lidí - SLOUPEČKOVÁ TABULKA
+                        # Výpis lidí
                         if not lidi.empty:
-                            # ZÁHLAVÍ - PŘIDÁN SLOUPEC PRO DOPRAVU
-                            # Poměry: # | Jméno | Poznámka | Auto | Koš
                             h1, h2, h3, h4, h5 = st.columns([0.4, 2.0, 2.0, 0.8, 0.5]) 
                             h1.markdown("**#**")
                             h2.markdown("**Jméno**")
@@ -413,7 +427,6 @@ for tyden in month_days:
                             
                             st.markdown("<hr style='margin: 5px 0 10px 0; border-top: 2px solid #ccc;'>", unsafe_allow_html=True)
                             
-                            # ŘÁDKY
                             for i, (idx, row) in enumerate(lidi.iterrows()):
                                 c1, c2, c3, c4, c5 = st.columns([0.4, 2.0, 2.0, 0.8, 0.5], vertical_alignment="center")
                                 
@@ -423,12 +436,11 @@ for tyden in month_days:
                                 poznamka_txt = row['poznámka'] if pd.notna(row['poznámka']) else ""
                                 c3.caption(poznamka_txt)
                                 
-                                # Zobrazení dopravy (Ano)
                                 doprava_val = str(row['doprava']) if pd.notna(row.get('doprava')) else ""
                                 c4.write(doprava_val)
                                 
                                 if not je_po_deadlinu:
-                                    if c5.button("🗑️", key=f"del_{akce['název']}_{idx}"):
+                                    if c5.button("🗑️", key=f"del_{akce_id_str}_{idx}"):
                                         st.session_state[delete_key_state] = row['jméno']
                                         st.rerun()
                                 
