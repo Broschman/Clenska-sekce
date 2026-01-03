@@ -137,7 +137,7 @@ with col_help:
         """)
         
         st.divider()
-        st.markdown("**Terén:** 🌲 Les | 🏙️ Sprint | 🌗 Nočák")
+        st.markdown("**Terén:** 🌲 Les | 🏙️ Sprint | 🌗 Nočák | 🏃 Ostatní")
 
 
 # --- 2. PŘIPOJENÍ A NAČTENÍ DAT ---
@@ -151,21 +151,22 @@ url_navrhy = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out
 
 try:
     df_akce = pd.read_csv(url_akce)
-    # Zpracování data začátku
+    
+    # 1. Datum začátku
     df_akce['datum'] = pd.to_datetime(df_akce['datum'], dayfirst=True, errors='coerce').dt.date
     
-    # Zpracování data konce (pro vícedenní akce)
+    # 2. Datum konce (pro vícedenní)
     if 'datum_do' in df_akce.columns:
         df_akce['datum_do'] = pd.to_datetime(df_akce['datum_do'], dayfirst=True, errors='coerce').dt.date
         df_akce['datum_do'] = df_akce['datum_do'].fillna(df_akce['datum'])
     else:
         df_akce['datum_do'] = df_akce['datum']
 
-    # Zpracování deadlinu
+    # 3. Deadline
     df_akce['deadline'] = pd.to_datetime(df_akce['deadline'], dayfirst=True, errors='coerce').dt.date
     df_akce = df_akce.dropna(subset=['datum'])
     
-    # --- FIX PRO CHYBĚJÍCÍ DEADLINE ---
+    # 4. FIX DEADLINE (AUTOMATICKY 14 DNÍ PŘED)
     def get_deadline(row):
         if pd.isna(row['deadline']):
             return row['datum'] - timedelta(days=14)
@@ -173,6 +174,7 @@ try:
 
     df_akce['deadline'] = df_akce.apply(get_deadline, axis=1)
 
+    # 5. ID na string
     if 'id' in df_akce.columns:
         df_akce['id'] = df_akce['id'].astype(str).str.replace(r'\.0$', '', regex=True)
     
@@ -247,7 +249,7 @@ for tyden in month_days:
             else:
                 st.markdown(f"<span class='day-number'>{den_cislo}</span>", unsafe_allow_html=True)
 
-            # AKCE (VÍCEDENNÍ LOGIKA)
+            # --- FILTRACE PRO VÍCEDENNÍ AKCE ---
             maska_dne = (df_akce['datum'] <= aktualni_den) & (df_akce['datum_do'] >= aktualni_den)
             akce_dne = df_akce[maska_dne]
             
@@ -256,10 +258,8 @@ for tyden in month_days:
                 je_dnes_deadline = dnes == akce['deadline']
                 
                 akce_id_str = str(akce['id']) if 'id' in df_akce.columns else ""
-                
-                # --- UNIKÁTNÍ KLÍČ (FIX CHYBY) ---
-                # Klíč musí obsahovat i aktuální den, aby se neopakovalo ID u vícedenních akcí
-                unique_suffix = f"{akce_id_str}_{aktualni_den.strftime('%Y%m%d')}"
+                # UNIKÁTNÍ KLÍČ (ID + Datum)
+                unique_key = f"{akce_id_str}_{aktualni_den.strftime('%Y%m%d')}"
 
                 # DATA
                 typ_udalosti = str(akce['typ']).lower().strip() if 'typ' in df_akce.columns and pd.notna(akce['typ']) else ""
@@ -270,7 +270,7 @@ for tyden in month_days:
                 je_zavod_obecne = any(s in typ_udalosti for s in zavodni_slova)
 
                 # --- BAREVNÉ ROZLIŠENÍ ---
-                bg_style = "gray"
+                bg_style = "gray" 
                 typ_label_short = "AKCE"
 
                 if "mčr" in typ_udalosti or "mistrovství" in typ_udalosti:
@@ -301,12 +301,18 @@ for tyden in month_days:
                     bg_style = "blue"
                     typ_label_short = "ZÁVOD"
 
+                # --- EMOJI LOGIKA (FIX: BĚŽEC JAKO DEFAULT) ---
                 ikony_mapa = {
-                    "les": "🌲", "krátká trať": "🌲", "klasická trať": "🌲",
-                    "sprint": "🏙️", "nočák": "🌗"
+                    "les": "🌲", 
+                    "krátká trať": "🌲", 
+                    "klasická trať": "🌲",
+                    "sprint": "🏙️", 
+                    "nočák": "🌗"
                 }
-                emoji_druh = ikony_mapa.get(druh_akce, "")
+                # Pokud nenajde klíč, vrátí běžce 🏃
+                emoji_druh = ikony_mapa.get(druh_akce, "🏃")
 
+                # Název a Zobrazení
                 nazev_full = akce['název']
                 if '-' in nazev_full:
                     display_text = nazev_full.split('-')[0].strip()
@@ -362,16 +368,15 @@ for tyden in month_days:
                             st.markdown(f"👉 [**ℹ️ Stránka závodu v ORISu**]({link_target})")
 
                     with col_form:
-                        delete_key_state = f"confirm_delete_{akce_id_str}"
+                        delete_key_state = f"confirm_delete_{unique_key}"
                         
                         if (not je_zavod_obecne or je_stafeta):
                             if not je_po_deadlinu and delete_key_state not in st.session_state:
                                 nadpis_form = "✍️ Soupiska" if je_stafeta else "✍️ Přihláška"
                                 st.markdown(f"#### {nadpis_form}")
                                 
-                                # === OPRAVENÝ UNIKÁTNÍ KLÍČ FORMULÁŘE ===
-                                form_key = f"form_{unique_suffix}"
-                                
+                                # Unikátní klíč formuláře
+                                form_key = f"form_{unique_key}"
                                 with st.form(key=form_key, clear_on_submit=True):
                                     if kategorie_txt and kategorie_txt.lower() != "všichni":
                                         st.warning(f"⚠️ Opravdu splňuješ podmínku? Tato akce je určena pro: **{kategorie_txt}**")
@@ -437,9 +442,7 @@ for tyden in month_days:
                             clovek_ke_smazani = st.session_state[delete_key_state]
                             st.warning(f"⚠️ Opravdu odhlásit: **{clovek_ke_smazani}**?")
                             col_conf1, col_conf2 = st.columns(2)
-                            
-                            # === OPRAVENÉ UNIKÁTNÍ KLÍČE PRO DELETE POTVRZENÍ ===
-                            if col_conf1.button("✅ ANO", key=f"yes_{unique_suffix}"):
+                            if col_conf1.button("✅ ANO", key=f"yes_{unique_key}"):
                                 smazano_ok = False
                                 try:
                                     df_curr = conn.read(worksheet="prihlasky", ttl=0)
@@ -454,7 +457,7 @@ for tyden in month_days:
                                     st.success("Smazáno!")
                                     time.sleep(0.5)
                                     st.rerun()
-                            if col_conf2.button("❌ ZPĚT", key=f"no_{unique_suffix}"):
+                            if col_conf2.button("❌ ZPĚT", key=f"no_{unique_key}"):
                                 del st.session_state[delete_key_state]
                                 st.rerun()
 
@@ -479,8 +482,7 @@ for tyden in month_days:
                                 c4.write(doprava_val)
                                 
                                 if not je_po_deadlinu:
-                                    # === OPRAVENÝ UNIKÁTNÍ KLÍČ PRO TLAČÍTKO SMAZAT ===
-                                    if c5.button("🗑️", key=f"del_{unique_suffix}_{idx}"):
+                                    if c5.button("🗑️", key=f"del_{unique_key}_{idx}"):
                                         st.session_state[delete_key_state] = row['jméno']
                                         st.rerun()
                                 
