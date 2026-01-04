@@ -208,7 +208,7 @@ col_dummy, col_title, col_help = st.columns([1, 10, 1], vertical_alignment="cent
 
 with col_title:
     # Cesta k tvému logu
-    logo_path = "logo_rbk.png" 
+    logo_path = "logo_rbk.jpg" 
     
     # Zkusíme načíst lokální logo, jinak placeholder
     logo_b64 = get_base64_image(logo_path)
@@ -217,7 +217,7 @@ with col_title:
         img_src = f"data:image/png;base64,{logo_b64}"
     else:
         # Placeholder (pokud soubor neexistuje) - zelený štít
-        img_src = "logo_rbk.jpg"
+        img_src = "https://cdn-icons-png.flaticon.com/512/2051/2051939.png"
 
     # HTML Nadpis s vloženým obrázkem
     st.markdown(f"""
