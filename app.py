@@ -1,8 +1,8 @@
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 from streamlit_extras.stylable_container import stylable_container
-from streamlit_lottie import st_lottie # <--- 1. NOVÝ IMPORT
-import requests # <--- 2. NOVÝ IMPORT (pro stažení animace)
+from streamlit_lottie import st_lottie, st_lottie_spinner # <--- NOVÉ: Animace
+import requests # <--- NOVÉ: Pro stažení animace
 import pandas as pd
 from datetime import datetime, date, timedelta
 import calendar
@@ -13,15 +13,18 @@ import os
 # --- 1. NASTAVENÍ STRÁNKY ---
 st.set_page_config(page_title="Kalendář RBK", page_icon="🌲", layout="wide")
 
-# --- FUNKCE PRO NAČTENÍ ANIMACE ---
+# --- NOVÉ: NAČTENÍ LOTTIE ANIMACE ---
 def load_lottieurl(url: str):
-    r = requests.get(url)
-    if r.status_code != 200:
+    try:
+        r = requests.get(url)
+        if r.status_code != 200:
+            return None
+        return r.json()
+    except:
         return None
-    return r.json()
 
-# Načtení animace "Success/Party" (dělá se jen jednou na začátku)
-lottie_success = load_lottieurl("https://assets9.lottiefiles.com/packages/lf20_jbrw3hcz.json") # <--- URL ANIMACE
+# Načtení animace "Success" (zelená fajfka)
+lottie_success = load_lottieurl("https://assets9.lottiefiles.com/packages/lf20_jbrw3hcz.json")
 
 # --- CSS VZHLED (DESIGN 4.2 - LOGO IN HEADER) ---
 st.markdown("""
@@ -228,7 +231,7 @@ with col_title:
     if logo_b64:
         img_src = f"data:image/png;base64,{logo_b64}"
     else:
-        # Placeholder (pokud soubor neexistuje) - zelený štít
+        # Placeholder (pokud soubor neexistuje)
         img_src = "https://cdn-icons-png.flaticon.com/512/2051/2051939.png"
 
     # HTML Nadpis s vloženým obrázkem
@@ -616,9 +619,8 @@ for tyden in month_days:
                                                             if uspesne_zapsano:
                                                                 # --- LOTTIE ANIMACE START ---
                                                                 with st_lottie_spinner(lottie_success, key=f"anim_{unique_key}"):
-                                                                    time.sleep(2) # Čas na animaci
+                                                                    time.sleep(2) 
                                                                 # --- LOTTIE ANIMACE END ---
-                                                                
                                                                 st.toast(f"✅ {finalni_jmeno} přihlášen(a)!")
                                                                 st.rerun()
                                                     except Exception as e:
@@ -795,7 +797,7 @@ with stylable_container(
     with col_center:
         st.markdown("""
         <div style='text-align: center; color: #9CA3AF; font-size: 0.8em; font-family: sans-serif;'>
-            <b>Členská sekce RBK</b> • Designed by Broschman • v1.7<br>
+            <b>Členská sekce RBK</b> • Designed by Broschman • v1.8<br>
             &copy; 2026 All rights reserved
         </div>
         """, unsafe_allow_html=True)
