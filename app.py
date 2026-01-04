@@ -438,13 +438,7 @@ for tyden in month_days:
 
                 vybrany_styl = BARVY_AKCI.get(style_key, BARVY_AKCI["default"])
 
-                ikony_mapa = {
-                    "les": "🌲", 
-                    "krátká trať": "🌲", 
-                    "klasická trať": "🌲",
-                    "sprint": "🏙️", 
-                    "nočák": "🌗"
-                }
+                ikony_mapa = { "les": "🌲", "krátká trať": "🌲", "klasická trať": "🌲", "sprint": "🏙️", "nočák": "🌗" }
                 emoji_druh = ikony_mapa.get(druh_akce, "🏃")
 
                 nazev_full = akce['název']
@@ -539,214 +533,212 @@ for tyden in month_days:
                         with col_form:
                             delete_key_state = f"confirm_delete_{unique_key}"
                             
-                            if (not je_zavod_obecne or je_stafeta or je_soustredeni):
-                                with stylable_container(
-                                    key=f"form_cont_{unique_key}",
-                                    css_styles="""
-                                    {
-                                        border: 1px solid #E5E7EB;
-                                        border-radius: 12px;
-                                        padding: 20px;
-                                        background-color: #F9FAFB;
-                                        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-                                    }
-                                    """
-                                ):
-                                    if not je_po_deadlinu and delete_key_state not in st.session_state:
-                                        st.markdown("<h4 style='margin-top:0;'>✍️ Přihláška</h4>", unsafe_allow_html=True)
-                                        form_key = f"form_{unique_key}"
-                                        
-                                        with st.form(key=form_key, clear_on_submit=True):
-                                            if kategorie_txt and kategorie_txt.lower() != "všichni":
-                                                st.warning(f"Podmínka: **{kategorie_txt}**")
-                                            
-                                            vybrane_jmeno = st.selectbox("Jméno", options=seznam_jmen, index=None, placeholder="Vyber ze seznamu...")
-                                            nove_jmeno = st.text_input("Nebo nové jméno")
-                                            poznamka_input = st.text_input("Poznámka")
-                                            
-                                            # --- DVA CHECKBOXY VEDLE SEBE ---
-                                            c_check1, c_check2 = st.columns(2)
-                                            doprava_input = c_check1.checkbox("🚗 Sháním odvoz")
-                                            ubytovani_input = c_check2.checkbox("🛏️ Společné ubytko") # <--- NOVÉ
-                                            
-                                            st.markdown("<br>", unsafe_allow_html=True)
-                                            
-                                            with stylable_container(
-                                                key=f"submit_btn_{unique_key}",
-                                                css_styles="""
-                                                    button {
-                                                        background-color: #16A34A !important;
-                                                        color: white !important;
-                                                        border: none !important;
-                                                        transform: translateY(-10px) !important;
-                                                        margin-top: 0px !important;
-                                                    }
-                                                    button:hover {
-                                                        background-color: #15803d !important;
-                                                        color: white !important;
-                                                    }
-                                                """
-                                            ):
-                                                odeslat_btn = st.form_submit_button("Přihlásit")
-                                            
-                                            if odeslat_btn:
-                                                finalni_jmeno = nove_jmeno.strip() if nove_jmeno else vybrane_jmeno
-                                                if finalni_jmeno:
-                                                    # --- KONTROLA DUPLICITY ---
-                                                    try:
-                                                        aktualni = conn.read(worksheet="prihlasky", ttl=0)
-                                                        aktualni['id_akce'] = aktualni['id_akce'].astype(str).str.replace(r'\.0$', '', regex=True)
-                                                        
-                                                        duplicita = not aktualni[
-                                                            (aktualni['id_akce'] == akce_id_str) & 
-                                                            (aktualni['jméno'] == finalni_jmeno)
-                                                        ].empty
-                                                        
-                                                        if duplicita:
-                                                            st.warning(f"⚠️ {finalni_jmeno}, na této akci už jsi!")
-                                                        else:
-                                                            uspesne_zapsano = False
-                                                            hodnota_dopravy = "Ano 🚗" if doprava_input else ""
-                                                            hodnota_ubytovani = "Ano 🛏️" if ubytovani_input else "" # <--- LOGIKA
-                                                            
-                                                            novy_zaznam = pd.DataFrame([{
-                                                                "id_akce": akce_id_str,
-                                                                "název": akce['název'],
-                                                                "jméno": finalni_jmeno,
-                                                                "poznámka": poznamka_input,
-                                                                "doprava": hodnota_dopravy,
-                                                                "ubytování": hodnota_ubytovani, # <--- ULOŽENÍ
-                                                                "čas zápisu": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                                                            }])
-                                                            
-                                                            updated = pd.concat([aktualni, novy_zaznam], ignore_index=True)
-                                                            conn.update(worksheet="prihlasky", data=updated)
-                                                            
-                                                            if finalni_jmeno not in seznam_jmen:
-                                                                try:
-                                                                    aktualni_jmena = conn.read(worksheet="jmena", ttl=0)
-                                                                    novy_clen = pd.DataFrame([{"jméno": finalni_jmeno}])
-                                                                    updated_jmena = pd.concat([aktualni_jmena, novy_clen], ignore_index=True)
-                                                                    conn.update(worksheet="jmena", data=updated_jmena)
-                                                                except: pass
-                                                            
-                                                            uspesne_zapsano = True
-                                                            
-                                                            if uspesne_zapsano:
-                                                                with st_lottie_spinner(lottie_success, key=f"anim_{unique_key}"):
-                                                                    time.sleep(2) 
-                                                                
-                                                                st.toast(f"✅ {finalni_jmeno} přihlášen(a)!")
-                                                                st.rerun()
-                                                    except Exception as e:
-                                                        st.error(f"Chyba: {e}")
-                                                else: st.warning("Vyplň jméno!")
-                                    elif je_po_deadlinu:
-                                        st.info("🔒 Přihlášky uzavřeny.")
-                            elif je_zavod_obecne:
-                                st.markdown("<div style='height: 50px;'></div>", unsafe_allow_html=True)
+                            # ZDE Byla změna: Formulář zobrazujeme VŽDY (odstraněna podmínka if not je_zavod...)
+                            with stylable_container(
+                                key=f"form_cont_{unique_key}",
+                                css_styles="""
+                                {
+                                    border: 1px solid #E5E7EB;
+                                    border-radius: 12px;
+                                    padding: 20px;
+                                    background-color: #F9FAFB;
+                                    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+                                }
+                                """
+                            ):
+                                if not je_po_deadlinu and delete_key_state not in st.session_state:
+                                    st.markdown("<h4 style='margin-top:0;'>✍️ Interní tabulka</h4>", unsafe_allow_html=True)
+                                    
+                                    # NOVÉ: Varování pro závody
+                                    if je_zavod_obecne:
+                                        st.markdown("""
+                                        <div style="background-color: #FEF2F2; border: 1px solid #FCA5A5; color: #B91C1C; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-weight: bold; font-size: 0.9em; display: flex; align-items: center;">
+                                            <span style="font-size: 1.2em; margin-right: 8px;">⚠️</span>
+                                            Je nutné se přihlásit i v ORISu!
+                                        </div>
+                                        """, unsafe_allow_html=True)
 
-                        # --- SPODNÍ ČÁST: SEZNAM PŘIHLÁŠENÝCH (ASYMETRICKÉ ZEBRA STRIPES) ---
+                                    form_key = f"form_{unique_key}"
+                                    
+                                    with st.form(key=form_key, clear_on_submit=True):
+                                        if kategorie_txt and kategorie_txt.lower() != "všichni":
+                                            st.warning(f"Podmínka: **{kategorie_txt}**")
+                                        
+                                        vybrane_jmeno = st.selectbox("Jméno", options=seznam_jmen, index=None, placeholder="Vyber ze seznamu...")
+                                        nove_jmeno = st.text_input("Nebo nové jméno")
+                                        poznamka_input = st.text_input("Poznámka")
+                                        
+                                        # CHECKBOXY Doprava + Ubytování
+                                        c_check1, c_check2 = st.columns(2)
+                                        doprava_input = c_check1.checkbox("🚗 Sháním odvoz")
+                                        ubytovani_input = c_check2.checkbox("🛏️ Společné ubytko")
+                                        
+                                        st.markdown("<br>", unsafe_allow_html=True)
+                                        
+                                        with stylable_container(
+                                            key=f"submit_btn_{unique_key}",
+                                            css_styles="""
+                                                button {
+                                                    background-color: #16A34A !important;
+                                                    color: white !important;
+                                                    border: none !important;
+                                                    transform: translateY(-10px) !important;
+                                                    margin-top: 0px !important;
+                                                }
+                                                button:hover {
+                                                    background-color: #15803d !important;
+                                                    color: white !important;
+                                                }
+                                            """
+                                        ):
+                                            odeslat_btn = st.form_submit_button("Zapsat se")
+                                        
+                                        if odeslat_btn:
+                                            finalni_jmeno = nove_jmeno.strip() if nove_jmeno else vybrane_jmeno
+                                            if finalni_jmeno:
+                                                try:
+                                                    aktualni = conn.read(worksheet="prihlasky", ttl=0)
+                                                    aktualni['id_akce'] = aktualni['id_akce'].astype(str).str.replace(r'\.0$', '', regex=True)
+                                                    
+                                                    duplicita = not aktualni[
+                                                        (aktualni['id_akce'] == akce_id_str) & 
+                                                        (aktualni['jméno'] == finalni_jmeno)
+                                                    ].empty
+                                                    
+                                                    if duplicita:
+                                                        st.warning(f"⚠️ {finalni_jmeno}, na této akci už jsi!")
+                                                    else:
+                                                        uspesne_zapsano = False
+                                                        hodnota_dopravy = "Ano 🚗" if doprava_input else ""
+                                                        hodnota_ubytovani = "Ano 🛏️" if ubytovani_input else ""
+                                                        
+                                                        novy_zaznam = pd.DataFrame([{
+                                                            "id_akce": akce_id_str,
+                                                            "název": akce['název'],
+                                                            "jméno": finalni_jmeno,
+                                                            "poznámka": poznamka_input,
+                                                            "doprava": hodnota_dopravy,
+                                                            "ubytování": hodnota_ubytovani,
+                                                            "čas zápisu": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                                                        }])
+                                                        
+                                                        updated = pd.concat([aktualni, novy_zaznam], ignore_index=True)
+                                                        conn.update(worksheet="prihlasky", data=updated)
+                                                        if finalni_jmeno not in seznam_jmen:
+                                                            try:
+                                                                aktualni_jmena = conn.read(worksheet="jmena", ttl=0)
+                                                                novy_clen = pd.DataFrame([{"jméno": finalni_jmeno}])
+                                                                updated_jmena = pd.concat([aktualni_jmena, novy_clen], ignore_index=True)
+                                                                conn.update(worksheet="jmena", data=updated_jmena)
+                                                            except: pass
+                                                        uspesne_zapsano = True
+                                                        
+                                                        if uspesne_zapsano:
+                                                            with st_lottie_spinner(lottie_success, key=f"anim_{unique_key}"):
+                                                                time.sleep(2)
+                                                            st.toast(f"✅ {finalni_jmeno} zapsán(a)!")
+                                                            st.rerun()
+                                                except Exception as e:
+                                                    st.error(f"Chyba: {e}")
+                                            else: st.warning("Vyplň jméno!")
+                                elif je_po_deadlinu:
+                                    st.info("🔒 Tabulka uzavřena.")
+
+                        # --- SPODNÍ ČÁST: SEZNAM PŘIHLÁŠENÝCH ---
                         st.markdown("<br>", unsafe_allow_html=True)
                         st.divider()
 
-                        if not je_zavod_obecne or je_stafeta or je_soustredeni:
-                            if akce_id_str:
-                                lidi = df_prihlasky[df_prihlasky['id_akce'] == akce_id_str].copy()
-                            else:
-                                lidi = pd.DataFrame()
+                        # ZDE Byla změna: Seznam zobrazujeme VŽDY
+                        if akce_id_str:
+                            lidi = df_prihlasky[df_prihlasky['id_akce'] == akce_id_str].copy()
+                        else:
+                            lidi = pd.DataFrame()
 
-                            nadpis_seznam = f"👥 Zájemci ({len(lidi)})" if je_stafeta else f"👥 Přihlášeno ({len(lidi)})"
-                            st.markdown(f"#### {nadpis_seznam}")
+                        nadpis_seznam = f"👥 Zapsaní ({len(lidi)})"
+                        st.markdown(f"#### {nadpis_seznam}")
 
-                            if delete_key_state in st.session_state:
-                                clovek_ke_smazani = st.session_state[delete_key_state]
-                                with st.container():
-                                    st.warning(f"⚠️ Opravdu odhlásit: **{clovek_ke_smazani}**?")
-                                    c_yes, c_no = st.columns(2)
-                                    if c_yes.button("✅ ANO", key=f"yes_{unique_key}"):
-                                        smazano_ok = False
-                                        try:
-                                            df_curr = conn.read(worksheet="prihlasky", ttl=0)
-                                            df_curr['id_akce'] = df_curr['id_akce'].astype(str).str.replace(r'\.0$', '', regex=True)
-                                            mask = (df_curr['id_akce'] == akce_id_str) & (df_curr['jméno'] == clovek_ke_smazani)
-                                            df_clean = df_curr[~mask]
-                                            conn.update(worksheet="prihlasky", data=df_clean)
-                                            smazano_ok = True
-                                        except Exception as e: st.error(f"Chyba: {e}")
-                                        if smazano_ok:
-                                            del st.session_state[delete_key_state]
-                                            st.toast("🗑️ Odhlášeno.")
-                                            time.sleep(1)
-                                            st.rerun()
-                                    if c_no.button("❌ ZPĚT", key=f"no_{unique_key}"):
+                        if delete_key_state in st.session_state:
+                            clovek_ke_smazani = st.session_state[delete_key_state]
+                            with st.container():
+                                st.warning(f"⚠️ Opravdu smazat: **{clovek_ke_smazani}**?")
+                                c_yes, c_no = st.columns(2)
+                                if c_yes.button("✅ ANO", key=f"yes_{unique_key}"):
+                                    smazano_ok = False
+                                    try:
+                                        df_curr = conn.read(worksheet="prihlasky", ttl=0)
+                                        df_curr['id_akce'] = df_curr['id_akce'].astype(str).str.replace(r'\.0$', '', regex=True)
+                                        mask = (df_curr['id_akce'] == akce_id_str) & (df_curr['jméno'] == clovek_ke_smazani)
+                                        df_clean = df_curr[~mask]
+                                        conn.update(worksheet="prihlasky", data=df_clean)
+                                        smazano_ok = True
+                                    except Exception as e: st.error(f"Chyba: {e}")
+                                    if smazano_ok:
                                         del st.session_state[delete_key_state]
+                                        st.toast("🗑️ Smazáno.")
+                                        time.sleep(1)
                                         st.rerun()
+                                if c_no.button("❌ ZPĚT", key=f"no_{unique_key}"):
+                                    del st.session_state[delete_key_state]
+                                    st.rerun()
 
-                            if not lidi.empty:
-                                # Upravené sloupce: ID, Jméno, Poznámka, Auto, Postel, Koš
-                                h1, h2, h3, h4, h5, h6 = st.columns([0.4, 2.0, 1.5, 0.6, 0.6, 0.5]) 
-                                h1.markdown("<b style='color:#9CA3AF'>#</b>", unsafe_allow_html=True)
-                                h2.markdown("<b>Jméno</b>", unsafe_allow_html=True)
-                                h3.markdown("<b>Poznámka</b>", unsafe_allow_html=True)
-                                h4.markdown("🚗", unsafe_allow_html=True)
-                                h5.markdown("🛏️", unsafe_allow_html=True) # <--- HLAVIČKA
-                                h6.markdown("") 
-                                st.markdown("<hr style='margin: 5px 0 10px 0; border-top: 1px solid #E5E7EB;'>", unsafe_allow_html=True)
+                        if not lidi.empty:
+                            h1, h2, h3, h4, h5, h6 = st.columns([0.4, 2.0, 1.5, 0.6, 0.6, 0.5]) 
+                            h1.markdown("<b style='color:#9CA3AF'>#</b>", unsafe_allow_html=True)
+                            h2.markdown("<b>Jméno</b>", unsafe_allow_html=True)
+                            h3.markdown("<b>Poznámka</b>", unsafe_allow_html=True)
+                            h4.markdown("🚗", unsafe_allow_html=True)
+                            h5.markdown("🛏️", unsafe_allow_html=True)
+                            h6.markdown("") 
+                            st.markdown("<hr style='margin: 5px 0 10px 0; border-top: 1px solid #E5E7EB;'>", unsafe_allow_html=True)
+                            
+                            for i, (idx, row) in enumerate(lidi.iterrows()):
+                                is_gray = (i % 2 == 0)
+                                bg_color = "#F3F4F6" if is_gray else "white"
                                 
-                                for i, (idx, row) in enumerate(lidi.iterrows()):
-                                    is_gray = (i % 2 == 0)
-                                    bg_color = "#F3F4F6" if is_gray else "white"
+                                padding_style = "10px 5px 25px 5px !important" if is_gray else "0px 5px 10px 5px !important"
+                                
+                                with stylable_container(
+                                    key=f"row_{unique_key}_{idx}",
+                                    css_styles=f"""
+                                    {{
+                                        background-color: {bg_color};
+                                        border-radius: 6px;
+                                        padding: {padding_style};
+                                        margin-bottom: 2px;
+                                        display: flex;
+                                        align-items: center;
+                                        min-height: 40px;
+                                    }}
+                                    """
+                                ):
+                                    c1, c2, c3, c4, c5, c6 = st.columns([0.4, 2.0, 1.5, 0.6, 0.6, 0.5], vertical_alignment="center")
+                                    c1.write(f"{i+1}.")
+                                    c2.markdown(f"**{row['jméno']}**")
+                                    poznamka_txt = row['poznámka'] if pd.notna(row['poznámka']) else ""
+                                    c3.caption(poznamka_txt)
+                                    doprava_val = str(row['doprava']) if pd.notna(row.get('doprava')) else ""
+                                    c4.write(doprava_val)
+                                    ubytko_val = str(row['ubytování']) if 'ubytování' in row and pd.notna(row.get('ubytování')) else ""
+                                    c5.write(ubytko_val)
                                     
-                                    padding_style = "10px 5px 25px 5px !important" if is_gray else "0px 5px 10px 5px !important"
-                                    
-                                    with stylable_container(
-                                        key=f"row_{unique_key}_{idx}",
-                                        css_styles=f"""
-                                        {{
-                                            background-color: {bg_color};
-                                            border-radius: 6px;
-                                            padding: {padding_style};
-                                            margin-bottom: 2px;
-                                            display: flex;
-                                            align-items: center;
-                                            min-height: 40px;
-                                        }}
-                                        """
-                                    ):
-                                        # Přidán sloupec c5 pro ubytování
-                                        c1, c2, c3, c4, c5, c6 = st.columns([0.4, 2.0, 1.5, 0.6, 0.6, 0.5], vertical_alignment="center")
-                                        c1.write(f"{i+1}.")
-                                        c2.markdown(f"**{row['jméno']}**")
-                                        
-                                        poznamka_txt = row['poznámka'] if pd.notna(row['poznámka']) else ""
-                                        c3.caption(poznamka_txt)
-                                        
-                                        doprava_val = str(row['doprava']) if pd.notna(row.get('doprava')) else ""
-                                        c4.write(doprava_val)
-
-                                        # Zobrazení ubytování (pokud sloupec existuje v datech)
-                                        ubytko_val = str(row['ubytování']) if 'ubytování' in row and pd.notna(row.get('ubytování')) else ""
-                                        c5.write(ubytko_val)
-                                        
-                                        if not je_po_deadlinu:
-                                            with stylable_container(
-                                                key=f"del_btn_cont_{unique_key}_{idx}",
-                                                css_styles="""
-                                                    button {
-                                                        margin: 0px !important;
-                                                        padding-top: 0px !important;
-                                                        padding-bottom: 0px !important;
-                                                        height: auto !important;
-                                                        min-height: 0px !important;
-                                                    }
-                                                """
-                                            ):
-                                                if c6.button("🗑️", key=f"del_{unique_key}_{idx}"):
-                                                    st.session_state[delete_key_state] = row['jméno']
-                                                    st.rerun()
-                            else:
-                                st.caption("Zatím nikdo. Buď první!")
+                                    if not je_po_deadlinu:
+                                        with stylable_container(
+                                            key=f"del_btn_cont_{unique_key}_{idx}",
+                                            css_styles="""
+                                                button {
+                                                    margin: 0px !important;
+                                                    padding-top: 0px !important;
+                                                    padding-bottom: 0px !important;
+                                                    height: auto !important;
+                                                    min-height: 0px !important;
+                                                }
+                                            """
+                                        ):
+                                            if c6.button("🗑️", key=f"del_{unique_key}_{idx}"):
+                                                st.session_state[delete_key_state] = row['jméno']
+                                                st.rerun()
+                        else:
+                            st.caption("Zatím nikdo. Buď první!")
 
 st.markdown("<div style='margin-bottom: 50px'></div>", unsafe_allow_html=True)
 
@@ -796,7 +788,7 @@ with stylable_container(key="footer_logos", css_styles="img {height: 50px !impor
         l2.image("logo2.jpg", width="stretch")
         
     with col_center:
-        st.markdown("<div style='text-align: center; color: #9CA3AF; font-size: 0.8em; font-family: sans-serif;'><b>Členská sekce RBK</b> • Designed by Broschman • v1.9<br>&copy; 2026 All rights reserved</div>", unsafe_allow_html=True)
+        st.markdown("<div style='text-align: center; color: #9CA3AF; font-size: 0.8em; font-family: sans-serif;'><b>Členská sekce RBK</b> • Designed by Broschman • v1.2.13<br>&copy; 2026 All rights reserved</div>", unsafe_allow_html=True)
         
     with col_right:
         r1, r2 = st.columns(2)
