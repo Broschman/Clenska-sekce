@@ -35,6 +35,13 @@ st.markdown("""
         font-family: 'Inter', sans-serif;
         color: #1f2937;
     }
+    /* === STEALTH MODE (SKRYTÍ UI STREAMLITU) === */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    .stDeployButton {display:none;}
+    [data-testid="stToolbar"] {visibility: hidden;}
+    [data-testid="stDecoration"] {display:none;}
 
     /* Nadpis - Textová část s gradientem */
     h1 span.gradient-text {
