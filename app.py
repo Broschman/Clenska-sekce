@@ -773,48 +773,18 @@ st.markdown('</div>', unsafe_allow_html=True)
 
 # --- PATIČKA ---
 st.markdown("---")
-
-# CSS pro loga - vynutí stejnou výšku
-with stylable_container(
-    key="footer_logos",
-    css_styles="""
-        img {
-            height: 50px !important; /* VYNUCENÁ VÝŠKA */
-            width: auto !important;
-            object-fit: contain;
-        }
-        div[data-testid="column"] {
-            display: flex;
-            align-items: center; 
-            justify-content: center;
-        }
-    """
-):
+with stylable_container(key="footer_logos", css_styles="img {height: 50px !important; width: auto !important; object-fit: contain;} div[data-testid=\"column\"] {display: flex; align-items: center; justify-content: center;}"):
     col_left, col_center, col_right = st.columns([1.5, 2, 1.5], gap="medium", vertical_alignment="center")
-
-    # 1. LEVÍ SPONZOŘI (2 loga)
     with col_left:
         l1, l2 = st.columns(2)
-        l1.image("logo1.jpg", use_column_width=True) # Změň na: l1.image("logo1.png")
-        # l1.caption("Logo 1")
-        l2.image("logo2.jpg", use_column_width=True) # Změň na: l2.image("logo2.png")
-        # l2.caption("Logo 2")
-
-    # 2. PROSTŘEDNÍ TEXT
+        # Změna: use_column_width -> use_container_width
+        l1.image("logo1.jpg", use_container_width=True)
+        l2.image("logo2.jpg", use_container_width=True)
     with col_center:
-        st.markdown("""
-        <div style='text-align: center; color: #9CA3AF; font-size: 0.8em; font-family: sans-serif;'>
-            <b>Členská sekce RBK</b> • Designed by Broschman • v1.8<br>
-            &copy; 2026 All rights reserved
-        </div>
-        """, unsafe_allow_html=True)
-
-    # 3. PRAVÍ SPONZOŘI (2 loga)
+        st.markdown("<div style='text-align: center; color: #9CA3AF; font-size: 0.8em; font-family: sans-serif;'><b>Členská sekce RBK</b> • Designed by Broschman • v1.9<br>&copy; 2026 All rights reserved</div>", unsafe_allow_html=True)
     with col_right:
         r1, r2 = st.columns(2)
-        r1.image("logo3.jpg", use_column_width=True) # Změň na: r1.image("logo3.png")
-        # r1.caption("Logo 3")
-        r2.image("logo4.jpg", use_column_width=True) # Změň na: r2.image("logo4.png")
-        # r2.caption("Logo 4")
-
+        # Změna: use_column_width -> use_container_width
+        r1.image("logo3.jpg", use_container_width=True)
+        r2.image("logo4.jpg", use_container_width=True)
 st.markdown("<div style='margin-bottom: 20px'></div>", unsafe_allow_html=True)
