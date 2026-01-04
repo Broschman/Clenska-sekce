@@ -250,42 +250,31 @@ with col_title:
     """, unsafe_allow_html=True)
 
 with col_help:
-    with st.popover("❔", help="Legenda"):
+    with st.popover("❔", help="Nápověda a Legenda"):
+        # --- 1. LEGENDA BAREV ---
         st.markdown("<h3 style='margin-bottom:10px;'>🎨 Legenda barev</h3>", unsafe_allow_html=True)
         st.markdown("""
         <div style="display: grid; gap: 10px; font-size: 0.9rem;">
-            <div style="display: flex; align-items: center;">
-                <span style="width: 20px; height: 20px; border-radius: 6px; background: linear-gradient(90deg, #EF4444, #F59E0B, #10B981); margin-right: 10px;"></span>
-                <b>MČR / Mistrovství</b>
-            </div>
-            <div style="display: flex; align-items: center;">
-                <span style="width: 20px; height: 20px; border-radius: 6px; background: #DC2626; margin-right: 10px;"></span>
-                <b>Závod ŽA</b> (Licence A)
-            </div>
-            <div style="display: flex; align-items: center;">
-                <span style="width: 20px; height: 20px; border-radius: 6px; background: #EA580C; margin-right: 10px;"></span>
-                <b>Závod ŽB</b> (Licence B)
-            </div>
-            <div style="display: flex; align-items: center;">
-                <span style="width: 20px; height: 20px; border-radius: 6px; background: #D97706; margin-right: 10px;"></span>
-                <b>Soustředění</b> (Přednostní)
-            </div>
-            <div style="display: flex; align-items: center;">
-                <span style="width: 20px; height: 20px; border-radius: 6px; background: #2563EB; margin-right: 10px;"></span>
-                <b>Oblastní žebříček</b>
-            </div>
-             <div style="display: flex; align-items: center;">
-                <span style="width: 20px; height: 20px; border-radius: 6px; background: #9333EA; margin-right: 10px;"></span>
-                <b>Štafety</b>
-            </div>
-            <div style="display: flex; align-items: center;">
-                <span style="width: 20px; height: 20px; border-radius: 6px; background: #16A34A; margin-right: 10px;"></span>
-                <b>Trénink</b>
-            </div>
+            <div style="display: flex; align-items: center;"><span style="width: 20px; height: 20px; border-radius: 6px; background: linear-gradient(90deg, #EF4444, #F59E0B, #10B981); margin-right: 10px;"></span><b>MČR / Mistrovství</b></div>
+            <div style="display: flex; align-items: center;"><span style="width: 20px; height: 20px; border-radius: 6px; background: #DC2626; margin-right: 10px;"></span><b>Závod ŽA</b> (Licence A)</div>
+            <div style="display: flex; align-items: center;"><span style="width: 20px; height: 20px; border-radius: 6px; background: #EA580C; margin-right: 10px;"></span><b>Závod ŽB</b> (Licence B)</div>
+            <div style="display: flex; align-items: center;"><span style="width: 20px; height: 20px; border-radius: 6px; background: #D97706; margin-right: 10px;"></span><b>Soustředění</b> (Přednostní)</div>
+            <div style="display: flex; align-items: center;"><span style="width: 20px; height: 20px; border-radius: 6px; background: #2563EB; margin-right: 10px;"></span><b>Oblastní žebříček</b></div>
+             <div style="display: flex; align-items: center;"><span style="width: 20px; height: 20px; border-radius: 6px; background: #9333EA; margin-right: 10px;"></span><b>Štafety</b></div>
+            <div style="display: flex; align-items: center;"><span style="width: 20px; height: 20px; border-radius: 6px; background: #16A34A; margin-right: 10px;"></span><b>Trénink</b></div>
         </div>
         """, unsafe_allow_html=True)
+        
         st.divider()
-        st.info("💡 **Tip:** Kliknutím na akci se otevře detail.")
+        
+        # --- 2. NÁVOD ---
+        st.markdown("### 📖 Rychlý návod")
+        st.markdown("""
+        1.  👆 **Klikni na akci** v kalendáři pro zobrazení detailů.
+        2.  ✍️ **Zapiš se:** Vyber své jméno, zaškrtni, jestli chceš **odvoz 🚗** nebo **společné spaní 🛏️**, a dej *Zapsat se*.
+        3.  ⚠️ **Závody:** Tato tabulka slouží jen pro **dopravu a ubytování**! Na samotný závod se musíš vždy přihlásit přes **ORIS**.
+        4.  🗑️ **Odhlášení:** Pokud jsi přihlášený a termín ještě nevypršel, můžeš se smazat kliknutím na ikonu koše v seznamu.
+        """)
 
 
 # --- 2. PŘIPOJENÍ A NAČTENÍ DAT ---
