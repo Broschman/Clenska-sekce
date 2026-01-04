@@ -496,7 +496,6 @@ for tyden in month_days:
                                             
                                             st.markdown("<br>", unsafe_allow_html=True)
                                             
-                                            # --- TLAČÍTKO V PŮVODNÍM STAVU (-10px) ---
                                             with stylable_container(
                                                 key=f"submit_btn_{unique_key}",
                                                 css_styles="""
@@ -504,7 +503,7 @@ for tyden in month_days:
                                                         background-color: #16A34A !important;
                                                         color: white !important;
                                                         border: none !important;
-                                                        transform: translateY(-15px) !important;
+                                                        transform: translateY(-10px) !important;
                                                         margin-top: 0px !important;
                                                     }
                                                     button:hover {
@@ -518,7 +517,6 @@ for tyden in month_days:
                                             if odeslat_btn:
                                                 finalni_jmeno = nove_jmeno.strip() if nove_jmeno else vybrane_jmeno
                                                 if finalni_jmeno:
-                                                    # --- KONTROLA DUPLICITY ZAČÁTEK ---
                                                     try:
                                                         aktualni = conn.read(worksheet="prihlasky", ttl=0)
                                                         aktualni['id_akce'] = aktualni['id_akce'].astype(str).str.replace(r'\.0$', '', regex=True)
@@ -559,7 +557,6 @@ for tyden in month_days:
                                                                 st.rerun()
                                                     except Exception as e:
                                                         st.error(f"Chyba: {e}")
-                                                    # --- KONEC LOGIKY ---
                                                 else: st.warning("Vyplň jméno!")
                                     elif je_po_deadlinu:
                                         st.info("🔒 Přihlášky uzavřeny.")
@@ -700,9 +697,48 @@ st.markdown('</div>', unsafe_allow_html=True)
 
 # --- PATIČKA ---
 st.markdown("---")
-st.markdown("""
-<div style='text-align: center; color: #9CA3AF; font-size: 0.8em; font-family: sans-serif; padding-bottom: 20px;'>
-    <b>Členská sekce RBK</b> • Designed by Broschman • v1.2<br>
-    &copy; 2026 All rights reserved
-</div>
-""", unsafe_allow_html=True)
+
+# CSS pro loga - vynutí stejnou výšku
+with stylable_container(
+    key="footer_logos",
+    css_styles="""
+        img {
+            height: 50px !important; /* VYNUCENÁ VÝŠKA */
+            width: auto !important;
+            object-fit: contain;
+        }
+        div[data-testid="column"] {
+            display: flex;
+            align-items: center; 
+            justify-content: center;
+        }
+    """
+):
+    col_left, col_center, col_right = st.columns([1.5, 2, 1.5], gap="medium", vertical_alignment="center")
+
+    # 1. LEVÍ SPONZOŘI (2 loga)
+    with col_left:
+        l1, l2 = st.columns(2)
+        # l1.image("logo1.png")
+        l1.caption("Logo 1")
+        # l2.image("logo2.png")
+        l2.caption("Logo 2")
+
+    # 2. PROSTŘEDNÍ TEXT
+    with col_center:
+        st.markdown("""
+        <div style='text-align: center; color: #9CA3AF; font-size: 0.8em; font-family: sans-serif;'>
+            <b>Členská sekce RBK</b> • Designed by Broschman • v1.5<br>
+            &copy; 2026 All rights reserved
+        </div>
+        """, unsafe_allow_html=True)
+
+    # 3. PRAVÍ SPONZOŘI (2 loga)
+    with col_right:
+        r1, r2 = st.columns(2)
+        # r1.image("logo3.png")
+        r1.caption("Logo 3")
+        # r2.image("logo4.png")
+        r2.caption("Logo 4")
+
+st.markdown("<div style='margin-bottom: 20px'></div>", unsafe_allow_html=True)
