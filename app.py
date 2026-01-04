@@ -738,9 +738,9 @@ with stylable_container(
     # 3. PRAVÍ SPONZOŘI (2 loga)
     with col_right:
         r1, r2 = st.columns(2)
-        r1.image("https://placehold.co/150x80/png?text=Logo+3", use_column_width=True) # Změň na: r1.image("logo3.png")
+        r1.image("logo3.jpg", use_column_width=True) # Změň na: r1.image("logo3.png")
         # r1.caption("Logo 3")
-        r2.image("https://placehold.co/150x80/png?text=Logo+4", use_column_width=True) # Změň na: r2.image("logo4.png")
+        r2.image("logo4.png", use_column_width=True) # Změň na: r2.image("logo4.png")
         # r2.caption("Logo 4")
 
 st.markdown("<div style='margin-bottom: 20px'></div>", unsafe_allow_html=True)
