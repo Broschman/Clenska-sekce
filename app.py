@@ -1,6 +1,8 @@
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 from streamlit_extras.stylable_container import stylable_container
+from streamlit_lottie import st_lottie # <--- 1. NOVÝ IMPORT
+import requests # <--- 2. NOVÝ IMPORT (pro stažení animace)
 import pandas as pd
 from datetime import datetime, date, timedelta
 import calendar
@@ -10,6 +12,16 @@ import os
 
 # --- 1. NASTAVENÍ STRÁNKY ---
 st.set_page_config(page_title="Kalendář RBK", page_icon="🌲", layout="wide")
+
+# --- FUNKCE PRO NAČTENÍ ANIMACE ---
+def load_lottieurl(url: str):
+    r = requests.get(url)
+    if r.status_code != 200:
+        return None
+    return r.json()
+
+# Načtení animace "Success/Party" (dělá se jen jednou na začátku)
+lottie_success = load_lottieurl("https://assets9.lottiefiles.com/packages/lf20_jbrw3hcz.json") # <--- URL ANIMACE
 
 # --- CSS VZHLED (DESIGN 4.2 - LOGO IN HEADER) ---
 st.markdown("""
@@ -602,8 +614,12 @@ for tyden in month_days:
                                                             uspesne_zapsano = True
                                                             
                                                             if uspesne_zapsano:
+                                                                # --- LOTTIE ANIMACE START ---
+                                                                with st_lottie_spinner(lottie_success, key=f"anim_{unique_key}"):
+                                                                    time.sleep(2) # Čas na animaci
+                                                                # --- LOTTIE ANIMACE END ---
+                                                                
                                                                 st.toast(f"✅ {finalni_jmeno} přihlášen(a)!")
-                                                                time.sleep(1)
                                                                 st.rerun()
                                                     except Exception as e:
                                                         st.error(f"Chyba: {e}")
