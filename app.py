@@ -775,16 +775,20 @@ st.markdown('</div>', unsafe_allow_html=True)
 st.markdown("---")
 with stylable_container(key="footer_logos", css_styles="img {height: 50px !important; width: auto !important; object-fit: contain;} div[data-testid=\"column\"] {display: flex; align-items: center; justify-content: center;}"):
     col_left, col_center, col_right = st.columns([1.5, 2, 1.5], gap="medium", vertical_alignment="center")
+    
     with col_left:
         l1, l2 = st.columns(2)
-        # Změna: use_column_width -> use_container_width
-        l1.image("logo1.jpg", use_container_width=True)
-        l2.image("logo2.jpg", use_container_width=True)
+        # Nová syntaxe: width="stretch" místo use_container_width=True
+        l1.image("logo1.jpg", width="stretch") 
+        l2.image("logo2.jpg", width="stretch")
+        
     with col_center:
         st.markdown("<div style='text-align: center; color: #9CA3AF; font-size: 0.8em; font-family: sans-serif;'><b>Členská sekce RBK</b> • Designed by Broschman • v1.9<br>&copy; 2026 All rights reserved</div>", unsafe_allow_html=True)
+        
     with col_right:
         r1, r2 = st.columns(2)
-        # Změna: use_column_width -> use_container_width
-        r1.image("logo3.jpg", use_container_width=True)
-        r2.image("logo4.jpg", use_container_width=True)
+        # Nová syntaxe: width="stretch" místo use_container_width=True
+        r1.image("logo3.jpg", width="stretch")
+        r2.image("logo4.jpg", width="stretch")
+
 st.markdown("<div style='margin-bottom: 20px'></div>", unsafe_allow_html=True)
