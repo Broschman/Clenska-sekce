@@ -5,11 +5,13 @@ import pandas as pd
 from datetime import datetime, date, timedelta
 import calendar
 import time
+import base64
+import os
 
 # --- 1. NASTAVENÍ STRÁNKY ---
 st.set_page_config(page_title="Kalendář RBK", page_icon="🌲", layout="wide")
 
-# --- CSS VZHLED (DESIGN 4.1 - COMPACT WHITE ROWS) ---
+# --- CSS VZHLED (DESIGN 4.2 - LOGO IN HEADER) ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
@@ -19,16 +21,38 @@ st.markdown("""
         color: #1f2937;
     }
 
-    h1 {
+    /* Nadpis - Textová část s gradientem */
+    h1 span.gradient-text {
         background: -webkit-linear-gradient(45deg, #166534, #15803d);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        text-align: center !important;
         font-weight: 900;
         text-transform: uppercase;
         letter-spacing: -1px;
+    }
+    
+    /* Nadpis - Kontejner */
+    h1 {
+        text-align: center !important;
         margin: 0;
         padding-bottom: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 15px; /* Mezera mezi textem a logem */
+    }
+
+    /* Logo v nadpisu */
+    h1 img.header-logo {
+        height: 60px; /* Výška loga v nadpisu */
+        width: auto;
+        vertical-align: middle;
+        margin-top: -5px; /* Jemné doladění pozice */
+        transition: transform 0.3s ease;
+    }
+    
+    h1 img.header-logo:hover {
+        transform: scale(1.1) rotate(5deg);
     }
 
     h3 {
@@ -172,11 +196,36 @@ BARVY_AKCI = {
 def badge(text, bg="#f3f4f6", color="#111"):
     return f"<span style='background-color: {bg}; color: {color}; padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; margin-right: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);'>{text}</span>"
 
-# --- HLAVIČKA ---
+def get_base64_image(image_path):
+    """Načte obrázek a převede ho na base64 string pro HTML."""
+    if not os.path.exists(image_path):
+        return None
+    with open(image_path, "rb") as img_file:
+        return base64.b64encode(img_file.read()).decode()
+
+# --- HLAVIČKA S LOGEM ---
 col_dummy, col_title, col_help = st.columns([1, 10, 1], vertical_alignment="center")
 
 with col_title:
-    st.title("🌲 Kalendář RBK")
+    # Cesta k tvému logu
+    logo_path = "logo_rbk.png" 
+    
+    # Zkusíme načíst lokální logo, jinak placeholder
+    logo_b64 = get_base64_image(logo_path)
+    
+    if logo_b64:
+        img_src = f"data:image/png;base64,{logo_b64}"
+    else:
+        # Placeholder (pokud soubor neexistuje) - zelený štít
+        img_src = "https://cdn-icons-png.flaticon.com/512/2051/2051939.png"
+
+    # HTML Nadpis s vloženým obrázkem
+    st.markdown(f"""
+        <h1>
+            <span class="gradient-text">🌲 Kalendář</span>
+            <img src="{img_src}" class="header-logo" alt="RBK Logo">
+        </h1>
+    """, unsafe_allow_html=True)
 
 with col_help:
     with st.popover("❔", help="Legenda"):
@@ -721,16 +770,16 @@ with stylable_container(
     # 1. LEVÍ SPONZOŘI (2 loga)
     with col_left:
         l1, l2 = st.columns(2)
-        l1.image("logo1.jpg", use_column_width=True) # Změň na: l1.image("logo1.png")
+        l1.image("https://placehold.co/150x80/png?text=Logo+1", use_column_width=True) # Změň na: l1.image("logo1.png")
         # l1.caption("Logo 1")
-        l2.image("logo2.jpg", use_column_width=True) # Změň na: l2.image("logo2.png")
+        l2.image("https://placehold.co/150x80/png?text=Logo+2", use_column_width=True) # Změň na: l2.image("logo2.png")
         # l2.caption("Logo 2")
 
     # 2. PROSTŘEDNÍ TEXT
     with col_center:
         st.markdown("""
         <div style='text-align: center; color: #9CA3AF; font-size: 0.8em; font-family: sans-serif;'>
-            <b>Členská sekce RBK</b> • Designed by Broschman • v1.6<br>
+            <b>Členská sekce RBK</b> • Designed by Broschman • v1.7<br>
             &copy; 2026 All rights reserved
         </div>
         """, unsafe_allow_html=True)
@@ -738,9 +787,9 @@ with stylable_container(
     # 3. PRAVÍ SPONZOŘI (2 loga)
     with col_right:
         r1, r2 = st.columns(2)
-        r1.image("logo3.jpg", use_column_width=True) # Změň na: r1.image("logo3.png")
+        r1.image("https://placehold.co/150x80/png?text=Logo+3", use_column_width=True) # Změň na: r1.image("logo3.png")
         # r1.caption("Logo 3")
-        r2.image("logo4.jpg", use_column_width=True) # Změň na: r2.image("logo4.png")
+        r2.image("https://placehold.co/150x80/png?text=Logo+4", use_column_width=True) # Změň na: r2.image("logo4.png")
         # r2.caption("Logo 4")
 
 st.markdown("<div style='margin-bottom: 20px'></div>", unsafe_allow_html=True)
