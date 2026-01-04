@@ -563,7 +563,11 @@ for tyden in month_days:
                                             vybrane_jmeno = st.selectbox("Jméno", options=seznam_jmen, index=None, placeholder="Vyber ze seznamu...")
                                             nove_jmeno = st.text_input("Nebo nové jméno")
                                             poznamka_input = st.text_input("Poznámka")
-                                            doprava_input = st.checkbox("🚗 Sháním odvoz")
+                                            
+                                            # --- DVA CHECKBOXY VEDLE SEBE ---
+                                            c_check1, c_check2 = st.columns(2)
+                                            doprava_input = c_check1.checkbox("🚗 Sháním odvoz")
+                                            ubytovani_input = c_check2.checkbox("🛏️ Společné ubytko") # <--- NOVÉ
                                             
                                             st.markdown("<br>", unsafe_allow_html=True)
                                             
@@ -588,7 +592,7 @@ for tyden in month_days:
                                             if odeslat_btn:
                                                 finalni_jmeno = nove_jmeno.strip() if nove_jmeno else vybrane_jmeno
                                                 if finalni_jmeno:
-                                                    # --- KONTROLA DUPLICITY ZAČÁTEK ---
+                                                    # --- KONTROLA DUPLICITY ---
                                                     try:
                                                         aktualni = conn.read(worksheet="prihlasky", ttl=0)
                                                         aktualni['id_akce'] = aktualni['id_akce'].astype(str).str.replace(r'\.0$', '', regex=True)
@@ -603,17 +607,21 @@ for tyden in month_days:
                                                         else:
                                                             uspesne_zapsano = False
                                                             hodnota_dopravy = "Ano 🚗" if doprava_input else ""
+                                                            hodnota_ubytovani = "Ano 🛏️" if ubytovani_input else "" # <--- LOGIKA
+                                                            
                                                             novy_zaznam = pd.DataFrame([{
                                                                 "id_akce": akce_id_str,
                                                                 "název": akce['název'],
                                                                 "jméno": finalni_jmeno,
                                                                 "poznámka": poznamka_input,
                                                                 "doprava": hodnota_dopravy,
+                                                                "ubytování": hodnota_ubytovani, # <--- ULOŽENÍ
                                                                 "čas zápisu": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                                                             }])
                                                             
                                                             updated = pd.concat([aktualni, novy_zaznam], ignore_index=True)
                                                             conn.update(worksheet="prihlasky", data=updated)
+                                                            
                                                             if finalni_jmeno not in seznam_jmen:
                                                                 try:
                                                                     aktualni_jmena = conn.read(worksheet="jmena", ttl=0)
@@ -621,18 +629,17 @@ for tyden in month_days:
                                                                     updated_jmena = pd.concat([aktualni_jmena, novy_clen], ignore_index=True)
                                                                     conn.update(worksheet="jmena", data=updated_jmena)
                                                                 except: pass
+                                                            
                                                             uspesne_zapsano = True
                                                             
                                                             if uspesne_zapsano:
-                                                                # --- LOTTIE ANIMACE START ---
                                                                 with st_lottie_spinner(lottie_success, key=f"anim_{unique_key}"):
                                                                     time.sleep(2) 
-                                                                # --- LOTTIE ANIMACE END ---
+                                                                
                                                                 st.toast(f"✅ {finalni_jmeno} přihlášen(a)!")
                                                                 st.rerun()
                                                     except Exception as e:
                                                         st.error(f"Chyba: {e}")
-                                                    # --- KONEC LOGIKY ---
                                                 else: st.warning("Vyplň jméno!")
                                     elif je_po_deadlinu:
                                         st.info("🔒 Přihlášky uzavřeny.")
@@ -677,20 +684,20 @@ for tyden in month_days:
                                         st.rerun()
 
                             if not lidi.empty:
-                                h1, h2, h3, h4, h5 = st.columns([0.4, 2.0, 2.0, 0.8, 0.5]) 
+                                # Upravené sloupce: ID, Jméno, Poznámka, Auto, Postel, Koš
+                                h1, h2, h3, h4, h5, h6 = st.columns([0.4, 2.0, 1.5, 0.6, 0.6, 0.5]) 
                                 h1.markdown("<b style='color:#9CA3AF'>#</b>", unsafe_allow_html=True)
                                 h2.markdown("<b>Jméno</b>", unsafe_allow_html=True)
                                 h3.markdown("<b>Poznámka</b>", unsafe_allow_html=True)
                                 h4.markdown("🚗", unsafe_allow_html=True)
-                                h5.markdown("") 
+                                h5.markdown("🛏️", unsafe_allow_html=True) # <--- HLAVIČKA
+                                h6.markdown("") 
                                 st.markdown("<hr style='margin: 5px 0 10px 0; border-top: 1px solid #E5E7EB;'>", unsafe_allow_html=True)
                                 
                                 for i, (idx, row) in enumerate(lidi.iterrows()):
                                     is_gray = (i % 2 == 0)
                                     bg_color = "#F3F4F6" if is_gray else "white"
                                     
-                                    # POKUD JE ŠEDÝ (is_gray), DÁME MU VELKÝ SPODNÍ PADDING
-                                    # POKUD JE BÍLÝ, DÁME MU O 10px MENŠÍ HORNÍ PADDING (0px)
                                     padding_style = "10px 5px 25px 5px !important" if is_gray else "0px 5px 10px 5px !important"
                                     
                                     with stylable_container(
@@ -699,7 +706,7 @@ for tyden in month_days:
                                         {{
                                             background-color: {bg_color};
                                             border-radius: 6px;
-                                            padding: {padding_style}; /* ZDE SE TO LIŠÍ */
+                                            padding: {padding_style};
                                             margin-bottom: 2px;
                                             display: flex;
                                             align-items: center;
@@ -707,16 +714,22 @@ for tyden in month_days:
                                         }}
                                         """
                                     ):
-                                        c1, c2, c3, c4, c5 = st.columns([0.4, 2.0, 2.0, 0.8, 0.5], vertical_alignment="center")
+                                        # Přidán sloupec c5 pro ubytování
+                                        c1, c2, c3, c4, c5, c6 = st.columns([0.4, 2.0, 1.5, 0.6, 0.6, 0.5], vertical_alignment="center")
                                         c1.write(f"{i+1}.")
                                         c2.markdown(f"**{row['jméno']}**")
+                                        
                                         poznamka_txt = row['poznámka'] if pd.notna(row['poznámka']) else ""
                                         c3.caption(poznamka_txt)
+                                        
                                         doprava_val = str(row['doprava']) if pd.notna(row.get('doprava')) else ""
                                         c4.write(doprava_val)
+
+                                        # Zobrazení ubytování (pokud sloupec existuje v datech)
+                                        ubytko_val = str(row['ubytování']) if 'ubytování' in row and pd.notna(row.get('ubytování')) else ""
+                                        c5.write(ubytko_val)
                                         
                                         if not je_po_deadlinu:
-                                            # KOŠ BEZ MARGINŮ
                                             with stylable_container(
                                                 key=f"del_btn_cont_{unique_key}_{idx}",
                                                 css_styles="""
@@ -729,7 +742,7 @@ for tyden in month_days:
                                                     }
                                                 """
                                             ):
-                                                if c5.button("🗑️", key=f"del_{unique_key}_{idx}"):
+                                                if c6.button("🗑️", key=f"del_{unique_key}_{idx}"):
                                                     st.session_state[delete_key_state] = row['jméno']
                                                     st.rerun()
                             else:
