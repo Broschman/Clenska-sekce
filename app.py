@@ -517,6 +517,7 @@ for tyden in month_days:
                                             if odeslat_btn:
                                                 finalni_jmeno = nove_jmeno.strip() if nove_jmeno else vybrane_jmeno
                                                 if finalni_jmeno:
+                                                    # --- KONTROLA DUPLICITY ZAČÁTEK ---
                                                     try:
                                                         aktualni = conn.read(worksheet="prihlasky", ttl=0)
                                                         aktualni['id_akce'] = aktualni['id_akce'].astype(str).str.replace(r'\.0$', '', regex=True)
@@ -557,6 +558,7 @@ for tyden in month_days:
                                                                 st.rerun()
                                                     except Exception as e:
                                                         st.error(f"Chyba: {e}")
+                                                    # --- KONEC LOGIKY ---
                                                 else: st.warning("Vyplň jméno!")
                                     elif je_po_deadlinu:
                                         st.info("🔒 Přihlášky uzavřeny.")
@@ -719,16 +721,16 @@ with stylable_container(
     # 1. LEVÍ SPONZOŘI (2 loga)
     with col_left:
         l1, l2 = st.columns(2)
-        # l1.image("logo1.png")
-        l1.caption("Logo 1")
-        # l2.image("logo2.png")
-        l2.caption("Logo 2")
+        l1.image("logo1.jpg", use_column_width=True) # Změň na: l1.image("logo1.png")
+        # l1.caption("Logo 1")
+        l2.image("logo2.jpg", use_column_width=True) # Změň na: l2.image("logo2.png")
+        # l2.caption("Logo 2")
 
     # 2. PROSTŘEDNÍ TEXT
     with col_center:
         st.markdown("""
         <div style='text-align: center; color: #9CA3AF; font-size: 0.8em; font-family: sans-serif;'>
-            <b>Členská sekce RBK</b> • Designed by Broschman • v1.5<br>
+            <b>Členská sekce RBK</b> • Designed by Broschman • v1.6<br>
             &copy; 2026 All rights reserved
         </div>
         """, unsafe_allow_html=True)
@@ -736,9 +738,9 @@ with stylable_container(
     # 3. PRAVÍ SPONZOŘI (2 loga)
     with col_right:
         r1, r2 = st.columns(2)
-        # r1.image("logo3.png")
-        r1.caption("Logo 3")
-        # r2.image("logo4.png")
-        r2.caption("Logo 4")
+        r1.image("https://placehold.co/150x80/png?text=Logo+3", use_column_width=True) # Změň na: r1.image("logo3.png")
+        # r1.caption("Logo 3")
+        r2.image("https://placehold.co/150x80/png?text=Logo+4", use_column_width=True) # Změň na: r2.image("logo4.png")
+        # r2.caption("Logo 4")
 
 st.markdown("<div style='margin-bottom: 20px'></div>", unsafe_allow_html=True)
