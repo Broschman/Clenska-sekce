@@ -538,14 +538,15 @@ for tyden in month_days:
                                 if not je_po_deadlinu and delete_key_state not in st.session_state:
                                     st.markdown("<h4 style='margin-top:0;'>✍️ Interní tabulka</h4>", unsafe_allow_html=True)
                                     
-                                    # NOVÉ: Varování pro závody
-                                    if je_zavod_obecne:
+                                # NOVÉ: Varování pro závody (kromě štafet, ty řeší trenér)
+                                    if je_zavod_obecne and not je_stafeta:
                                         st.markdown("""
                                         <div style="background-color: #FEF2F2; border: 1px solid #FCA5A5; color: #B91C1C; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-weight: bold; font-size: 0.9em; display: flex; align-items: center;">
                                             <span style="font-size: 1.2em; margin-right: 8px;">⚠️</span>
                                             Je nutné se přihlásit i v ORISu!
                                         </div>
                                         """, unsafe_allow_html=True)
+
 
                                     form_key = f"form_{unique_key}"
                                     
