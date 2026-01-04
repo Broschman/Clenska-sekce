@@ -738,7 +738,7 @@ with stylable_container(
     # 3. PRAVÍ SPONZOŘI (2 loga)
     with col_right:
         r1, r2 = st.columns(2)
-        r1.image("logo3.png", use_column_width=True) # Změň na: r1.image("logo3.png")
+        r1.image("logo3.jpg", use_column_width=True) # Změň na: r1.image("logo3.png")
         # r1.caption("Logo 3")
         r2.image("logo4.jpg", use_column_width=True) # Změň na: r2.image("logo4.png")
         # r2.caption("Logo 4")
