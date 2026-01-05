@@ -690,7 +690,7 @@ for tyden in month_days:
                 druh_akce = str(akce['druh']).lower().strip() if 'druh' in df_akce.columns and pd.notna(akce['druh']) else "ostatní"
                 
                 # ... (původní logika if/elif pro style_key) ...
-                 style_key = "default"
+                style_key = "default"
 
                 if "mčr" in typ_udalosti or "mistrovství" in typ_udalosti:
                     style_key = "mcr"
