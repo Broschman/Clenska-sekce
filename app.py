@@ -326,6 +326,51 @@ except Exception as e:
 if 'vybrany_datum' not in st.session_state:
     st.session_state.vybrany_datum = date.today()
 
+# --- DASHBOARD NEJBLIŽŠÍCH DEADLINŮ (UMÍSTĚNÝ NAD NAVIGACÍ) ---
+dnes = date.today()
+future_deadlines = df_akce[df_akce['deadline'] >= dnes].sort_values('deadline').head(3)
+
+if not future_deadlines.empty:
+    st.markdown("### 🔥 Pozor, hoří termíny!")
+    
+    cols_d = st.columns(len(future_deadlines))
+    
+    for i, (_, row) in enumerate(future_deadlines.iterrows()):
+        days_left = (row['deadline'] - dnes).days
+        
+        # Barvičky podle stresu
+        if days_left == 0:
+            bg_color, border_color, text_color, icon, time_msg = "#FEF2F2", "#EF4444", "#B91C1C", "🚨", "DNES!"
+        elif days_left <= 3:
+            bg_color, border_color, text_color, icon, time_msg = "#FFFBEB", "#F59E0B", "#B45309", "⚠️", f"Za {days_left} dny"
+        else:
+            bg_color, border_color, text_color, icon, time_msg = "#ECFDF5", "#10B981", "#047857", "📅", row['deadline'].strftime('%d.%m.')
+
+        with cols_d[i]:
+            st.markdown(f"""
+            <div style="
+                background-color: {bg_color};
+                border: 2px solid {border_color};
+                border-radius: 12px;
+                padding: 10px;
+                text-align: center;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                height: 100%;
+                display: flex; flex-direction: column; justify-content: space-between;
+            ">
+                <div style="font-size: 1.5em; margin-bottom: 2px;">{icon}</div>
+                <div style="font-weight: 700; font-size: 0.9em; line-height: 1.2; color: #111; margin-bottom: 5px;">
+                    {row['název']}
+                </div>
+                <div style="color: {text_color}; font-weight: 800; font-size: 1em;">
+                    {time_msg}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+    st.markdown("<div style='margin-bottom: 25px'></div>", unsafe_allow_html=True)
+
+# --- NAVIGACE MĚSÍCŮ ---
 col_nav1, col_nav2, col_nav3 = st.columns([2, 5, 2])
 with col_nav1:
     if st.button("⬅️ Předchozí", use_container_width=True):
@@ -358,63 +403,6 @@ for i, d in enumerate(dny_v_tydnu):
 st.markdown("<hr style='margin: 0 0 15px 0; border: 0; border-top: 1px solid #E5E7EB;'>", unsafe_allow_html=True)
 
 dnes = date.today()
-
-# --- DASHBOARD NEJBLIŽŠÍCH DEADLINŮ ---
-# Vybereme 3 akce s nejbližším budoucím (nebo dnešním) deadlinem
-future_deadlines = df_akce[df_akce['deadline'] >= dnes].sort_values('deadline').head(3)
-
-if not future_deadlines.empty:
-    st.markdown("### 🔥 Pozor, hoří termíny!")
-    
-    # Dynamický počet sloupců (kdyby náhodou zbývala jen 1 nebo 2 akce)
-    cols_count = len(future_deadlines)
-    cols_d = st.columns(cols_count)
-    
-    for i, (_, row) in enumerate(future_deadlines.iterrows()):
-        days_left = (row['deadline'] - dnes).days
-        
-        # Logika barev podle naléhavosti
-        if days_left == 0:
-            bg_color = "#FEF2F2" # Červená
-            border_color = "#EF4444"
-            text_color = "#B91C1C"
-            icon = "🚨"
-            time_msg = "DNES!"
-        elif days_left <= 3:
-            bg_color = "#FFFBEB" # Žlutá/Oranžová
-            border_color = "#F59E0B"
-            text_color = "#B45309"
-            icon = "⚠️"
-            time_msg = f"Za {days_left} dny"
-        else:
-            bg_color = "#ECFDF5" # Zelená (pohoda)
-            border_color = "#10B981"
-            text_color = "#047857"
-            icon = "📅"
-            time_msg = row['deadline'].strftime('%d.%m.')
-
-        with cols_d[i]:
-            st.markdown(f"""
-            <div style="
-                background-color: {bg_color};
-                border: 2px solid {border_color};
-                border-radius: 12px;
-                padding: 12px;
-                text-align: center;
-                height: 100%;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            ">
-                <div style="font-size: 1.8em; margin-bottom: 5px;">{icon}</div>
-                <div style="font-weight: 700; font-size: 0.95em; margin-bottom: 5px; line-height: 1.3; color: #111; min-height: 2.6em; display: flex; align-items: center; justify-content: center;">
-                    {row['název']}
-                </div>
-                <div style="color: {text_color}; font-weight: 800; font-size: 1.1em; text-transform: uppercase;">
-                    {time_msg}
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-            
-    st.markdown("<div style='margin-bottom: 30px'></div>", unsafe_allow_html=True)
     
 for tyden in month_days:
     cols = st.columns(7, gap="small")
