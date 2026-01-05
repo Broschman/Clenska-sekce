@@ -681,15 +681,15 @@ for tyden in month_days:
                 akce_id_str = str(akce['id']) if 'id' in df_akce.columns else ""
                 unique_key = f"{akce_id_str}_{aktualni_den.strftime('%Y%m%d')}"
 
-                # ... Zde necháme původní logiku určování stylů tlačítka (BARVY_AKCI, emoji_druh atd.) ...
-                # ... PROTOŽE tlačítko v kalendáři vypadá jinak než na dashboardu ...
-                
-                # Zkopíruj sem zpět původní logiku pro `typ_udalosti`, `style_key`, `vybrany_styl`, `final_text`
-                # (Zkracuji to zde pro přehlednost, v tvém kódu to tam nech, jak to bylo)
+                # 1. Definice typu události a druhu
                 typ_udalosti = str(akce['typ']).lower().strip() if 'typ' in df_akce.columns and pd.notna(akce['typ']) else ""
                 druh_akce = str(akce['druh']).lower().strip() if 'druh' in df_akce.columns and pd.notna(akce['druh']) else "ostatní"
                 
-                # ... (původní logika if/elif pro style_key) ...
+                # 2. Pomocné proměnné (TOTO MUSÍ BÝT PŘED PODMÍNKAMI!)
+                zavodni_slova = ["závod", "mčr", "žebříček", "liga", "mistrovství", "štafety", "ža", "žb"]
+                je_zavod_obecne = any(s in typ_udalosti for s in zavodni_slova)
+
+                # 3. LOGIKA BAREV
                 style_key = "default"
 
                 if "mčr" in typ_udalosti or "mistrovství" in typ_udalosti:
@@ -711,17 +711,21 @@ for tyden in month_days:
                 elif je_zavod_obecne:
                     style_key = "oblastni"
 
+                # 4. Načtení stylu z konfigurace
                 vybrany_styl = BARVY_AKCI.get(style_key, BARVY_AKCI["default"])
-                
+
+                # 5. Ikony a Text tlačítka
                 ikony_mapa = { "les": "🌲", "krátká trať": "🌲", "klasická trať": "🌲", "sprint": "🏙️", "nočák": "🌗" }
                 emoji_druh = ikony_mapa.get(druh_akce, "🏃")
                 
                 nazev_full = akce['název']
                 display_text = nazev_full.split('-')[0].strip() if '-' in nazev_full else nazev_full
                 final_text = f"{emoji_druh} {display_text}".strip()
-                if je_po_deadlinu: final_text = "🔒 " + final_text
+                
+                if je_po_deadlinu:
+                    final_text = "🔒 " + final_text
 
-                # TADY JE TA ZMĚNA:
+                # 6. Vykreslení tlačítka s Popoverem
                 with stylable_container(
                     key=f"btn_container_{unique_key}",
                     css_styles=f"""
@@ -749,7 +753,6 @@ for tyden in month_days:
                     """
                 ):
                     with st.popover(final_text, use_container_width=True):
-                        # ZAVOLÁME FUNKCI MÍSTO VYPISOVÁNÍ KÓDU
                         vykreslit_detail_akce(akce, unique_key)
 st.markdown("<div style='margin-bottom: 50px'></div>", unsafe_allow_html=True)
 
