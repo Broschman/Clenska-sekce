@@ -359,6 +359,63 @@ st.markdown("<hr style='margin: 0 0 15px 0; border: 0; border-top: 1px solid #E5
 
 dnes = date.today()
 
+# --- DASHBOARD NEJBLIŽŠÍCH DEADLINŮ ---
+# Vybereme 3 akce s nejbližším budoucím (nebo dnešním) deadlinem
+future_deadlines = df_akce[df_akce['deadline'] >= dnes].sort_values('deadline').head(3)
+
+if not future_deadlines.empty:
+    st.markdown("### 🔥 Pozor, hoří termíny!")
+    
+    # Dynamický počet sloupců (kdyby náhodou zbývala jen 1 nebo 2 akce)
+    cols_count = len(future_deadlines)
+    cols_d = st.columns(cols_count)
+    
+    for i, (_, row) in enumerate(future_deadlines.iterrows()):
+        days_left = (row['deadline'] - dnes).days
+        
+        # Logika barev podle naléhavosti
+        if days_left == 0:
+            bg_color = "#FEF2F2" # Červená
+            border_color = "#EF4444"
+            text_color = "#B91C1C"
+            icon = "🚨"
+            time_msg = "DNES!"
+        elif days_left <= 3:
+            bg_color = "#FFFBEB" # Žlutá/Oranžová
+            border_color = "#F59E0B"
+            text_color = "#B45309"
+            icon = "⚠️"
+            time_msg = f"Za {days_left} dny"
+        else:
+            bg_color = "#ECFDF5" # Zelená (pohoda)
+            border_color = "#10B981"
+            text_color = "#047857"
+            icon = "📅"
+            time_msg = row['deadline'].strftime('%d.%m.')
+
+        with cols_d[i]:
+            st.markdown(f"""
+            <div style="
+                background-color: {bg_color};
+                border: 2px solid {border_color};
+                border-radius: 12px;
+                padding: 12px;
+                text-align: center;
+                height: 100%;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            ">
+                <div style="font-size: 1.8em; margin-bottom: 5px;">{icon}</div>
+                <div style="font-weight: 700; font-size: 0.95em; margin-bottom: 5px; line-height: 1.3; color: #111; min-height: 2.6em; display: flex; align-items: center; justify-content: center;">
+                    {row['název']}
+                </div>
+                <div style="color: {text_color}; font-weight: 800; font-size: 1.1em; text-transform: uppercase;">
+                    {time_msg}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+    st.markdown("<div style='margin-bottom: 30px'></div>", unsafe_allow_html=True)
+    
 for tyden in month_days:
     cols = st.columns(7, gap="small")
     
