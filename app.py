@@ -206,6 +206,12 @@ BARVY_AKCI = {
         "border": "none",
         "shadow": "0 2px 4px rgba(22, 163, 74, 0.3)"
     },
+    "zavod": {
+        "bg": "#0D9488",  # Teal barva
+        "color": "white",
+        "border": "none",
+        "shadow": "0 2px 4px rgba(13, 148, 136, 0.3)"
+    },
     "default": {
         "bg": "#FFFFFF",
         "color": "#374151",
@@ -493,6 +499,7 @@ with col_help:
             <div style="display: flex; align-items: center;"><span style="width: 20px; height: 20px; border-radius: 6px; background: #EA580C; margin-right: 10px;"></span><b>Závod ŽB</b> (Licence B)</div>
             <div style="display: flex; align-items: center;"><span style="width: 20px; height: 20px; border-radius: 6px; background: #D97706; margin-right: 10px;"></span><b>Soustředění</b> (Přednostní)</div>
             <div style="display: flex; align-items: center;"><span style="width: 20px; height: 20px; border-radius: 6px; background: #2563EB; margin-right: 10px;"></span><b>Oblastní žebříček</b></div>
+            <div style="display: flex; align-items: center;"><span style="width: 20px; height: 20px; border-radius: 6px; background: #0D9488; margin-right: 10px;"></span><b>Ostatní závody</b></div> <!-- NOVÝ ŘÁDEK -->
              <div style="display: flex; align-items: center;"><span style="width: 20px; height: 20px; border-radius: 6px; background: #9333EA; margin-right: 10px;"></span><b>Štafety</b></div>
             <div style="display: flex; align-items: center;"><span style="width: 20px; height: 20px; border-radius: 6px; background: #16A34A; margin-right: 10px;"></span><b>Trénink</b></div>
         </div>
@@ -709,8 +716,8 @@ for tyden in month_days:
                 elif "trénink" in typ_udalosti:
                     style_key = "trenink"
                 elif je_zavod_obecne:
-                    style_key = "oblastni"
-
+                    style_key = "zavod"
+                    
                 # 4. Načtení stylu z konfigurace
                 vybrany_styl = BARVY_AKCI.get(style_key, BARVY_AKCI["default"])
 
@@ -802,7 +809,7 @@ with stylable_container(key="footer_logos", css_styles="img {height: 50px !impor
         l2.image("logo2.jpg", width="stretch")
         
     with col_center:
-        st.markdown("<div style='text-align: center; color: #9CA3AF; font-size: 0.8em; font-family: sans-serif;'><b>Členská sekce RBK</b> • Designed by Broschman • v1.2.13<br>&copy; 2026 All rights reserved</div>", unsafe_allow_html=True)
+        st.markdown("<div style='text-align: center; color: #9CA3AF; font-size: 0.8em; font-family: sans-serif;'><b>Členská sekce RBK</b> • Designed by Broschman • v1.2.15.3<br>&copy; 2026 All rights reserved</div>", unsafe_allow_html=True)
         
     with col_right:
         r1, r2 = st.columns(2)
