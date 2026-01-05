@@ -690,13 +690,27 @@ for tyden in month_days:
                 druh_akce = str(akce['druh']).lower().strip() if 'druh' in df_akce.columns and pd.notna(akce['druh']) else "ostatní"
                 
                 # ... (původní logika if/elif pro style_key) ...
-                # Abych tě nenutil to hledat, tady je zkrácená verze pro kontext, ty tam nech tu svou plnou:
-                style_key = "default"
-                if "mčr" in typ_udalosti: style_key = "mcr"
-                elif "ža" in typ_udalosti: style_key = "za"
-                # ... atd ...
-                elif "trénink" in typ_udalosti: style_key = "trenink"
-                
+                 style_key = "default"
+
+                if "mčr" in typ_udalosti or "mistrovství" in typ_udalosti:
+                    style_key = "mcr"
+                elif "ža" in typ_udalosti or "žebříček a" in typ_udalosti:
+                    style_key = "za"
+                elif "žb" in typ_udalosti or "žebříček b" in typ_udalosti:
+                    style_key = "zb"
+                elif "soustředění" in typ_udalosti:
+                    style_key = "soustredeni"
+                elif "oblastní" in typ_udalosti or "žebříček" in typ_udalosti:
+                    style_key = "oblastni"
+                elif "zimní liga" in typ_udalosti or "bzl" in typ_udalosti:
+                    style_key = "zimni_liga"
+                elif "štafety" in typ_udalosti:
+                    style_key = "stafety"
+                elif "trénink" in typ_udalosti:
+                    style_key = "trenink"
+                elif je_zavod_obecne:
+                    style_key = "oblastni"
+
                 vybrany_styl = BARVY_AKCI.get(style_key, BARVY_AKCI["default"])
                 
                 ikony_mapa = { "les": "🌲", "krátká trať": "🌲", "klasická trať": "🌲", "sprint": "🏙️", "nočák": "🌗" }
