@@ -296,7 +296,7 @@ def vykreslit_detail_akce(akce, unique_key):
         if kategorie_txt:
             st.write(f"🎯 **Kategorie:** {kategorie_txt}")
         
-        # --- MAPA (Folium / OSM) --- FINAL PRO VERSION
+        # --- MAPA (Folium / OSM) --- ICONS LOGIC UPDATE
         mapa_raw = str(akce['mapa']).strip() if 'mapa' in df_akce.columns and pd.notna(akce['mapa']) else ""
         body_k_vykresleni = [] # Seznam n-tic (lat, lon, nazev_bodu)
 
@@ -322,7 +322,6 @@ def vykreslit_detail_akce(akce, unique_key):
                     parsed = urlparse(mapa_raw)
                     params = parse_qs(parsed.query)
                     
-                    # 1. Varianta: "vlastni-body" (parametry ud, ut)
                     if 'ud' in params:
                         uds = params['ud']
                         uts = params.get('ut', [])
@@ -335,7 +334,6 @@ def vykreslit_detail_akce(akce, unique_key):
                                     nazev = uts[i] if i < len(uts) else f"Bod {i+1}"
                                     body_k_vykresleni.append((lat, lon, nazev))
                     
-                    # 2. Varianta: Klasický odkaz (x, y) nebo (q)
                     if not body_k_vykresleni:
                         lat, lon = None, None
                         if 'x' in params and 'y' in params:
@@ -350,7 +348,7 @@ def vykreslit_detail_akce(akce, unique_key):
                         if lat and lon:
                             body_k_vykresleni.append((lat, lon, akce['název']))
 
-                # B) NEJSOU TO URL, ALE PŘÍMÉ SOUŘADNICE
+                # B) PŘÍMÉ SOUŘADNICE
                 else:
                     raw_parts = mapa_raw.split(';')
                     for part in raw_parts:
@@ -373,12 +371,14 @@ def vykreslit_detail_akce(akce, unique_key):
         if body_k_vykresleni:
             st.markdown("<div style='margin-top: 15px; margin-bottom: 5px; font-weight: bold;'>🗺️ Místo srazu (Body):</div>", unsafe_allow_html=True)
             
-            # Startovní bod (pro Google/Waze a centrování)
             start_lat, start_lon, _ = body_k_vykresleni[0]
             m = folium.Map(location=[start_lat, start_lon], tiles="OpenStreetMap")
             
             min_lat, max_lat = 90, -90
             min_lon, max_lon = 180, -180
+
+            # --- LOGIKA IKON ---
+            pocet_bodu = len(body_k_vykresleni)
 
             for i, (b_lat, b_lon, b_nazev) in enumerate(body_k_vykresleni):
                 if b_lat < min_lat: min_lat = b_lat
@@ -386,14 +386,36 @@ def vykreslit_detail_akce(akce, unique_key):
                 if b_lon < min_lon: min_lon = b_lon
                 if b_lon > max_lon: max_lon = b_lon
                 
-                barva = "red" if i == 0 else "blue"
-                icon_type = "flag" if i == 0 else "info-sign"
-                
+                # Defaultní nastavení
+                barva = "blue"
+                ikona = "info-sign"
+                prefix = "glyphicon"
+
+                if pocet_bodu == 1:
+                    # Jen jeden bod -> Červená vlajka (Sraz)
+                    barva = "red"
+                    ikona = "flag"
+                else:
+                    # Více bodů
+                    if i == 0:
+                        # 1. bod -> Parkování (Auto)
+                        barva = "blue" # Nebo 'cadetblue' pro odlišení
+                        ikona = "car"
+                        prefix = "fa" # FontAwesome
+                    elif i == 1:
+                        # 2. bod -> Start (Vlajka)
+                        barva = "red"
+                        ikona = "flag"
+                    else:
+                        # 3. a další bod -> Info
+                        barva = "blue"
+                        ikona = "info-sign"
+
                 folium.Marker(
                     [b_lat, b_lon], 
                     popup=b_nazev, 
                     tooltip=b_nazev,
-                    icon=folium.Icon(color=barva, icon=icon_type)
+                    icon=folium.Icon(color=barva, icon=ikona, prefix=prefix)
                 ).add_to(m)
 
             sw = [min_lat - 0.005, min_lon - 0.005]
@@ -402,16 +424,12 @@ def vykreslit_detail_akce(akce, unique_key):
 
             st_data = st_folium(m, height=280, returned_objects=[], key=f"map_{unique_key}")
             
-            # --- ZDE JE TA ZMĚNA ODKAZŮ ---
-            
-            # 1. Mapy.cz: Pokud vstup byl URL na Mapy.cz, použijeme ho (zobrazí všechny body).
-            #    Jinak vygenerujeme odkaz na ten první bod.
+            # Odkazy
             if "http" in mapa_raw and ("mapy.cz" in mapa_raw or "mapy.com" in mapa_raw):
                 link_mapy_cz = mapa_raw
             else:
                 link_mapy_cz = f"https://mapy.cz/turisticka?q={start_lat},{start_lon}"
             
-            # 2. Google a Waze: Vždy vedou na ten PRVNÍ bod (navigace na start)
             link_google = f"https://www.google.com/maps/search/?api=1&query={start_lat},{start_lon}"
             link_waze = f"https://waze.com/ul?ll={start_lat},{start_lon}&navigate=yes"
 
