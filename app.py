@@ -292,26 +292,47 @@ def vykreslit_detail_akce(akce, unique_key):
         if kategorie_txt:
             st.write(f"🎯 **Kategorie:** {kategorie_txt}")
         
-        # --- NOVÉ: MAPA ---
-        # Načteme odkaz ze sloupce 'mapa', pokud existuje
+         # --- NOVÉ: MAPA (Embedovaná z odkazu) ---
+        # Bere odkaz ze sloupce 'mapa' (např. https://mapy.com/s/renelomaho)
         mapa_url = str(akce['mapa']).strip() if 'mapa' in df_akce.columns and pd.notna(akce['mapa']) else ""
         
         if mapa_url:
-            # Jednoduchá konverze běžného odkazu na embedovací (frame)
-            # Změní https://mapy.com/s/neco -> https://frame.mapy.com/s/neco
-            if "mapy.com/s/" in mapa_url:
-                embed_url = mapa_url.replace("mapy.com/s/", "frame.mapy.com/s/")
-                
-                st.markdown("<div style='margin-top: 10px; margin-bottom: 5px; font-weight: bold;'>🗺️ Místo srazu:</div>", unsafe_allow_html=True)
-                
-                # Vykreslení mapy
-                components.iframe(embed_url, height=250)
-                
-                # Odkaz na otevření ve velkém okně
-                st.markdown(f"<a href='{mapa_url}' target='_blank' style='font-size: 0.8em; color: #2563EB;'>↗️ Otevřít na Mapy.com</a>", unsafe_allow_html=True)
+            st.markdown("<div style='margin-top: 15px; margin-bottom: 5px; font-weight: bold;'>🗺️ Místo srazu:</div>", unsafe_allow_html=True)
+            
+            # 1. Iframe s mapou
+            try:
+                # Streamlit automaticky vytvoří iframe z URL
+                # Výška 280px, šířka se přizpůsobí
+                components.iframe(mapa_url, height=280)
+            except Exception:
+                st.warning("Náhled mapy se nepodařilo načíst.")
 
-        st.markdown("</div>", unsafe_allow_html=True)     
+            # 2. Tlačítko pod mapou (pro otevření v appce/fullscreen)
+            # Má negativní margin -15px, aby vypadalo spojené s mapou
+            st.markdown(f"""
+            <a href="{mapa_url}" target="_blank" style="text-decoration:none;">
+                <div style="
+                    background-color: white;
+                    border: 1px solid #E5E7EB;
+                    border-top: none;
+                    border-radius: 0 0 8px 8px;
+                    padding: 8px;
+                    text-align: center;
+                    color: #2563EB;
+                    font-size: 0.85rem;
+                    font-weight: 600;
+                    margin-top: -15px; 
+                    position: relative;
+                    z-index: 10;
+                " onmouseover="this.style.backgroundColor='#F3F4F6'" 
+                  onmouseout="this.style.backgroundColor='white'">
+                    ↗️ Otevřít na celou obrazovku / v aplikaci
+                </div>
+            </a>
+            """, unsafe_allow_html=True)
 
+        st.markdown("</div>", unsafe_allow_html=True)
+        
         if pd.notna(akce['popis']): 
             st.info(f"{akce['popis']}", icon="ℹ️")
         
@@ -832,7 +853,7 @@ with stylable_container(key="footer_logos", css_styles="img {height: 50px !impor
         l2.image("logo2.jpg", width="stretch")
         
     with col_center:
-        st.markdown("<div style='text-align: center; color: #9CA3AF; font-size: 0.8em; font-family: sans-serif;'><b>Členská sekce RBK</b> • Designed by Broschman • v1.2.17.2<br>&copy; 2026 All rights reserved</div>", unsafe_allow_html=True)
+        st.markdown("<div style='text-align: center; color: #9CA3AF; font-size: 0.8em; font-family: sans-serif;'><b>Členská sekce RBK</b> • Designed by Broschman • v1.2.17.3<br>&copy; 2026 All rights reserved</div>", unsafe_allow_html=True)
         
     with col_right:
         r1, r2 = st.columns(2)
