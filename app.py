@@ -301,47 +301,59 @@ def vykreslit_detail_akce(akce, unique_key):
         lat, lon = None, None
 
         if mapa_raw:
-            # 1. Detekce domény - přidáno "mapy.com"
+            # 1. Detekce URL (Mapy.cz / Mapy.com)
             if "mapy.cz" in mapa_raw or "mapy.com" in mapa_raw:
                 try:
                     target_url = mapa_raw
-                    # Rozbalení zkráceného odkazu (např. mapy.com/s/...)
+                    
+                    # Pokud je to zkrácený odkaz (/s/), musíme ho vyřešit
                     if "/s/" in mapa_raw:
+                        # TRIK: Změníme mapy.com na mapy.cz pro request, backend je stejný a spolehlivější
+                        check_url = mapa_raw.replace("mapy.com", "mapy.cz")
+                        
+                        # "Převlek" za běžný prohlížeč (jinak nás server odmítne)
+                        headers = {
+                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"
+                        }
+                        
                         try:
-                            # User-Agent je někdy potřeba, aby server neodpověděl chybou
-                            headers = {'User-Agent': 'Mozilla/5.0'}
-                            response = requests.head(mapa_raw, allow_redirects=True, timeout=5, headers=headers)
+                            # Použijeme GET, ten je spolehlivější než HEAD
+                            response = requests.get(check_url, headers=headers, allow_redirects=True, timeout=10)
                             target_url = response.url
-                        except:
-                            pass 
+                        except Exception as e:
+                            print(f"Chyba spojení: {e}")
+                            # Pokud request selže, zkusíme pracovat s tím, co máme (možná už je to full url)
 
+                    # 2. Analýza výsledné URL
                     parsed_url = urlparse(target_url)
                     params = parse_qs(parsed_url.query)
 
-                    # Mapy.com/cz logika: x = longitude, y = latitude
+                    # Mapy.cz logika: x = délka (lon), y = šířka (lat)
                     if 'x' in params and 'y' in params:
                         lon = float(params['x'][0])
                         lat = float(params['y'][0])
                     
-                    # Fallback pro parametr q (query)
+                    # Fallback: někdy je to v parametru 'id' a souřadnice chybí -> pak to bohužel nezjistíme bez API
+                    # Ale často bývají i v 'q'
                     elif 'q' in params:
-                        q_parts = params['q'][0].split(',')
-                        if len(q_parts) == 2:
-                            # V 'q' bývá pořadí: lat,lon (např. 49.123,16.456)
-                            lat = float(q_parts[0])
-                            lon = float(q_parts[1])
+                        q_parts = params['q'][0].replace(' ', '').split(',')
+                        if len(q_parts) >= 2:
+                            # Zkusíme odhadnout pořadí, Mapy.cz v Q často dávají lat,lon
+                            try:
+                                lat = float(q_parts[0])
+                                lon = float(q_parts[1])
+                            except: pass
 
                 except Exception as e:
                     print(f"Chyba parsování Mapy: {e}")
 
-            # 2. Pokud to není URL s "mapy...", zkusíme přímé souřadnice
+            # 2. Pokud to není URL, zkusíme přímé souřadnice
             else:
                 try:
                     clean_coords = mapa_raw.upper().replace('N', '').replace('E', '')
                     separator = ',' if ',' in clean_coords else ' '
                     parts = clean_coords.split(separator)
-                    
-                    # Filtrujeme prázdné stringy po splitu
                     parts = [p.strip() for p in parts if p.strip()]
                     
                     if len(parts) == 2:
@@ -373,7 +385,7 @@ def vykreslit_detail_akce(akce, unique_key):
                 key=f"map_{unique_key}"
             )
             
-            # --- ZMĚNA: Odkaz vede na mapy.com ---
+            # Odkazy - zachováváme mapy.com pro uživatele
             link_mapy_com = f"https://mapy.com/turisticka?q={lat},{lon}"
             link_google = f"https://www.google.com/maps/search/?api=1&query={lat},{lon}"
             link_waze = f"https://waze.com/ul?ll={lat},{lon}&navigate=yes"
@@ -399,7 +411,8 @@ def vykreslit_detail_akce(akce, unique_key):
             """, unsafe_allow_html=True)
             
         elif mapa_raw:
-             st.warning(f"⚠️ Formát mapy nebyl rozpoznán: '{mapa_raw}'")
+             # Vypíšeme si raw data pro debugging, kdyby to zase nešlo
+             st.warning(f"⚠️ Nepodařilo se načíst souřadnice z odkazu. Zkus zadat přímo čísla (lat, lon).")
         
         if pd.notna(akce['popis']): 
             st.info(f"{akce['popis']}", icon="ℹ️")
