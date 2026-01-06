@@ -1,7 +1,7 @@
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 from streamlit_extras.stylable_container import stylable_container
-from streamlit_lottie import st_lottie, st_lottie_spinner # <--- NOVÉ: Animace
+from streamlit_lottie import st_lottie, st_lottie_spinner
 import requests # <--- NOVÉ: Pro stažení animace
 import pandas as pd
 from datetime import datetime, date, timedelta
@@ -340,7 +340,7 @@ def vykreslit_detail_akce(akce, unique_key):
                 
                 with st.form(key=form_key, clear_on_submit=True):
                     if kategorie_txt and kategorie_txt.lower() != "všichni":
-                        st.warning(f"Podmínka: **{kategorie_txt}**")
+                        st.warning(f"Doporučení: **{kategorie_txt}**")
                     
                     vybrane_jmeno = st.selectbox("Jméno", options=seznam_jmen, index=None, placeholder="Vyber ze seznamu...")
                     nove_jmeno = st.text_input("Nebo nové jméno")
@@ -809,7 +809,7 @@ with stylable_container(key="footer_logos", css_styles="img {height: 50px !impor
         l2.image("logo2.jpg", width="stretch")
         
     with col_center:
-        st.markdown("<div style='text-align: center; color: #9CA3AF; font-size: 0.8em; font-family: sans-serif;'><b>Členská sekce RBK</b> • Designed by Broschman • v1.2.15.3<br>&copy; 2026 All rights reserved</div>", unsafe_allow_html=True)
+        st.markdown("<div style='text-align: center; color: #9CA3AF; font-size: 0.8em; font-family: sans-serif;'><b>Členská sekce RBK</b> • Designed by Broschman • v1.2.15.4<br>&copy; 2026 All rights reserved</div>", unsafe_allow_html=True)
         
     with col_right:
         r1, r2 = st.columns(2)
