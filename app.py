@@ -295,10 +295,44 @@ def vykreslit_detail_akce(akce, unique_key):
         
         if kategorie_txt:
             st.write(f"🎯 **Kategorie:** {kategorie_txt}")
+        st.markdown("</div>", unsafe_allow_html=True)
         
-        # --- MAPA (Folium / OSM) --- ICONS LOGIC UPDATE
+        # --- POPIS A INFO (Teď je to nahoře) ---
+        if pd.notna(akce['popis']): 
+            st.info(f"{akce['popis']}", icon="ℹ️")
+        
+        st.markdown("---")
+        
+        # --- DEADLINE ---
+        if je_po_deadlinu:
+            st.error(f"⛔ **DEADLINE BYL:** {deadline_str}")
+        elif je_dnes_deadline:
+            st.warning(f"⚠️ **DNES JE DEADLINE!** ({deadline_str})")
+        else:
+            st.success(f"📅 **Deadline:** {deadline_str}")
+
+        # --- ORIS TLAČÍTKO ---
+        if je_zavod_obecne:
+            st.caption("Přihlášky probíhají v systému ORIS.")
+            odkaz_zavodu = str(akce['odkaz']).strip() if 'odkaz' in df_akce.columns and pd.notna(akce['odkaz']) else ""
+            link_target = odkaz_zavodu if odkaz_zavodu else "https://oris.orientacnisporty.cz/"
+            
+            if je_stafeta:
+                st.warning("⚠️ **ŠTAFETY:** Přihlaš se i ZDE (vpravo) kvůli soupiskám!")
+            
+            st.markdown(f"""
+            <a href="{link_target}" target="_blank" style="text-decoration:none;">
+                <div style="background-color: #2563EB; color: white; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold; margin-bottom: 20px;">
+                    👉 Otevřít ORIS
+                </div>
+            </a>
+            """, unsafe_allow_html=True)
+
+        # ==========================================
+        # --- MAPA (Teď je až úplně dole) ---
+        # ==========================================
         mapa_raw = str(akce['mapa']).strip() if 'mapa' in df_akce.columns and pd.notna(akce['mapa']) else ""
-        body_k_vykresleni = [] # Seznam n-tic (lat, lon, nazev_bodu)
+        body_k_vykresleni = [] 
 
         # Pomocná funkce DMS -> Decimal
         def dms_to_decimal(dms_str):
@@ -369,7 +403,9 @@ def vykreslit_detail_akce(akce, unique_key):
                 pass
 
         if body_k_vykresleni:
-            st.markdown("<div style='margin-top: 15px; margin-bottom: 5px; font-weight: bold;'>🗺️ Místo srazu (Body):</div>", unsafe_allow_html=True)
+            # Nadpis mapy s oddělovačem
+            st.markdown("---")
+            st.markdown("<div style='margin-bottom: 5px; font-weight: bold;'>🗺️ Místo srazu / Parkování:</div>", unsafe_allow_html=True)
             
             start_lat, start_lon, _ = body_k_vykresleni[0]
             m = folium.Map(location=[start_lat, start_lon], tiles="OpenStreetMap")
@@ -377,7 +413,6 @@ def vykreslit_detail_akce(akce, unique_key):
             min_lat, max_lat = 90, -90
             min_lon, max_lon = 180, -180
 
-            # --- LOGIKA IKON ---
             pocet_bodu = len(body_k_vykresleni)
 
             for i, (b_lat, b_lon, b_nazev) in enumerate(body_k_vykresleni):
@@ -386,28 +421,22 @@ def vykreslit_detail_akce(akce, unique_key):
                 if b_lon < min_lon: min_lon = b_lon
                 if b_lon > max_lon: max_lon = b_lon
                 
-                # Defaultní nastavení
                 barva = "blue"
                 ikona = "info-sign"
                 prefix = "glyphicon"
 
                 if pocet_bodu == 1:
-                    # Jen jeden bod -> Červená vlajka (Sraz)
                     barva = "red"
                     ikona = "flag"
                 else:
-                    # Více bodů
                     if i == 0:
-                        # 1. bod -> Parkování (Auto)
-                        barva = "blue" # Nebo 'cadetblue' pro odlišení
+                        barva = "blue"
                         ikona = "car"
-                        prefix = "fa" # FontAwesome
+                        prefix = "fa"
                     elif i == 1:
-                        # 2. bod -> Start (Vlajka)
                         barva = "red"
                         ikona = "flag"
                     else:
-                        # 3. a další bod -> Info
                         barva = "blue"
                         ikona = "info-sign"
 
@@ -424,7 +453,6 @@ def vykreslit_detail_akce(akce, unique_key):
 
             st_data = st_folium(m, height=280, returned_objects=[], key=f"map_{unique_key}")
             
-            # Odkazy
             if "http" in mapa_raw and ("mapy.cz" in mapa_raw or "mapy.com" in mapa_raw):
                 link_mapy_cz = mapa_raw
             else:
@@ -455,34 +483,6 @@ def vykreslit_detail_akce(akce, unique_key):
             
         elif mapa_raw:
              st.warning(f"⚠️ Mapa se nenačetla.")
-        
-        if pd.notna(akce['popis']): 
-            st.info(f"{akce['popis']}", icon="ℹ️")
-        
-        st.markdown("---")
-        
-        if je_po_deadlinu:
-            st.error(f"⛔ **DEADLINE BYL:** {deadline_str}")
-        elif je_dnes_deadline:
-            st.warning(f"⚠️ **DNES JE DEADLINE!** ({deadline_str})")
-        else:
-            st.success(f"📅 **Deadline:** {deadline_str}")
-
-        if je_zavod_obecne:
-            st.caption("Přihlášky probíhají v systému ORIS.")
-            odkaz_zavodu = str(akce['odkaz']).strip() if 'odkaz' in df_akce.columns and pd.notna(akce['odkaz']) else ""
-            link_target = odkaz_zavodu if odkaz_zavodu else "https://oris.orientacnisporty.cz/"
-            
-            if je_stafeta:
-                st.warning("⚠️ **ŠTAFETY:** Přihlaš se i ZDE (vpravo) kvůli soupiskám!")
-            
-            st.markdown(f"""
-            <a href="{link_target}" target="_blank" style="text-decoration:none;">
-                <div style="background-color: #2563EB; color: white; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold;">
-                    👉 Otevřít ORIS
-                </div>
-            </a>
-            """, unsafe_allow_html=True)
 
     with col_form:
         delete_key_state = f"confirm_delete_{unique_key}"
@@ -975,7 +975,7 @@ with stylable_container(key="footer_logos", css_styles="img {height: 50px !impor
         l2.image("logo2.jpg", width="stretch")
         
     with col_center:
-        st.markdown("<div style='text-align: center; color: #9CA3AF; font-size: 0.8em; font-family: sans-serif;'><b>Členská sekce RBK</b> • Designed by Broschman • v1.2.17.15<br>&copy; 2026 All rights reserved</div>", unsafe_allow_html=True)
+        st.markdown("<div style='text-align: center; color: #9CA3AF; font-size: 0.8em; font-family: sans-serif;'><b>Členská sekce RBK</b> • Designed by Broschman • v1.2.17.16<br>&copy; 2026 All rights reserved</div>", unsafe_allow_html=True)
         
     with col_right:
         r1, r2 = st.columns(2)
