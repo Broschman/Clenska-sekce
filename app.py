@@ -296,74 +296,128 @@ def vykreslit_detail_akce(akce, unique_key):
         if kategorie_txt:
             st.write(f"🎯 **Kategorie:** {kategorie_txt}")
         
-        # --- MAPA (Folium / OSM) --- FINAL "LONG LINK" VERSION
+        # --- MAPA (Folium / OSM) --- ULTIMATE PARSER
         mapa_raw = str(akce['mapa']).strip() if 'mapa' in df_akce.columns and pd.notna(akce['mapa']) else ""
-        lat, lon = None, None
+        body_k_vykresleni = [] # Seznam n-tic (lat, lon, nazev_bodu)
+
+        # Pomocná funkce pro převod DMS (49°8'4.7"N) na Decimal (49.134)
+        def dms_to_decimal(dms_str):
+            try:
+                # 1. Vyčistíme string
+                dms_str = dms_str.upper().strip()
+                # 2. Regulární výraz pro formát: 49°8'4.766"N
+                match = re.match(r"(\d+)[°](\d+)['′](\d+(\.\d+)?)[^NSEW]*([NSEW])?", dms_str)
+                if match:
+                    deg, minutes, seconds, _, direction = match.groups()
+                    val = float(deg) + float(minutes)/60 + float(seconds)/3600
+                    if direction in ['S', 'W']:
+                        val = -val
+                    return val
+                # 3. Fallback: pokud je to jen číslo
+                return float(dms_str)
+            except:
+                return None
 
         if mapa_raw:
             try:
-                # 1. Je to URL? Zkusíme z něj vytáhnout parametry (bez stahování stránky!)
+                # A) JE TO URL?
                 if "http" in mapa_raw:
                     parsed = urlparse(mapa_raw)
                     params = parse_qs(parsed.query)
                     
-                    # Varianta A: parametry x (lon) a y (lat) - klasický dlouhý odkaz
-                    if 'x' in params and 'y' in params:
-                        lon = float(params['x'][0])
-                        lat = float(params['y'][0])
-                    
-                    # Varianta B: parametr q (query) - např. ?q=49.123,16.456
-                    elif 'q' in params:
-                        q_text = params['q'][0]
-                        # Někdy je tam "49.1N, 16.4E", musíme to vyčistit
-                        clean_q = q_text.upper().replace('N', '').replace('E', '')
-                        parts = clean_q.split(',') if ',' in clean_q else clean_q.split()
-                        if len(parts) >= 2:
-                            lat = float(parts[0])
-                            lon = float(parts[1])
-
-                # 2. Pokud se nic nenašlo (nebo to není URL), zkusíme to jako prostý text/čísla
-                if lat is None or lon is None:
-                    # Vyhodíme "http", "mapy.cz" a další balast, kdyby to náhodou neprošlo přes URL parser
-                    clean_text = mapa_raw
-                    # Agresivní čištění - necháme jen čísla, tečky a čárky
-                    clean_coords = re.sub(r'[^\d.,]', ' ', clean_text) 
-                    
-                    # Rozdělíme podle čárky nebo mezery
-                    parts = clean_coords.replace(',', ' ').split()
-                    parts = [p for p in parts if len(p) > 0] # vyhodíme prázdné
-                    
-                    if len(parts) >= 2:
-                        val1 = float(parts[0])
-                        val2 = float(parts[1])
+                    # 1. Varianta: "vlastni-body" (parametry ud=souřadnice, ut=název)
+                    # Odkaz typu: mapy.cz/turisticka?ud=49°8'4"N...&ud=...&ut=Start&ut=Cíl
+                    if 'ud' in params:
+                        uds = params['ud'] # Seznam souřadnic
+                        uts = params.get('ut', []) # Seznam názvů (nemusí být)
                         
-                        # Kontrola souřadnic pro ČR (cca 48-51 severně, 12-19 východně)
-                        # Pokud je první číslo malé (12-19), je to asi Longitude (prohozené pořadí)
-                        if 12 <= val1 <= 19 and 48 <= val2 <= 52:
-                             lon, lat = val1, val2
-                        else:
-                             # Jinak klasika: Lat, Lon
-                             lat, lon = val1, val2
+                        for i, ud_val in enumerate(uds):
+                            # ud_val vypadá např. takto: "49°8'4.766\"N, 16°29'26.976\"E"
+                            parts = ud_val.split(',')
+                            if len(parts) >= 2:
+                                lat = dms_to_decimal(parts[0])
+                                lon = dms_to_decimal(parts[1])
+                                
+                                if lat and lon:
+                                    # Pokud máme název (ut), použijeme ho, jinak "Bod X"
+                                    nazev = uts[i] if i < len(uts) else f"Bod {i+1}"
+                                    body_k_vykresleni.append((lat, lon, nazev))
+                    
+                    # 2. Varianta: Klasický odkaz (x, y) nebo (q)
+                    # Pokud se nenašly žádné 'ud' body, zkusíme střed mapy
+                    if not body_k_vykresleni:
+                        lat, lon = None, None
+                        if 'x' in params and 'y' in params:
+                            lon = float(params['x'][0])
+                            lat = float(params['y'][0])
+                        elif 'q' in params:
+                            # q=lat,lon
+                            q_parts = params['q'][0].replace(' ', '').split(',')
+                            if len(q_parts) >= 2:
+                                lat = float(q_parts[0])
+                                lon = float(q_parts[1])
+                        
+                        if lat and lon:
+                            body_k_vykresleni.append((lat, lon, akce['název']))
+
+                # B) NEJSOU TO URL, ALE PŘÍMÉ SOUŘADNICE V TEXTU
+                # Formát: "49.123, 16.123; 50.456, 15.789" (oddělené středníkem)
+                else:
+                    raw_parts = mapa_raw.split(';')
+                    for part in raw_parts:
+                        part = part.strip()
+                        if not part: continue
+                        
+                        # Čištění na čísla
+                        clean_text = re.sub(r'[^\d.,]', ' ', part)
+                        num_parts = clean_text.replace(',', ' ').split()
+                        num_parts = [p for p in num_parts if len(p) > 0]
+                        
+                        if len(num_parts) >= 2:
+                            v1, v2 = float(num_parts[0]), float(num_parts[1])
+                            # Detekce ČR
+                            if 12 <= v1 <= 19 and 48 <= v2 <= 52:
+                                lat, lon = v2, v1
+                            else:
+                                lat, lon = v1, v2
+                            
+                            body_k_vykresleni.append((lat, lon, f"Bod {len(body_k_vykresleni)+1}"))
 
             except Exception as e:
-                # print(f"Debug chyba: {e}") 
+                # print(f"Chyba mapy: {e}")
                 pass
 
-        if lat and lon:
-            # ... TADY UŽ JE TO STEJNÉ ...
-            st.markdown("<div style='margin-top: 15px; margin-bottom: 5px; font-weight: bold;'>🗺️ Místo srazu:</div>", unsafe_allow_html=True)
+        if body_k_vykresleni:
+            st.markdown("<div style='margin-top: 15px; margin-bottom: 5px; font-weight: bold;'>🗺️ Místo srazu (Body):</div>", unsafe_allow_html=True)
             
-            m = folium.Map(location=[lat, lon], tiles="OpenStreetMap")
+            # Střed mapy na prvním bodě
+            start_lat, start_lon, _ = body_k_vykresleni[0]
+            m = folium.Map(location=[start_lat, start_lon], tiles="OpenStreetMap")
             
-            folium.Marker(
-                [lat, lon], 
-                popup=akce['název'], 
-                tooltip="Sraz zde",
-                icon=folium.Icon(color="red", icon="info-sign")
-            ).add_to(m)
+            min_lat, max_lat = 90, -90
+            min_lon, max_lon = 180, -180
 
-            sw = [lat - 0.002, lon - 0.002]
-            ne = [lat + 0.002, lon + 0.002]
+            for i, (b_lat, b_lon, b_nazev) in enumerate(body_k_vykresleni):
+                # Bounds update
+                if b_lat < min_lat: min_lat = b_lat
+                if b_lat > max_lat: max_lat = b_lat
+                if b_lon < min_lon: min_lon = b_lon
+                if b_lon > max_lon: max_lon = b_lon
+                
+                # První bod ČERVENÝ, ostatní MODRÉ
+                barva = "red" if i == 0 else "blue"
+                icon_type = "flag" if i == 0 else "info-sign"
+                
+                folium.Marker(
+                    [b_lat, b_lon], 
+                    popup=b_nazev, 
+                    tooltip=b_nazev,
+                    icon=folium.Icon(color=barva, icon=icon_type)
+                ).add_to(m)
+
+            # Fit bounds + padding
+            sw = [min_lat - 0.005, min_lon - 0.005]
+            ne = [max_lat + 0.005, max_lon + 0.005]
             m.fit_bounds([sw, ne])
 
             st_data = st_folium(
@@ -373,9 +427,10 @@ def vykreslit_detail_akce(akce, unique_key):
                 key=f"map_{unique_key}"
             )
             
-            link_mapy_cz = f"https://mapy.cz/turisticka?q={lat},{lon}" 
-            link_google = f"https://www.google.com/maps/search/?api=1&query={lat},{lon}"
-            link_waze = f"https://waze.com/ul?ll={lat},{lon}&navigate=yes"
+            # Tlačítka vedou na PRVNÍ BOD
+            link_mapy_cz = f"https://mapy.cz/turisticka?q={start_lat},{start_lon}"
+            link_google = f"https://www.google.com/maps/search/?api=1&query={start_lat},{start_lon}"
+            link_waze = f"https://waze.com/ul?ll={start_lat},{start_lon}&navigate=yes"
 
             st.markdown(f"""
             <div style="display: flex; gap: 8px; margin-top: -15px; margin-bottom: 10px; flex-wrap: wrap;">
@@ -398,7 +453,7 @@ def vykreslit_detail_akce(akce, unique_key):
             """, unsafe_allow_html=True)
             
         elif mapa_raw:
-             st.warning(f"⚠️ Mapa se nenačetla. Zkus vložit 'dlouhý' odkaz z adresního řádku nebo jen souřadnice.")
+             st.warning(f"⚠️ Mapa se nenačetla.")
         
         if pd.notna(akce['popis']): 
             st.info(f"{akce['popis']}", icon="ℹ️")
