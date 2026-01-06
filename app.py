@@ -396,7 +396,7 @@ def vykreslit_detail_akce(akce, unique_key):
                                 st.error(f"Chyba: {e}")
                         else: st.warning("Vyplň jméno!")
             elif je_po_deadlinu:
-                st.info("🔒 Tabulka uzavřena.")
+                st.info("🔒 Tabulka uzavřena. Podkud chceš ještě běžet, piš na luckapetr@volny.cz nebo volej na 602 214 725.")
 
     # --- SEZNAM PŘIHLÁŠENÝCH ---
     st.markdown("<br>", unsafe_allow_html=True)
@@ -809,7 +809,7 @@ with stylable_container(key="footer_logos", css_styles="img {height: 50px !impor
         l2.image("logo2.jpg", width="stretch")
         
     with col_center:
-        st.markdown("<div style='text-align: center; color: #9CA3AF; font-size: 0.8em; font-family: sans-serif;'><b>Členská sekce RBK</b> • Designed by Broschman • v1.2.15.4<br>&copy; 2026 All rights reserved</div>", unsafe_allow_html=True)
+        st.markdown("<div style='text-align: center; color: #9CA3AF; font-size: 0.8em; font-family: sans-serif;'><b>Členská sekce RBK</b> • Designed by Broschman • v1.2.15.5<br>&copy; 2026 All rights reserved</div>", unsafe_allow_html=True)
         
     with col_right:
         r1, r2 = st.columns(2)
