@@ -292,23 +292,27 @@ def vykreslit_detail_akce(akce, unique_key):
         if kategorie_txt:
             st.write(f"🎯 **Kategorie:** {kategorie_txt}")
         
-         # --- NOVÉ: MAPA (Embedovaná z odkazu) ---
-        # Bere odkaz ze sloupce 'mapa' (např. https://mapy.com/s/renelomaho)
+        # --- NOVÉ: MAPA (Embedovaná z odkazu) ---
         mapa_url = str(akce['mapa']).strip() if 'mapa' in df_akce.columns and pd.notna(akce['mapa']) else ""
         
         if mapa_url:
             st.markdown("<div style='margin-top: 15px; margin-bottom: 5px; font-weight: bold;'>🗺️ Místo srazu:</div>", unsafe_allow_html=True)
             
-            # 1. Iframe s mapou
+            # --- FIX: Oprava domény a protokolů ---
+            # 1. Přepíšeme mapy.com na mapy.cz (odstraní chybu "Mapy.com nelze načíst")
+            # 2. Vynutíme HTTPS
+            if "mapy.com" in mapa_url:
+                mapa_url = mapa_url.replace("mapy.com", "mapy.cz")
+            if "http://" in mapa_url:
+                mapa_url = mapa_url.replace("http://", "https://")
+
+            # 3. Iframe s mapou
             try:
-                # Streamlit automaticky vytvoří iframe z URL
-                # Výška 280px, šířka se přizpůsobí
                 components.iframe(mapa_url, height=280)
             except Exception:
                 st.warning("Náhled mapy se nepodařilo načíst.")
 
-            # 2. Tlačítko pod mapou (pro otevření v appce/fullscreen)
-            # Má negativní margin -15px, aby vypadalo spojené s mapou
+            # 4. Tlačítko pod mapou
             st.markdown(f"""
             <a href="{mapa_url}" target="_blank" style="text-decoration:none;">
                 <div style="
