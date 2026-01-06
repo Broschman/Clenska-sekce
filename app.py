@@ -340,27 +340,29 @@ def vykreslit_detail_akce(akce, unique_key):
                 height=280, 
                 # width=720,  <-- TOTO JSME DALI PRYČ, ať se to natáhne automaticky
                 returned_objects=[], 
-                key=f"map_{unique_key}" # <-- TOTO ZDE MUSÍ BÝT (oprava chyby DuplicateElement)
+                key=f"map_{unique_key}" # <-- TOTO ZDE MUSÍ BÝT
             )
             
             link_mapy_cz = f"https://mapy.cz/turisticka?q={lat},{lon}"
             link_google = f"https://www.google.com/maps/search/?api=1&query={lat},{lon}"
             link_waze = f"https://waze.com/ul?ll={lat},{lon}&navigate=yes"
 
+            # Tlačítka pod mapou
+            # Změna: přidáno 'margin-bottom: 10px' do hlavního stylu
             st.markdown(f"""
-            <div style="display: flex; gap: 8px; margin-top: -15px; flex-wrap: wrap;">
+            <div style="display: flex; gap: 8px; margin-top: -15px; margin-bottom: 10px; flex-wrap: wrap;">
                 <a href="{link_mapy_cz}" target="_blank" style="text-decoration:none; flex: 1;">
-                    <div style="background-color: white; border: 1px solid #E5E7EB; border-radius: 6px; padding: 8px; text-align: center; color: #B91C1C; font-weight: 600; font-size: 0.85rem;">
+                    <div style="background-color: white; border: 1px solid #E5E7EB; border-radius: 6px; padding: 8px; text-align: center; color: #B91C1C; font-weight: 600; font-size: 0.85rem; transition: 0.3s;">
                         🌲 Mapy.cz
                     </div>
                 </a>
                 <a href="{link_google}" target="_blank" style="text-decoration:none; flex: 1;">
-                    <div style="background-color: white; border: 1px solid #E5E7EB; border-radius: 6px; padding: 8px; text-align: center; color: #2563EB; font-weight: 600; font-size: 0.85rem;">
+                    <div style="background-color: white; border: 1px solid #E5E7EB; border-radius: 6px; padding: 8px; text-align: center; color: #2563EB; font-weight: 600; font-size: 0.85rem; transition: 0.3s;">
                         🚗 Google
                     </div>
                 </a>
                 <a href="{link_waze}" target="_blank" style="text-decoration:none; flex: 1;">
-                    <div style="background-color: white; border: 1px solid #E5E7EB; border-radius: 6px; padding: 8px; text-align: center; color: #3b82f6; font-weight: 600; font-size: 0.85rem;">
+                    <div style="background-color: white; border: 1px solid #E5E7EB; border-radius: 6px; padding: 8px; text-align: center; color: #3b82f6; font-weight: 600; font-size: 0.85rem; transition: 0.3s;">
                         🚙 Waze
                     </div>
                 </a>
