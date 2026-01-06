@@ -3,6 +3,8 @@ from streamlit_gsheets import GSheetsConnection
 from streamlit_extras.stylable_container import stylable_container
 from streamlit_lottie import st_lottie, st_lottie_spinner
 import streamlit.components.v1 as components
+import folium
+from streamlit_folium import st_folium
 import requests 
 import pandas as pd
 from datetime import datetime, date, timedelta
@@ -292,58 +294,81 @@ def vykreslit_detail_akce(akce, unique_key):
         if kategorie_txt:
             st.write(f"🎯 **Kategorie:** {kategorie_txt}")
         
-        # --- NOVÉ: MAPA (HTML Embed) ---
-        mapa_url = str(akce['mapa']).strip() if 'mapa' in df_akce.columns and pd.notna(akce['mapa']) else ""
-        
-        if mapa_url:
+        # --- MAPA (Folium / OSM) ---
+        mapa_raw = str(akce['mapa']).strip() if 'mapa' in df_akce.columns and pd.notna(akce['mapa']) else ""
+        lat, lon = None, None
+
+        if mapa_raw:
+            try:
+                # 1. Čištění stringu: "49.123N, 16.456E" -> "49.123, 16.456"
+                # Zbavíme se písmen (case insensitive)
+                clean_coords = mapa_raw.upper().replace('N', '').replace('E', '')
+                
+                # 2. Rozdělení podle čárky
+                if ',' in clean_coords:
+                    parts = clean_coords.split(',')
+                    if len(parts) == 2:
+                        lat = float(parts[0].strip())
+                        lon = float(parts[1].strip())
+                else:
+                    # Fallback pro formát bez čárky (jen mezera)
+                    parts = clean_coords.split()
+                    if len(parts) == 2:
+                        lat = float(parts[0].strip())
+                        lon = float(parts[1].strip())
+            except Exception as e:
+                print(f"Chyba parsování souřadnic: {e}") # Pro debug v konzoli
+                lat, lon = None, None
+
+        if lat and lon:
             st.markdown("<div style='margin-top: 15px; margin-bottom: 5px; font-weight: bold;'>🗺️ Místo srazu:</div>", unsafe_allow_html=True)
             
-            # 1. Příprava odkazu pro embed - trik s en.mapy.cz
-            embed_src = mapa_url.replace("mapy.cz", "en.mapy.cz").replace("mapy.com", "en.mapy.cz")
+            # Vytvoření mapy
+            # zoom_start=14 je tak akorát na detail parkoviště vs okolí
+            m = folium.Map(location=[lat, lon], zoom_start=14)
             
-            if "http://" in embed_src:
-                embed_src = embed_src.replace("http://", "https://")
+            # Přidání markeru (červená ikona)
+            folium.Marker(
+                [lat, lon], 
+                popup=akce['název'], 
+                tooltip="Sraz zde",
+                icon=folium.Icon(color="red", icon="info-sign")
+            ).add_to(m)
 
-            # 2. Sestavení čistého HTML
-            mapa_html = f"""
-            <iframe 
-                style="border:none; border-radius: 8px;" 
-                src="{embed_src}" 
-                width="100%" 
-                height="280" 
-                frameborder="0">
-            </iframe>
-            """
+            # Vykreslení ve Streamlitu
+            # width=700 zajistí, že se roztáhne na šířku popoveru
+            st_data = st_folium(m, height=280, width=720, returned_objects=[])
+            
+            # Generování odkazů
+            # Trik: Mapy.cz berou souřadnice v URL krásně, Google taky
+            link_mapy_cz = f"https://mapy.cz/turisticka?q={lat},{lon}"
+            link_google = f"https://www.google.com/maps/dir/?api=1&destination={lat},{lon}"
+            link_waze = f"https://waze.com/ul?ll={lat},{lon}&navigate=yes"
 
-            try:
-                components.html(mapa_html, height=280)
-            except Exception:
-                st.warning("Mapa se nenačetla.")
-
-            # 3. Tlačítko pod mapou
+            # Tlačítka pod mapou (Mapy.cz na koukání, Google/Waze na jízdu)
             st.markdown(f"""
-            <a href="{mapa_url}" target="_blank" style="text-decoration:none;">
-                <div style="
-                    background-color: white;
-                    border: 1px solid #E5E7EB;
-                    border-top: none;
-                    border-radius: 0 0 8px 8px;
-                    padding: 8px;
-                    text-align: center;
-                    color: #2563EB;
-                    font-size: 0.85rem;
-                    font-weight: 600;
-                    margin-top: -20px; 
-                    position: relative;
-                    z-index: 10;
-                " onmouseover="this.style.backgroundColor='#F3F4F6'" 
-                  onmouseout="this.style.backgroundColor='white'">
-                    ↗️ Otevřít v aplikaci
-                </div>
-            </a>
+            <div style="display: flex; gap: 8px; margin-top: -15px; flex-wrap: wrap;">
+                <a href="{link_mapy_cz}" target="_blank" style="text-decoration:none; flex: 1;">
+                    <div style="background-color: white; border: 1px solid #E5E7EB; border-radius: 6px; padding: 8px; text-align: center; color: #B91C1C; font-weight: 600; font-size: 0.85rem; transition: 0.3s;">
+                        🌲 Mapy.cz
+                    </div>
+                </a>
+                <a href="{link_google}" target="_blank" style="text-decoration:none; flex: 1;">
+                    <div style="background-color: white; border: 1px solid #E5E7EB; border-radius: 6px; padding: 8px; text-align: center; color: #2563EB; font-weight: 600; font-size: 0.85rem; transition: 0.3s;">
+                        🚗 Google
+                    </div>
+                </a>
+                <a href="{link_waze}" target="_blank" style="text-decoration:none; flex: 1;">
+                    <div style="background-color: white; border: 1px solid #E5E7EB; border-radius: 6px; padding: 8px; text-align: center; color: #3b82f6; font-weight: 600; font-size: 0.85rem; transition: 0.3s;">
+                        🚙 Waze
+                    </div>
+                </a>
+            </div>
             """, unsafe_allow_html=True)
-
-        st.markdown("</div>", unsafe_allow_html=True)
+            
+        elif mapa_raw:
+            # Když tam něco je, ale nešlo to přečíst
+            st.warning(f"⚠️ Souřadnice '{mapa_raw}' mají špatný formát.")
         
         if pd.notna(akce['popis']): 
             st.info(f"{akce['popis']}", icon="ℹ️")
