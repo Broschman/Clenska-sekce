@@ -293,45 +293,54 @@ def vykreslit_detail_akce(akce, unique_key):
             st.write(f"🎯 **Kategorie:** {kategorie_txt}")
         
          # --- NOVÉ: MAPA (Embedovaná z odkazu) ---
-        # Bere odkaz ze sloupce 'mapa' (např. https://mapy.com/s/renelomaho)
-        mapa_url = str(akce['mapa']).strip() if 'mapa' in df_akce.columns and pd.notna(akce['mapa']) else ""
+    # Bere odkaz ze sloupce 'mapa' (např. https://mapy.com/s/renelomaho)
+    mapa_url = str(akce['mapa']).strip() if 'mapa' in df_akce.columns and pd.notna(akce['mapa']) else ""
+    
+    if mapa_url:
+        st.markdown("<div style='margin-top: 15px; margin-bottom: 5px; font-weight: bold;'>🗺️ Místo srazu:</div>", unsafe_allow_html=True)
         
-        if mapa_url:
-            st.markdown("<div style='margin-top: 15px; margin-bottom: 5px; font-weight: bold;'>🗺️ Místo srazu:</div>", unsafe_allow_html=True)
-            
-            # 1. Iframe s mapou
-            try:
-                # Streamlit automaticky vytvoří iframe z URL
-                # Výška 280px, šířka se přizpůsobí
-                components.iframe(mapa_url, height=280)
-            except Exception:
-                st.warning("Náhled mapy se nepodařilo načíst.")
+        # 1. HACK PRO IFRAME: Vynutíme .cz doménu
+        # Oficiální mapy.com často hází chybu v iframu bez API klíče.
+        # Stará doména mapy.cz je benevolentnější a zobrazí mapu správně.
+        iframe_url = mapa_url.replace("mapy.com", "mapy.cz")
+        
+        # Pojistka pro HTTPS
+        if "http://" in iframe_url:
+            iframe_url = iframe_url.replace("http://", "https://")
 
-            # 2. Tlačítko pod mapou (pro otevření v appce/fullscreen)
-            # Má negativní margin -15px, aby vypadalo spojené s mapou
-            st.markdown(f"""
-            <a href="{mapa_url}" target="_blank" style="text-decoration:none;">
-                <div style="
-                    background-color: white;
-                    border: 1px solid #E5E7EB;
-                    border-top: none;
-                    border-radius: 0 0 8px 8px;
-                    padding: 8px;
-                    text-align: center;
-                    color: #2563EB;
-                    font-size: 0.85rem;
-                    font-weight: 600;
-                    margin-top: -15px; 
-                    position: relative;
-                    z-index: 10;
-                " onmouseover="this.style.backgroundColor='#F3F4F6'" 
-                  onmouseout="this.style.backgroundColor='white'">
-                    ↗️ Otevřít na celou obrazovku / v aplikaci
-                </div>
-            </a>
-            """, unsafe_allow_html=True)
+        try:
+            # Streamlit automaticky vytvoří iframe
+            # Musíš mít nahoře import: import streamlit.components.v1 as components
+            components.iframe(iframe_url, height=280)
+        except Exception:
+            st.warning("Náhled mapy se nepodařilo načíst.")
 
-        st.markdown("</div>", unsafe_allow_html=True)
+        # 2. Tlačítko pod mapou
+        # Zde necháváme původní URL (mapy.com), aby se v telefonu otevřela správná moderní appka.
+        st.markdown(f"""
+        <a href="{mapa_url}" target="_blank" style="text-decoration:none;">
+            <div style="
+                background-color: white;
+                border: 1px solid #E5E7EB;
+                border-top: none;
+                border-radius: 0 0 8px 8px;
+                padding: 8px;
+                text-align: center;
+                color: #2563EB;
+                font-size: 0.85rem;
+                font-weight: 600;
+                margin-top: -15px; 
+                position: relative;
+                z-index: 10;
+            " onmouseover="this.style.backgroundColor='#F3F4F6'" 
+              onmouseout="this.style.backgroundColor='white'">
+                ↗️ Otevřít na celou obrazovku / v aplikaci
+            </div>
+        </a>
+        """, unsafe_allow_html=True)
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
         
         if pd.notna(akce['popis']): 
             st.info(f"{akce['popis']}", icon="ℹ️")
