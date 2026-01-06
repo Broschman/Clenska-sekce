@@ -300,34 +300,27 @@ def vykreslit_detail_akce(akce, unique_key):
 
         if mapa_raw:
             try:
-                # 1. Čištění stringu: "49.123N, 16.456E" -> "49.123, 16.456"
-                # Zbavíme se písmen (case insensitive)
                 clean_coords = mapa_raw.upper().replace('N', '').replace('E', '')
-                
-                # 2. Rozdělení podle čárky
                 if ',' in clean_coords:
                     parts = clean_coords.split(',')
                     if len(parts) == 2:
                         lat = float(parts[0].strip())
                         lon = float(parts[1].strip())
                 else:
-                    # Fallback pro formát bez čárky (jen mezera)
                     parts = clean_coords.split()
                     if len(parts) == 2:
                         lat = float(parts[0].strip())
                         lon = float(parts[1].strip())
-            except Exception as e:
-                print(f"Chyba parsování souřadnic: {e}") # Pro debug v konzoli
+            except Exception:
                 lat, lon = None, None
 
         if lat and lon:
             st.markdown("<div style='margin-top: 15px; margin-bottom: 5px; font-weight: bold;'>🗺️ Místo srazu:</div>", unsafe_allow_html=True)
             
-            # Vytvoření mapy
-            # zoom_start=14 je tak akorát na detail parkoviště vs okolí
-            m = folium.Map(location=[lat, lon], zoom_start=14)
+            # 1. Inicializace mapy (zatím bez zoom_start, ten vyřeší fit_bounds)
+            m = folium.Map(location=[lat, lon], tiles="OpenStreetMap")
             
-            # Přidání markeru (červená ikona)
+            # 2. Přidání markeru
             folium.Marker(
                 [lat, lon], 
                 popup=akce['název'], 
@@ -335,31 +328,39 @@ def vykreslit_detail_akce(akce, unique_key):
                 icon=folium.Icon(color="red", icon="info-sign")
             ).add_to(m)
 
-            # Vykreslení ve Streamlitu
-            # width=700 zajistí, že se roztáhne na šířku popoveru
-            st_data = st_folium(m, height=280, width=720, returned_objects=[], key=f"map_{unique_key}")
+            # 3. VYNUCENÍ STŘEDU (Triky pro fixaci centru v popoveru)
+            # Vytvoříme malý čtverec kolem bodu, aby mapu donutil se na něj zaměřit
+            sw = [lat - 0.002, lon - 0.002]
+            ne = [lat + 0.002, lon + 0.002]
+            m.fit_bounds([sw, ne])
+
+            # 4. Vykreslení - ODSTRANĚNA fixní width, přidán unique_key
+            st_data = st_folium(
+                m, 
+                height=280, 
+                # width=720,  <-- TOTO JSME DALI PRYČ, ať se to natáhne automaticky
+                returned_objects=[], 
+                key=f"map_{unique_key}" # <-- TOTO ZDE MUSÍ BÝT (oprava chyby DuplicateElement)
+            )
             
-            # Generování odkazů
-            # Trik: Mapy.cz berou souřadnice v URL krásně, Google taky
             link_mapy_cz = f"https://mapy.cz/turisticka?q={lat},{lon}"
-            link_google = f"https://www.google.com/maps/dir/?api=1&destination={lat},{lon}"
+            link_google = f"https://www.google.com/maps/search/?api=1&query={lat},{lon}"
             link_waze = f"https://waze.com/ul?ll={lat},{lon}&navigate=yes"
 
-            # Tlačítka pod mapou (Mapy.cz na koukání, Google/Waze na jízdu)
             st.markdown(f"""
             <div style="display: flex; gap: 8px; margin-top: -15px; flex-wrap: wrap;">
                 <a href="{link_mapy_cz}" target="_blank" style="text-decoration:none; flex: 1;">
-                    <div style="background-color: white; border: 1px solid #E5E7EB; border-radius: 6px; padding: 8px; text-align: center; color: #B91C1C; font-weight: 600; font-size: 0.85rem; transition: 0.3s;">
+                    <div style="background-color: white; border: 1px solid #E5E7EB; border-radius: 6px; padding: 8px; text-align: center; color: #B91C1C; font-weight: 600; font-size: 0.85rem;">
                         🌲 Mapy.cz
                     </div>
                 </a>
                 <a href="{link_google}" target="_blank" style="text-decoration:none; flex: 1;">
-                    <div style="background-color: white; border: 1px solid #E5E7EB; border-radius: 6px; padding: 8px; text-align: center; color: #2563EB; font-weight: 600; font-size: 0.85rem; transition: 0.3s;">
+                    <div style="background-color: white; border: 1px solid #E5E7EB; border-radius: 6px; padding: 8px; text-align: center; color: #2563EB; font-weight: 600; font-size: 0.85rem;">
                         🚗 Google
                     </div>
                 </a>
                 <a href="{link_waze}" target="_blank" style="text-decoration:none; flex: 1;">
-                    <div style="background-color: white; border: 1px solid #E5E7EB; border-radius: 6px; padding: 8px; text-align: center; color: #3b82f6; font-weight: 600; font-size: 0.85rem; transition: 0.3s;">
+                    <div style="background-color: white; border: 1px solid #E5E7EB; border-radius: 6px; padding: 8px; text-align: center; color: #3b82f6; font-weight: 600; font-size: 0.85rem;">
                         🚙 Waze
                     </div>
                 </a>
@@ -367,8 +368,7 @@ def vykreslit_detail_akce(akce, unique_key):
             """, unsafe_allow_html=True)
             
         elif mapa_raw:
-            # Když tam něco je, ale nešlo to přečíst
-            st.warning(f"⚠️ Souřadnice '{mapa_raw}' mají špatný formát.")
+             st.warning(f"⚠️ Souřadnice '{mapa_raw}' mají špatný formát.")
         
         if pd.notna(akce['popis']): 
             st.info(f"{akce['popis']}", icon="ℹ️")
