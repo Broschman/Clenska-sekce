@@ -296,16 +296,14 @@ def vykreslit_detail_akce(akce, unique_key):
         if kategorie_txt:
             st.write(f"🎯 **Kategorie:** {kategorie_txt}")
         
-        # --- MAPA (Folium / OSM) --- ULTIMATE PARSER
+        # --- MAPA (Folium / OSM) --- FINAL PRO VERSION
         mapa_raw = str(akce['mapa']).strip() if 'mapa' in df_akce.columns and pd.notna(akce['mapa']) else ""
         body_k_vykresleni = [] # Seznam n-tic (lat, lon, nazev_bodu)
 
-        # Pomocná funkce pro převod DMS (49°8'4.7"N) na Decimal (49.134)
+        # Pomocná funkce DMS -> Decimal
         def dms_to_decimal(dms_str):
             try:
-                # 1. Vyčistíme string
                 dms_str = dms_str.upper().strip()
-                # 2. Regulární výraz pro formát: 49°8'4.766"N
                 match = re.match(r"(\d+)[°](\d+)['′](\d+(\.\d+)?)[^NSEW]*([NSEW])?", dms_str)
                 if match:
                     deg, minutes, seconds, _, direction = match.groups()
@@ -313,7 +311,6 @@ def vykreslit_detail_akce(akce, unique_key):
                     if direction in ['S', 'W']:
                         val = -val
                     return val
-                # 3. Fallback: pokud je to jen číslo
                 return float(dms_str)
             except:
                 return None
@@ -325,33 +322,26 @@ def vykreslit_detail_akce(akce, unique_key):
                     parsed = urlparse(mapa_raw)
                     params = parse_qs(parsed.query)
                     
-                    # 1. Varianta: "vlastni-body" (parametry ud=souřadnice, ut=název)
-                    # Odkaz typu: mapy.cz/turisticka?ud=49°8'4"N...&ud=...&ut=Start&ut=Cíl
+                    # 1. Varianta: "vlastni-body" (parametry ud, ut)
                     if 'ud' in params:
-                        uds = params['ud'] # Seznam souřadnic
-                        uts = params.get('ut', []) # Seznam názvů (nemusí být)
-                        
+                        uds = params['ud']
+                        uts = params.get('ut', [])
                         for i, ud_val in enumerate(uds):
-                            # ud_val vypadá např. takto: "49°8'4.766\"N, 16°29'26.976\"E"
                             parts = ud_val.split(',')
                             if len(parts) >= 2:
                                 lat = dms_to_decimal(parts[0])
                                 lon = dms_to_decimal(parts[1])
-                                
                                 if lat and lon:
-                                    # Pokud máme název (ut), použijeme ho, jinak "Bod X"
                                     nazev = uts[i] if i < len(uts) else f"Bod {i+1}"
                                     body_k_vykresleni.append((lat, lon, nazev))
                     
                     # 2. Varianta: Klasický odkaz (x, y) nebo (q)
-                    # Pokud se nenašly žádné 'ud' body, zkusíme střed mapy
                     if not body_k_vykresleni:
                         lat, lon = None, None
                         if 'x' in params and 'y' in params:
                             lon = float(params['x'][0])
                             lat = float(params['y'][0])
                         elif 'q' in params:
-                            # q=lat,lon
                             q_parts = params['q'][0].replace(' ', '').split(',')
                             if len(q_parts) >= 2:
                                 lat = float(q_parts[0])
@@ -360,37 +350,30 @@ def vykreslit_detail_akce(akce, unique_key):
                         if lat and lon:
                             body_k_vykresleni.append((lat, lon, akce['název']))
 
-                # B) NEJSOU TO URL, ALE PŘÍMÉ SOUŘADNICE V TEXTU
-                # Formát: "49.123, 16.123; 50.456, 15.789" (oddělené středníkem)
+                # B) NEJSOU TO URL, ALE PŘÍMÉ SOUŘADNICE
                 else:
                     raw_parts = mapa_raw.split(';')
                     for part in raw_parts:
                         part = part.strip()
                         if not part: continue
-                        
-                        # Čištění na čísla
                         clean_text = re.sub(r'[^\d.,]', ' ', part)
                         num_parts = clean_text.replace(',', ' ').split()
                         num_parts = [p for p in num_parts if len(p) > 0]
-                        
                         if len(num_parts) >= 2:
                             v1, v2 = float(num_parts[0]), float(num_parts[1])
-                            # Detekce ČR
                             if 12 <= v1 <= 19 and 48 <= v2 <= 52:
                                 lat, lon = v2, v1
                             else:
                                 lat, lon = v1, v2
-                            
                             body_k_vykresleni.append((lat, lon, f"Bod {len(body_k_vykresleni)+1}"))
 
-            except Exception as e:
-                # print(f"Chyba mapy: {e}")
+            except Exception:
                 pass
 
         if body_k_vykresleni:
             st.markdown("<div style='margin-top: 15px; margin-bottom: 5px; font-weight: bold;'>🗺️ Místo srazu (Body):</div>", unsafe_allow_html=True)
             
-            # Střed mapy na prvním bodě
+            # Startovní bod (pro Google/Waze a centrování)
             start_lat, start_lon, _ = body_k_vykresleni[0]
             m = folium.Map(location=[start_lat, start_lon], tiles="OpenStreetMap")
             
@@ -398,13 +381,11 @@ def vykreslit_detail_akce(akce, unique_key):
             min_lon, max_lon = 180, -180
 
             for i, (b_lat, b_lon, b_nazev) in enumerate(body_k_vykresleni):
-                # Bounds update
                 if b_lat < min_lat: min_lat = b_lat
                 if b_lat > max_lat: max_lat = b_lat
                 if b_lon < min_lon: min_lon = b_lon
                 if b_lon > max_lon: max_lon = b_lon
                 
-                # První bod ČERVENÝ, ostatní MODRÉ
                 barva = "red" if i == 0 else "blue"
                 icon_type = "flag" if i == 0 else "info-sign"
                 
@@ -415,20 +396,22 @@ def vykreslit_detail_akce(akce, unique_key):
                     icon=folium.Icon(color=barva, icon=icon_type)
                 ).add_to(m)
 
-            # Fit bounds + padding
             sw = [min_lat - 0.005, min_lon - 0.005]
             ne = [max_lat + 0.005, max_lon + 0.005]
             m.fit_bounds([sw, ne])
 
-            st_data = st_folium(
-                m, 
-                height=280, 
-                returned_objects=[], 
-                key=f"map_{unique_key}"
-            )
+            st_data = st_folium(m, height=280, returned_objects=[], key=f"map_{unique_key}")
             
-            # Tlačítka vedou na PRVNÍ BOD
-            link_mapy_cz = f"https://mapy.cz/turisticka?q={start_lat},{start_lon}"
+            # --- ZDE JE TA ZMĚNA ODKAZŮ ---
+            
+            # 1. Mapy.cz: Pokud vstup byl URL na Mapy.cz, použijeme ho (zobrazí všechny body).
+            #    Jinak vygenerujeme odkaz na ten první bod.
+            if "http" in mapa_raw and ("mapy.cz" in mapa_raw or "mapy.com" in mapa_raw):
+                link_mapy_cz = mapa_raw
+            else:
+                link_mapy_cz = f"https://mapy.cz/turisticka?q={start_lat},{start_lon}"
+            
+            # 2. Google a Waze: Vždy vedou na ten PRVNÍ bod (navigace na start)
             link_google = f"https://www.google.com/maps/search/?api=1&query={start_lat},{start_lon}"
             link_waze = f"https://waze.com/ul?ll={start_lat},{start_lon}&navigate=yes"
 
