@@ -345,13 +345,16 @@ def vykreslit_detail_akce(akce, unique_key):
                     vybrane_jmeno = st.selectbox("Jméno", options=seznam_jmen, index=None, placeholder="Vyber ze seznamu...")
                     nove_jmeno = st.text_input("Nebo nové jméno")
                     poznamka_input = st.text_input("Poznámka")
-                    
+                                        
                     c_check1, c_check2 = st.columns(2)
                     doprava_input = c_check1.checkbox("🚗 Sháním odvoz")
-                    ubytovani_input = c_check2.checkbox("🛏️ Společné ubytko")
+                    
+                    # Úprava: Ubytování řešíme jen pokud to NENÍ trénink
+                    ubytovani_input = False
+                    if "trénink" not in typ_udalosti:
+                        ubytovani_input = c_check2.checkbox("🛏️ Společné ubytko")
                     
                     st.markdown("<br>", unsafe_allow_html=True)
-                    
                     # Tlačítko Zapsat se
                     with stylable_container(key=f"submit_btn_{unique_key}", css_styles="button {background-color: #16A34A !important; color: white !important; border: none !important; transform: translateY(-10px) !important;}"):
                         odeslat_btn = st.form_submit_button("Zapsat se")
@@ -809,7 +812,7 @@ with stylable_container(key="footer_logos", css_styles="img {height: 50px !impor
         l2.image("logo2.jpg", width="stretch")
         
     with col_center:
-        st.markdown("<div style='text-align: center; color: #9CA3AF; font-size: 0.8em; font-family: sans-serif;'><b>Členská sekce RBK</b> • Designed by Broschman • v1.2.15.5<br>&copy; 2026 All rights reserved</div>", unsafe_allow_html=True)
+        st.markdown("<div style='text-align: center; color: #9CA3AF; font-size: 0.8em; font-family: sans-serif;'><b>Členská sekce RBK</b> • Designed by Broschman • v1.2.16.1<br>&copy; 2026 All rights reserved</div>", unsafe_allow_html=True)
         
     with col_right:
         r1, r2 = st.columns(2)
