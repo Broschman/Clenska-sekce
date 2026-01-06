@@ -302,7 +302,7 @@ def vykreslit_detail_akce(akce, unique_key):
 
         if mapa_raw:
             # A) Je to odkaz na Mapy.cz?
-            if "mapy.cz" in mapa_raw:
+            if "mapy.com" in mapa_raw:
                 try:
                     # 1. Pokud je to zkrácený odkaz (mapy.cz/s/...), musíme ho rozbalit
                     target_url = mapa_raw
@@ -331,7 +331,7 @@ def vykreslit_detail_akce(akce, unique_key):
                             lon = float(q_parts[1])
 
                 except Exception as e:
-                    print(f"Chyba parsování Mapy.cz: {e}")
+                    print(f"Chyba parsování Mapy.com: {e}")
 
             # B) Ne, asi to jsou přímé souřadnice (49.123, 16.456)
             else:
@@ -377,7 +377,7 @@ def vykreslit_detail_akce(akce, unique_key):
             )
             
             # Odkazy
-            link_mapy_cz = f"https://mapy.cz/turisticka?q={lat},{lon}"
+            link_mapy_cz = f"https://mapy.com/turisticka?q={lat},{lon}"
             link_google = f"https://www.google.com/maps/search/?api=1&query={lat},{lon}"
             link_waze = f"https://waze.com/ul?ll={lat},{lon}&navigate=yes"
 
