@@ -292,27 +292,35 @@ def vykreslit_detail_akce(akce, unique_key):
         if kategorie_txt:
             st.write(f"🎯 **Kategorie:** {kategorie_txt}")
         
-        # --- NOVÉ: MAPA (Embedovaná z odkazu) ---
+        # --- NOVÉ: MAPA (HTML Embed) ---
         mapa_url = str(akce['mapa']).strip() if 'mapa' in df_akce.columns and pd.notna(akce['mapa']) else ""
         
         if mapa_url:
             st.markdown("<div style='margin-top: 15px; margin-bottom: 5px; font-weight: bold;'>🗺️ Místo srazu:</div>", unsafe_allow_html=True)
             
-            # --- FIX: Oprava domény a protokolů ---
-            # 1. Přepíšeme mapy.com na mapy.cz (odstraní chybu "Mapy.com nelze načíst")
-            # 2. Vynutíme HTTPS
-            if "mapy.com" in mapa_url:
-                mapa_url = mapa_url.replace("mapy.com", "mapy.cz")
-            if "http://" in mapa_url:
-                mapa_url = mapa_url.replace("http://", "https://")
+            # 1. Příprava odkazu pro embed - trik s en.mapy.cz
+            embed_src = mapa_url.replace("mapy.cz", "en.mapy.cz").replace("mapy.com", "en.mapy.cz")
+            
+            if "http://" in embed_src:
+                embed_src = embed_src.replace("http://", "https://")
 
-            # 3. Iframe s mapou
+            # 2. Sestavení čistého HTML
+            mapa_html = f"""
+            <iframe 
+                style="border:none; border-radius: 8px;" 
+                src="{embed_src}" 
+                width="100%" 
+                height="280" 
+                frameborder="0">
+            </iframe>
+            """
+
             try:
-                components.iframe(mapa_url, height=280)
+                components.html(mapa_html, height=280)
             except Exception:
-                st.warning("Náhled mapy se nepodařilo načíst.")
+                st.warning("Mapa se nenačetla.")
 
-            # 4. Tlačítko pod mapou
+            # 3. Tlačítko pod mapou
             st.markdown(f"""
             <a href="{mapa_url}" target="_blank" style="text-decoration:none;">
                 <div style="
@@ -325,12 +333,12 @@ def vykreslit_detail_akce(akce, unique_key):
                     color: #2563EB;
                     font-size: 0.85rem;
                     font-weight: 600;
-                    margin-top: -15px; 
+                    margin-top: -20px; 
                     position: relative;
                     z-index: 10;
                 " onmouseover="this.style.backgroundColor='#F3F4F6'" 
                   onmouseout="this.style.backgroundColor='white'">
-                    ↗️ Otevřít na celou obrazovku / v aplikaci
+                    ↗️ Otevřít v aplikaci
                 </div>
             </a>
             """, unsafe_allow_html=True)
