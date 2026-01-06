@@ -298,9 +298,9 @@ def vykreslit_detail_akce(akce, unique_key):
         
         if mapa_url:
             # Jednoduchá konverze běžného odkazu na embedovací (frame)
-            # Změní https://mapy.cz/s/neco -> https://frame.mapy.cz/s/neco
-            if "mapy.cz/s/" in mapa_url:
-                embed_url = mapa_url.replace("mapy.cz/s/", "frame.mapy.cz/s/")
+            # Změní https://mapy.com/s/neco -> https://frame.mapy.com/s/neco
+            if "mapy.com/s/" in mapa_url:
+                embed_url = mapa_url.replace("mapy.com/s/", "frame.mapy.com/s/")
                 
                 st.markdown("<div style='margin-top: 10px; margin-bottom: 5px; font-weight: bold;'>🗺️ Místo srazu:</div>", unsafe_allow_html=True)
                 
@@ -308,7 +308,7 @@ def vykreslit_detail_akce(akce, unique_key):
                 components.iframe(embed_url, height=250)
                 
                 # Odkaz na otevření ve velkém okně
-                st.markdown(f"<a href='{mapa_url}' target='_blank' style='font-size: 0.8em; color: #2563EB;'>↗️ Otevřít na Mapy.cz</a>", unsafe_allow_html=True)
+                st.markdown(f"<a href='{mapa_url}' target='_blank' style='font-size: 0.8em; color: #2563EB;'>↗️ Otevřít na Mapy.com</a>", unsafe_allow_html=True)
 
         st.markdown("</div>", unsafe_allow_html=True)     
 
@@ -832,7 +832,7 @@ with stylable_container(key="footer_logos", css_styles="img {height: 50px !impor
         l2.image("logo2.jpg", width="stretch")
         
     with col_center:
-        st.markdown("<div style='text-align: center; color: #9CA3AF; font-size: 0.8em; font-family: sans-serif;'><b>Členská sekce RBK</b> • Designed by Broschman • v1.2.17.1<br>&copy; 2026 All rights reserved</div>", unsafe_allow_html=True)
+        st.markdown("<div style='text-align: center; color: #9CA3AF; font-size: 0.8em; font-family: sans-serif;'><b>Členská sekce RBK</b> • Designed by Broschman • v1.2.17.2<br>&copy; 2026 All rights reserved</div>", unsafe_allow_html=True)
         
     with col_right:
         r1, r2 = st.columns(2)
