@@ -2,7 +2,8 @@ import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 from streamlit_extras.stylable_container import stylable_container
 from streamlit_lottie import st_lottie, st_lottie_spinner
-import requests # <--- NOVÉ: Pro stažení animace
+import streamlit.components.v1 as components
+import requests 
 import pandas as pd
 from datetime import datetime, date, timedelta
 import calendar
@@ -290,7 +291,26 @@ def vykreslit_detail_akce(akce, unique_key):
         
         if kategorie_txt:
             st.write(f"🎯 **Kategorie:** {kategorie_txt}")
-        st.markdown("</div>", unsafe_allow_html=True)
+        
+        # --- NOVÉ: MAPA ---
+        # Načteme odkaz ze sloupce 'mapa', pokud existuje
+        mapa_url = str(akce['mapa']).strip() if 'mapa' in df_akce.columns and pd.notna(akce['mapa']) else ""
+        
+        if mapa_url:
+            # Jednoduchá konverze běžného odkazu na embedovací (frame)
+            # Změní https://mapy.cz/s/neco -> https://frame.mapy.cz/s/neco
+            if "mapy.cz/s/" in mapa_url:
+                embed_url = mapa_url.replace("mapy.cz/s/", "frame.mapy.cz/s/")
+                
+                st.markdown("<div style='margin-top: 10px; margin-bottom: 5px; font-weight: bold;'>🗺️ Místo srazu:</div>", unsafe_allow_html=True)
+                
+                # Vykreslení mapy
+                components.iframe(embed_url, height=250)
+                
+                # Odkaz na otevření ve velkém okně
+                st.markdown(f"<a href='{mapa_url}' target='_blank' style='font-size: 0.8em; color: #2563EB;'>↗️ Otevřít na Mapy.cz</a>", unsafe_allow_html=True)
+
+        st.markdown("</div>", unsafe_allow_html=True)     
 
         if pd.notna(akce['popis']): 
             st.info(f"{akce['popis']}", icon="ℹ️")
@@ -812,7 +832,7 @@ with stylable_container(key="footer_logos", css_styles="img {height: 50px !impor
         l2.image("logo2.jpg", width="stretch")
         
     with col_center:
-        st.markdown("<div style='text-align: center; color: #9CA3AF; font-size: 0.8em; font-family: sans-serif;'><b>Členská sekce RBK</b> • Designed by Broschman • v1.2.16.1<br>&copy; 2026 All rights reserved</div>", unsafe_allow_html=True)
+        st.markdown("<div style='text-align: center; color: #9CA3AF; font-size: 0.8em; font-family: sans-serif;'><b>Členská sekce RBK</b> • Designed by Broschman • v1.2.17.1<br>&copy; 2026 All rights reserved</div>", unsafe_allow_html=True)
         
     with col_right:
         r1, r2 = st.columns(2)
