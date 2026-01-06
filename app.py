@@ -5,7 +5,9 @@ from streamlit_lottie import st_lottie, st_lottie_spinner
 import streamlit.components.v1 as components
 import folium
 from streamlit_folium import st_folium
-import requests 
+import requests
+import re
+from urllib.parse import urlparse, parse_qs
 import pandas as pd
 from datetime import datetime, date, timedelta
 import calendar
@@ -299,28 +301,61 @@ def vykreslit_detail_akce(akce, unique_key):
         lat, lon = None, None
 
         if mapa_raw:
-            try:
-                clean_coords = mapa_raw.upper().replace('N', '').replace('E', '')
-                if ',' in clean_coords:
-                    parts = clean_coords.split(',')
-                    if len(parts) == 2:
-                        lat = float(parts[0].strip())
-                        lon = float(parts[1].strip())
-                else:
-                    parts = clean_coords.split()
-                    if len(parts) == 2:
-                        lat = float(parts[0].strip())
-                        lon = float(parts[1].strip())
-            except Exception:
-                lat, lon = None, None
+            # A) Je to odkaz na Mapy.cz?
+            if "mapy.cz" in mapa_raw:
+                try:
+                    # 1. Pokud je to zkrácený odkaz (mapy.cz/s/...), musíme ho rozbalit
+                    target_url = mapa_raw
+                    if "/s/" in mapa_raw:
+                        try:
+                            # Pošleme HEAD request, abychom zjistili finální URL bez stahování obsahu
+                            response = requests.head(mapa_raw, allow_redirects=True, timeout=5)
+                            target_url = response.url
+                        except:
+                            pass # Pokud selže síť, zkusíme pracovat s tím co máme
+
+                    # 2. Analýza URL (hledáme parametry x, y nebo q)
+                    parsed_url = urlparse(target_url)
+                    params = parse_qs(parsed_url.query)
+
+                    # Mapy.cz používají: x = longitude (délka/E), y = latitude (šířka/N)
+                    if 'x' in params and 'y' in params:
+                        lon = float(params['x'][0])
+                        lat = float(params['y'][0])
+                    
+                    # Někdy je to schované v parametru 'q' (query)
+                    elif 'q' in params:
+                        q_parts = params['q'][0].split(',')
+                        if len(q_parts) == 2:
+                            lat = float(q_parts[0]) # V 'q' bývá první lat
+                            lon = float(q_parts[1])
+
+                except Exception as e:
+                    print(f"Chyba parsování Mapy.cz: {e}")
+
+            # B) Ne, asi to jsou přímé souřadnice (49.123, 16.456)
+            else:
+                try:
+                    clean_coords = mapa_raw.upper().replace('N', '').replace('E', '')
+                    if ',' in clean_coords:
+                        parts = clean_coords.split(',')
+                        if len(parts) == 2:
+                            lat = float(parts[0].strip())
+                            lon = float(parts[1].strip())
+                    else:
+                        parts = clean_coords.split()
+                        if len(parts) == 2:
+                            lat = float(parts[0].strip())
+                            lon = float(parts[1].strip())
+                except:
+                    pass
 
         if lat and lon:
             st.markdown("<div style='margin-top: 15px; margin-bottom: 5px; font-weight: bold;'>🗺️ Místo srazu:</div>", unsafe_allow_html=True)
             
-            # 1. Inicializace mapy (zatím bez zoom_start, ten vyřeší fit_bounds)
+            # Inicializace mapy
             m = folium.Map(location=[lat, lon], tiles="OpenStreetMap")
             
-            # 2. Přidání markeru
             folium.Marker(
                 [lat, lon], 
                 popup=akce['název'], 
@@ -328,27 +363,24 @@ def vykreslit_detail_akce(akce, unique_key):
                 icon=folium.Icon(color="red", icon="info-sign")
             ).add_to(m)
 
-            # 3. VYNUCENÍ STŘEDU (Triky pro fixaci centru v popoveru)
-            # Vytvoříme malý čtverec kolem bodu, aby mapu donutil se na něj zaměřit
+            # Fixace středu
             sw = [lat - 0.002, lon - 0.002]
             ne = [lat + 0.002, lon + 0.002]
             m.fit_bounds([sw, ne])
 
-            # 4. Vykreslení - ODSTRANĚNA fixní width, přidán unique_key
+            # Vykreslení
             st_data = st_folium(
                 m, 
                 height=280, 
-                # width=720,  <-- TOTO JSME DALI PRYČ, ať se to natáhne automaticky
                 returned_objects=[], 
-                key=f"map_{unique_key}" # <-- TOTO ZDE MUSÍ BÝT
+                key=f"map_{unique_key}"
             )
             
+            # Odkazy
             link_mapy_cz = f"https://mapy.cz/turisticka?q={lat},{lon}"
             link_google = f"https://www.google.com/maps/search/?api=1&query={lat},{lon}"
             link_waze = f"https://waze.com/ul?ll={lat},{lon}&navigate=yes"
 
-            # Tlačítka pod mapou
-            # Změna: přidáno 'margin-bottom: 10px' do hlavního stylu
             st.markdown(f"""
             <div style="display: flex; gap: 8px; margin-top: -15px; margin-bottom: 10px; flex-wrap: wrap;">
                 <a href="{link_mapy_cz}" target="_blank" style="text-decoration:none; flex: 1;">
@@ -370,7 +402,7 @@ def vykreslit_detail_akce(akce, unique_key):
             """, unsafe_allow_html=True)
             
         elif mapa_raw:
-             st.warning(f"⚠️ Souřadnice '{mapa_raw}' mají špatný formát.")
+             st.warning(f"⚠️ Formát mapy nebyl rozpoznán: '{mapa_raw}'")
         
         if pd.notna(akce['popis']): 
             st.info(f"{akce['popis']}", icon="ℹ️")
