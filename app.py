@@ -337,7 +337,7 @@ def vykreslit_detail_akce(akce, unique_key):
 
             # Vykreslení ve Streamlitu
             # width=700 zajistí, že se roztáhne na šířku popoveru
-            st_data = st_folium(m, height=280, width=720, returned_objects=[])
+            st_data = st_folium(m, height=280, width=720, returned_objects=[], key=f"map_{unique_key}")
             
             # Generování odkazů
             # Trik: Mapy.cz berou souřadnice v URL krásně, Google taky
