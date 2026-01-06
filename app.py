@@ -301,59 +301,58 @@ def vykreslit_detail_akce(akce, unique_key):
         lat, lon = None, None
 
         if mapa_raw:
-            # A) Je to odkaz na Mapy.cz?
-            if "mapy.com" in mapa_raw:
+            # 1. Detekce domény - přidáno "mapy.com"
+            if "mapy.cz" in mapa_raw or "mapy.com" in mapa_raw:
                 try:
-                    # 1. Pokud je to zkrácený odkaz (mapy.cz/s/...), musíme ho rozbalit
                     target_url = mapa_raw
+                    # Rozbalení zkráceného odkazu (např. mapy.com/s/...)
                     if "/s/" in mapa_raw:
                         try:
-                            # Pošleme HEAD request, abychom zjistili finální URL bez stahování obsahu
-                            response = requests.head(mapa_raw, allow_redirects=True, timeout=5)
+                            # User-Agent je někdy potřeba, aby server neodpověděl chybou
+                            headers = {'User-Agent': 'Mozilla/5.0'}
+                            response = requests.head(mapa_raw, allow_redirects=True, timeout=5, headers=headers)
                             target_url = response.url
                         except:
-                            pass # Pokud selže síť, zkusíme pracovat s tím co máme
+                            pass 
 
-                    # 2. Analýza URL (hledáme parametry x, y nebo q)
                     parsed_url = urlparse(target_url)
                     params = parse_qs(parsed_url.query)
 
-                    # Mapy.cz používají: x = longitude (délka/E), y = latitude (šířka/N)
+                    # Mapy.com/cz logika: x = longitude, y = latitude
                     if 'x' in params and 'y' in params:
                         lon = float(params['x'][0])
                         lat = float(params['y'][0])
                     
-                    # Někdy je to schované v parametru 'q' (query)
+                    # Fallback pro parametr q (query)
                     elif 'q' in params:
                         q_parts = params['q'][0].split(',')
                         if len(q_parts) == 2:
-                            lat = float(q_parts[0]) # V 'q' bývá první lat
+                            # V 'q' bývá pořadí: lat,lon (např. 49.123,16.456)
+                            lat = float(q_parts[0])
                             lon = float(q_parts[1])
 
                 except Exception as e:
-                    print(f"Chyba parsování Mapy.com: {e}")
+                    print(f"Chyba parsování Mapy: {e}")
 
-            # B) Ne, asi to jsou přímé souřadnice (49.123, 16.456)
+            # 2. Pokud to není URL s "mapy...", zkusíme přímé souřadnice
             else:
                 try:
                     clean_coords = mapa_raw.upper().replace('N', '').replace('E', '')
-                    if ',' in clean_coords:
-                        parts = clean_coords.split(',')
-                        if len(parts) == 2:
-                            lat = float(parts[0].strip())
-                            lon = float(parts[1].strip())
-                    else:
-                        parts = clean_coords.split()
-                        if len(parts) == 2:
-                            lat = float(parts[0].strip())
-                            lon = float(parts[1].strip())
+                    separator = ',' if ',' in clean_coords else ' '
+                    parts = clean_coords.split(separator)
+                    
+                    # Filtrujeme prázdné stringy po splitu
+                    parts = [p.strip() for p in parts if p.strip()]
+                    
+                    if len(parts) == 2:
+                        lat = float(parts[0])
+                        lon = float(parts[1])
                 except:
                     pass
 
         if lat and lon:
             st.markdown("<div style='margin-top: 15px; margin-bottom: 5px; font-weight: bold;'>🗺️ Místo srazu:</div>", unsafe_allow_html=True)
             
-            # Inicializace mapy
             m = folium.Map(location=[lat, lon], tiles="OpenStreetMap")
             
             folium.Marker(
@@ -363,12 +362,10 @@ def vykreslit_detail_akce(akce, unique_key):
                 icon=folium.Icon(color="red", icon="info-sign")
             ).add_to(m)
 
-            # Fixace středu
             sw = [lat - 0.002, lon - 0.002]
             ne = [lat + 0.002, lon + 0.002]
             m.fit_bounds([sw, ne])
 
-            # Vykreslení
             st_data = st_folium(
                 m, 
                 height=280, 
@@ -376,16 +373,16 @@ def vykreslit_detail_akce(akce, unique_key):
                 key=f"map_{unique_key}"
             )
             
-            # Odkazy
-            link_mapy_cz = f"https://mapy.com/turisticka?q={lat},{lon}"
+            # --- ZMĚNA: Odkaz vede na mapy.com ---
+            link_mapy_com = f"https://mapy.com/turisticka?q={lat},{lon}"
             link_google = f"https://www.google.com/maps/search/?api=1&query={lat},{lon}"
             link_waze = f"https://waze.com/ul?ll={lat},{lon}&navigate=yes"
 
             st.markdown(f"""
             <div style="display: flex; gap: 8px; margin-top: -15px; margin-bottom: 10px; flex-wrap: wrap;">
-                <a href="{link_mapy_cz}" target="_blank" style="text-decoration:none; flex: 1;">
+                <a href="{link_mapy_com}" target="_blank" style="text-decoration:none; flex: 1;">
                     <div style="background-color: white; border: 1px solid #E5E7EB; border-radius: 6px; padding: 8px; text-align: center; color: #B91C1C; font-weight: 600; font-size: 0.85rem; transition: 0.3s;">
-                        🌲 Mapy.cz
+                        🌲 Mapy.com
                     </div>
                 </a>
                 <a href="{link_google}" target="_blank" style="text-decoration:none; flex: 1;">
