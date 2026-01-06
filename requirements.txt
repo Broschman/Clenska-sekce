@@ -3,4 +3,6 @@ pandas
 st-gsheets-connection
 streamlit-extras
 streamlit-lottie
+streamlit-folium
 requests
+folium
