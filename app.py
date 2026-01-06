@@ -301,68 +301,72 @@ def vykreslit_detail_akce(akce, unique_key):
         lat, lon = None, None
 
         if mapa_raw:
-            # 1. Detekce URL (Mapy.cz / Mapy.com)
+            # 1. Je to odkaz na Mapy.cz / Mapy.com?
             if "mapy.cz" in mapa_raw or "mapy.com" in mapa_raw:
                 try:
-                    target_url = mapa_raw
+                    # Zkusíme stáhnout obsah stránky a najít souřadnice v textu (pro obcházení ochrany)
+                    headers = {
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"
+                    }
                     
-                    # Pokud je to zkrácený odkaz (/s/), musíme ho vyřešit
-                    if "/s/" in mapa_raw:
-                        # TRIK: Změníme mapy.com na mapy.cz pro request, backend je stejný a spolehlivější
-                        check_url = mapa_raw.replace("mapy.com", "mapy.cz")
-                        
-                        # "Převlek" za běžný prohlížeč (jinak nás server odmítne)
-                        headers = {
-                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"
-                        }
-                        
-                        try:
-                            # Použijeme GET, ten je spolehlivější než HEAD
-                            response = requests.get(check_url, headers=headers, allow_redirects=True, timeout=10)
-                            target_url = response.url
-                        except Exception as e:
-                            print(f"Chyba spojení: {e}")
-                            # Pokud request selže, zkusíme pracovat s tím, co máme (možná už je to full url)
-
-                    # 2. Analýza výsledné URL
-                    parsed_url = urlparse(target_url)
-                    params = parse_qs(parsed_url.query)
-
-                    # Mapy.cz logika: x = délka (lon), y = šířka (lat)
-                    if 'x' in params and 'y' in params:
-                        lon = float(params['x'][0])
-                        lat = float(params['y'][0])
+                    # Pro jistotu nahradíme mapy.com -> mapy.cz (backend je stejný)
+                    target_url = mapa_raw.replace("mapy.com", "mapy.cz")
                     
-                    # Fallback: někdy je to v parametru 'id' a souřadnice chybí -> pak to bohužel nezjistíme bez API
-                    # Ale často bývají i v 'q'
-                    elif 'q' in params:
-                        q_parts = params['q'][0].replace(' ', '').split(',')
-                        if len(q_parts) >= 2:
-                            # Zkusíme odhadnout pořadí, Mapy.cz v Q často dávají lat,lon
-                            try:
-                                lat = float(q_parts[0])
-                                lon = float(q_parts[1])
-                            except: pass
+                    response = requests.get(target_url, headers=headers, timeout=5)
+                    content = response.text
+
+                    # HLEDÁNÍ SOUŘADNIC V HTML KÓDU (Regex)
+                    # Hledáme vzory jako x=16.123 nebo "x":16.123 v metadatech (např. og:image)
+                    found_lon = re.search(r'[?&"]x["=:]\s*([0-9]+\.[0-9]+)', content)
+                    found_lat = re.search(r'[?&"]y["=:]\s*([0-9]+\.[0-9]+)', content)
+
+                    if found_lon and found_lat:
+                        lon = float(found_lon.group(1))
+                        lat = float(found_lat.group(1))
+                    
+                    # Pokud regex nezabral, zkusíme jestli URL po redirectu už náhodou nemá parametry
+                    elif response.url:
+                         parsed = urlparse(response.url)
+                         params = parse_qs(parsed.query)
+                         if 'x' in params and 'y' in params:
+                            lon = float(params['x'][0])
+                            lat = float(params['y'][0])
 
                 except Exception as e:
-                    print(f"Chyba parsování Mapy: {e}")
+                    print(f"Chyba scrapingu Mapy.cz: {e}")
 
-            # 2. Pokud to není URL, zkusíme přímé souřadnice
-            else:
+            # 2. Pokud to není odkaz, nebo scraping selhal -> Zkusíme parsovat jako přímé souřadnice
+            if lat is None or lon is None:
                 try:
-                    clean_coords = mapa_raw.upper().replace('N', '').replace('E', '')
+                    # Odstraníme URL balast, pokud tam nějaký zůstal
+                    clean_text = mapa_raw
+                    if "http" in clean_text: 
+                        clean_text = "" # Pokud selhal scraping URL, nechceme to parsovat jako číslo
+                    
+                    clean_coords = clean_text.upper().replace('N', '').replace('E', '')
                     separator = ',' if ',' in clean_coords else ' '
                     parts = clean_coords.split(separator)
                     parts = [p.strip() for p in parts if p.strip()]
                     
                     if len(parts) == 2:
-                        lat = float(parts[0])
-                        lon = float(parts[1])
+                        # Detekce pořadí: V Česku je Lat (48-51) a Lon (12-18)
+                        v1 = float(parts[0])
+                        v2 = float(parts[1])
+                        
+                        # Jednoduchá heuristika pro ČR/Evropu
+                        if 48 <= v1 <= 52 and 12 <= v2 <= 19:
+                            lat, lon = v1, v2
+                        elif 48 <= v2 <= 52 and 12 <= v1 <= 19:
+                            lat, lon = v2, v1
+                        else:
+                            # Default: první je Lat
+                            lat, lon = v1, v2
                 except:
                     pass
 
         if lat and lon:
+            # ... ZDE POKRAČUJE VYKRESLENÍ MAPY (stejné jako předtím) ...
             st.markdown("<div style='margin-top: 15px; margin-bottom: 5px; font-weight: bold;'>🗺️ Místo srazu:</div>", unsafe_allow_html=True)
             
             m = folium.Map(location=[lat, lon], tiles="OpenStreetMap")
@@ -385,7 +389,6 @@ def vykreslit_detail_akce(akce, unique_key):
                 key=f"map_{unique_key}"
             )
             
-            # Odkazy - zachováváme mapy.com pro uživatele
             link_mapy_com = f"https://mapy.com/turisticka?q={lat},{lon}"
             link_google = f"https://www.google.com/maps/search/?api=1&query={lat},{lon}"
             link_waze = f"https://waze.com/ul?ll={lat},{lon}&navigate=yes"
@@ -411,8 +414,8 @@ def vykreslit_detail_akce(akce, unique_key):
             """, unsafe_allow_html=True)
             
         elif mapa_raw:
-             # Vypíšeme si raw data pro debugging, kdyby to zase nešlo
-             st.warning(f"⚠️ Nepodařilo se načíst souřadnice z odkazu. Zkus zadat přímo čísla (lat, lon).")
+             # Zobrazení návodu, když to selže
+             st.warning(f"⚠️ Souřadnice z odkazu se nepodařilo načíst. Pro jistotu vlož do tabulky přímo čísla (např. '49.123, 16.456').")
         
         if pd.notna(akce['popis']): 
             st.info(f"{akce['popis']}", icon="ℹ️")
