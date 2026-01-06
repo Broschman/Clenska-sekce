@@ -342,7 +342,7 @@ def vykreslit_detail_akce(akce, unique_key):
     st.markdown("</div>", unsafe_allow_html=True)
 
         
-    if pd.notna(akce['popis']): 
+        if pd.notna(akce['popis']): 
             st.info(f"{akce['popis']}", icon="ℹ️")
         
         st.markdown("---")
