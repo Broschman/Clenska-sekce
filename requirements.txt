@@ -6,3 +6,4 @@ streamlit-lottie
 streamlit-folium
 requests
 folium
+openpyxl
