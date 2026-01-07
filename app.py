@@ -715,8 +715,11 @@ def vykreslit_detail_akce(akce, unique_key):
 
     # --- SEZNAM ---
     st.markdown("<hr style='margin: 10px 0;'>", unsafe_allow_html=True)
-    if akce_id_str: lidi = df_prihlasky[df_prihlasky['id_akce'] == akce_id_str].copy()
-    else: lidi = pd.DataFrame()
+    if akce_id_str: 
+        lidi = df_prihlasky[df_prihlasky['id_akce'] == akce_id_str].copy()
+        lidi = lidi.fillna("") 
+    else: 
+        lidi = pd.DataFrame()
     st.markdown(f"#### 👥 Zapsaní ({len(lidi)})")
     
     # Mazání
@@ -1129,7 +1132,7 @@ with stylable_container(key="footer_logos", css_styles="img {height: 50px !impor
         l2.image("logo2.jpg", width="stretch")
         
     with col_center:
-        st.markdown("<div style='text-align: center; color: #9CA3AF; font-size: 0.8em; font-family: sans-serif;'><b>Členská sekce RBK</b> • Designed by Broschman • v1.2.20.4<br>&copy; 2026 All rights reserved</div>", unsafe_allow_html=True)
+        st.markdown("<div style='text-align: center; color: #9CA3AF; font-size: 0.8em; font-family: sans-serif;'><b>Členská sekce RBK</b> • Designed by Broschman • v1.2.20.5<br>&copy; 2026 All rights reserved</div>", unsafe_allow_html=True)
         
     with col_right:
         r1, r2 = st.columns(2)
