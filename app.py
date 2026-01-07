@@ -513,7 +513,15 @@ def vykreslit_detail_akce(akce, unique_key):
             st.markdown(f"<h3 style='margin:0; padding:0;'>{nazev_full}</h3>", unsafe_allow_html=True)
         with c_cal:
             ics_data = generate_ics(akce)
-            st.download_button("📅", ics_data, f"{akce['název']}.ics", "text/calendar", key=f"ics_{unique_key}")
+            # --- OPRAVA ZDE: Přidáno .encode('utf-8') ---
+            # Převedeme string na bytes, aby to Streamlit neztratil z paměti
+            st.download_button(
+                "📅", 
+                ics_data.encode('utf-8'), 
+                f"{akce['název']}.ics", 
+                "text/calendar", 
+                key=f"ics_{unique_key}"
+            )
 
         st.markdown(
             badge(typ_label_short, bg="#F3F4F6", color="#333") + 
