@@ -14,6 +14,7 @@ import calendar
 import time
 import base64
 import os
+from io import BytesIO
 
 # --- 1. NASTAVENÍ STRÁNKY ---
 st.set_page_config(page_title="Kalendář RBK", page_icon="🌲", layout="wide")
@@ -721,6 +722,43 @@ def vykreslit_detail_akce(akce, unique_key):
                      with stylable_container(key=f"delc_{unique_key}_{idx}", css_styles="button {margin:0 !important; padding:0 !important; height:auto !important; border:none; background:transparent;}"):
                         if c6.button("🗑️", key=f"d_{unique_key}_{idx}"): st.session_state[delete_key_state] = row['jméno']; st.rerun()
     else: st.caption("Zatím nikdo. Buď první!")
+
+    # === 🆕 SEKCE EXPORTU ===
+    if not lidi.empty:
+        st.markdown("---")
+        # Layout: Vlevo (1/3) export, Vpravo (2/3) prázdno
+        c_export, c_dummy = st.columns([1, 2])
+        
+        with c_export:
+            # Rozbalovací menu
+            with st.expander("🔐 Export pro trenéry"):
+                # Input na heslo
+                password = st.text_input("Zadej heslo:", type="password", key=f"pwd_{unique_key}")
+                
+                if password == "8848":
+                    st.success("Přístup povolen.")
+                    
+                    # Generování Excelu do paměti
+                    output = BytesIO()
+                    # Vybereme jen užitečné sloupce
+                    df_to_export = lidi[["jméno", "poznámka", "doprava", "ubytování"]].copy()
+                    
+                    # Uložení do Excelu (bez indexu)
+                    df_to_export.to_excel(output, index=False, sheet_name='Soupiska')
+                    excel_data = output.getvalue()
+                    
+                    file_name_safe = re.sub(r'[^\w\s-]', '', akce['název']).strip().replace(' ', '_')
+                    
+                    # Tlačítko ke stažení
+                    st.download_button(
+                        label="📥 Stáhnout Excel",
+                        data=excel_data,
+                        file_name=f"{file_name_safe}_soupiska.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        key=f"dl_xls_{unique_key}"
+                    )
+                elif password:
+                    st.error("❌ Špatné heslo.")
     
     # --- HLAVIČKA S LOGEM ---
 col_dummy, col_title, col_help = st.columns([1, 10, 1], vertical_alignment="center")
