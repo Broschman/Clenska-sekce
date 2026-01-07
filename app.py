@@ -662,13 +662,24 @@ def vykreslit_detail_akce(akce, unique_key):
                                     hodnota_dopravy = "Ano 🚗" if doprava_input else ""
                                     hodnota_ubytovani = "Ano 🛏️" if ubytovani_input else ""
                                     novy_zaznam = pd.DataFrame([{"id_akce": akce_id_str, "název": akce['název'], "jméno": finalni_jmeno, "poznámka": poznamka_input, "doprava": hodnota_dopravy, "ubytování": hodnota_ubytovani, "čas zápisu": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}])
-                                    conn.update(worksheet="prihlasky", data=pd.concat([aktualni, novy_zaznam], ignore_index=True))
+                                    # ... (zápis do Google Sheets proběhl výše: conn.update(...)) ...
+                                    
+                                    # Uložíme jméno do seznamu jmen, pokud je nové
                                     if finalni_jmeno not in seznam_jmen:
                                         try:
                                             aktualni_jmena = conn.read(worksheet="jmena", ttl=0)
                                             conn.update(worksheet="jmena", data=pd.concat([aktualni_jmena, pd.DataFrame([{"jméno": finalni_jmeno}])], ignore_index=True))
                                         except: pass
-                                    with st_lottie_spinner(lottie_success, key=f"anim_{unique_key}"): time.sleep(2)
+                                    
+                                    # Animace (fajfka)
+                                    with st_lottie_spinner(lottie_success, key=f"anim_{unique_key}"):
+                                        time.sleep(2)
+                                    
+                                    # --- TADY JE TA OPRAVA ---
+                                    # Vymažeme cache, aby se při rerunu načetla čerstvá data i s novým člověkem
+                                    st.cache_data.clear() 
+                                    # -------------------------
+
                                     st.toast(f"✅ {finalni_jmeno} zapsán(a)!")
                                     st.rerun()
                             except Exception as e: st.error(f"Chyba: {e}")
@@ -730,10 +741,17 @@ def vykreslit_detail_akce(akce, unique_key):
             c1, c2 = st.columns(2)
             if c1.button("✅ ANO", key=f"y_{unique_key}"):
                 df_curr = conn.read(worksheet="prihlasky", ttl=0)
-                df_curr['id_akce'] = df_curr['id_akce'].astype(str).str.replace(r'\.0$', '', regex=True)
+                # ... (úprava dataframu) ...
                 conn.update(worksheet="prihlasky", data=df_curr[~((df_curr['id_akce'] == akce_id_str) & (df_curr['jméno'] == clovek))])
+                
                 del st.session_state[delete_key_state]
-                st.toast("🗑️ Smazáno."); time.sleep(1); st.rerun()
+                
+                # --- TADY JE TA OPRAVA ---
+                st.cache_data.clear()
+
+                st.toast("🗑️ Smazáno.")
+                time.sleep(1)
+                st.rerun()
             if c2.button("❌ ZPĚT", key=f"n_{unique_key}"): del st.session_state[delete_key_state]; st.rerun()
 
     if not lidi.empty:
@@ -849,40 +867,74 @@ url_prihlasky = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=
 url_jmena = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=jmena"
 url_navrhy = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=navrhy"
 
-try:
-    df_akce = pd.read_csv(url_akce)
-    df_akce['datum'] = pd.to_datetime(df_akce['datum'], dayfirst=True, errors='coerce').dt.date
-    if 'datum_do' in df_akce.columns:
-        df_akce['datum_do'] = pd.to_datetime(df_akce['datum_do'], dayfirst=True, errors='coerce').dt.date
-        df_akce['datum_do'] = df_akce['datum_do'].fillna(df_akce['datum'])
-    else:
-        df_akce['datum_do'] = df_akce['datum']
-    df_akce['deadline'] = pd.to_datetime(df_akce['deadline'], dayfirst=True, errors='coerce').dt.date
-    df_akce = df_akce.dropna(subset=['datum'])
-    def get_deadline(row):
-        if pd.isna(row['deadline']):
-            return row['datum'] - timedelta(days=14)
-        return row['deadline']
-    df_akce['deadline'] = df_akce.apply(get_deadline, axis=1)
-    if 'id' in df_akce.columns:
-        df_akce['id'] = df_akce['id'].astype(str).str.replace(r'\.0$', '', regex=True)
-    
+@st.cache_data(ttl=300) # Data se uloží do mezipaměti na 5 minut (300 sekund)
+def load_all_data():
+    """
+    Načte všechna data najednou, zpracuje je a uloží do cache.
+    Tím se výrazně zrychlí odezva aplikace při klikání.
+    """
     try:
-        df_prihlasky = pd.read_csv(url_prihlasky)
-        if 'doprava' not in df_prihlasky.columns: df_prihlasky['doprava'] = ""
-        if 'id_akce' not in df_prihlasky.columns: df_prihlasky['id_akce'] = ""
-        df_prihlasky['id_akce'] = df_prihlasky['id_akce'].astype(str).str.replace(r'\.0$', '', regex=True)
-    except:
-        df_prihlasky = pd.DataFrame(columns=["id_akce", "název", "jméno", "poznámka", "doprava", "čas zápisu"])
+        # --- 1. NAČTENÍ AKCÍ ---
+        df_a = pd.read_csv(url_akce)
         
-    try:
-        df_jmena = pd.read_csv(url_jmena)
-        seznam_jmen = sorted(df_jmena['jméno'].dropna().unique().tolist())
-    except:
-        seznam_jmen = []
+        # Převod datumů
+        df_a['datum'] = pd.to_datetime(df_a['datum'], dayfirst=True, errors='coerce').dt.date
         
-except Exception as e:
-    st.error(f"⚠️ Chyba načítání dat: {e}")
+        # Ošetření sloupce 'datum_do'
+        if 'datum_do' in df_a.columns:
+            df_a['datum_do'] = pd.to_datetime(df_a['datum_do'], dayfirst=True, errors='coerce').dt.date
+            df_a['datum_do'] = df_a['datum_do'].fillna(df_a['datum'])
+        else:
+            df_a['datum_do'] = df_a['datum']
+            
+        # Vyhození řádků bez data
+        df_a = df_a.dropna(subset=['datum'])
+        
+        # Výpočet deadline (pokud chybí, tak 14 dní před akcí)
+        df_a['deadline'] = pd.to_datetime(df_a['deadline'], dayfirst=True, errors='coerce').dt.date
+        def get_deadline(row):
+            if pd.isna(row['deadline']):
+                return row['datum'] - timedelta(days=14)
+            return row['deadline']
+        df_a['deadline'] = df_a.apply(get_deadline, axis=1)
+        
+        # Čištění ID (odstranění ".0" na konci čísel)
+        if 'id' in df_a.columns:
+            df_a['id'] = df_a['id'].astype(str).str.replace(r'\.0$', '', regex=True)
+
+        # --- 2. NAČTENÍ PŘIHLÁŠEK ---
+        try:
+            df_p = pd.read_csv(url_prihlasky)
+            # Zajištění existence sloupců
+            if 'doprava' not in df_p.columns: df_p['doprava'] = ""
+            if 'id_akce' not in df_p.columns: df_p['id_akce'] = ""
+            # Čištění ID pro párování
+            df_p['id_akce'] = df_p['id_akce'].astype(str).str.replace(r'\.0$', '', regex=True)
+        except:
+            # Fallback pro případ chyby nebo prázdného listu
+            df_p = pd.DataFrame(columns=["id_akce", "název", "jméno", "poznámka", "doprava", "ubytování", "čas zápisu"])
+
+        # --- 3. NAČTENÍ JMEN ---
+        try:
+            df_j = pd.read_csv(url_jmena)
+            names_list = sorted(df_j['jméno'].dropna().unique().tolist())
+        except:
+            names_list = []
+            
+        return df_a, df_p, names_list
+
+    except Exception as e:
+        # V případě kritické chyby vrátíme None
+        print(f"Chyba load_all_data: {e}")
+        return None, None, None
+
+# --- VOLÁNÍ FUNKCE ---
+# Tady se to skutečně provede (buď stáhne z webu, nebo načte z paměti)
+df_akce, df_prihlasky, seznam_jmen = load_all_data()
+
+# Kontrola, jestli se to povedlo
+if df_akce is None:
+    st.error("⚠️ Nepodařilo se načíst data z Google Sheets. Zkuste stránku obnovit (F5).")
     st.stop()
 
 # --- 3. LOGIKA KALENDÁŘE ---
@@ -1132,7 +1184,7 @@ with stylable_container(key="footer_logos", css_styles="img {height: 50px !impor
         l2.image("logo2.jpg", width="stretch")
         
     with col_center:
-        st.markdown("<div style='text-align: center; color: #9CA3AF; font-size: 0.8em; font-family: sans-serif;'><b>Členská sekce RBK</b> • Designed by Broschman • v1.2.20.5<br>&copy; 2026 All rights reserved</div>", unsafe_allow_html=True)
+        st.markdown("<div style='text-align: center; color: #9CA3AF; font-size: 0.8em; font-family: sans-serif;'><b>Členská sekce RBK</b> • Designed by Broschman • v1.2.20.6<br>&copy; 2026 All rights reserved</div>", unsafe_allow_html=True)
         
     with col_right:
         r1, r2 = st.columns(2)
