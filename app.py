@@ -236,37 +236,66 @@ def get_base64_image(image_path):
     with open(image_path, "rb") as img_file:
         return base64.b64encode(img_file.read()).decode()
 def generate_ics(akce):
-    """Vygeneruje obsah .ics souboru pro danou akci."""
+    """
+    Vygeneruje robustní .ics soubor kompatibilní s Google Calendar i Outlook.
+    """
+    # 1. Formátování data (YYYYMMDD)
     fmt = "%Y%m%d"
     start_str = akce['datum'].strftime(fmt)
     # Pro celodenní událost musí být konec o den dál
     end_date = akce['datum_do'] + timedelta(days=1)
     end_str = end_date.strftime(fmt)
     
-    # Sestavení popisu (Description)
-    popis = akce.get('popis', '') if pd.notna(akce.get('popis')) else ""
-    odkaz = akce.get('odkaz', '') if pd.notna(akce.get('odkaz')) else ""
-    full_desc = f"{popis}\\n\\nWeb: {odkaz}".strip()
+    # 2. Timestamp vytvoření (Google to vyžaduje pro validaci)
+    now_str = datetime.now().strftime("%Y%m%dT%H%M%SZ")
     
-    # Unikátní ID (aby si kalendář pamatoval, že je to ta samá akce)
-    uid = f"rbk_{akce.get('id', 'unknown')}_{start_str}"
+    # 3. Příprava popisu - POZOR: Google nesnáší skutečné odřádkování v textu
+    # Musíme nahradit reálný enter znakem '\\n' (textové lomítko a n)
+    popis_raw = str(akce.get('popis', '')) if pd.notna(akce.get('popis')) else ""
+    odkaz_raw = str(akce.get('odkaz', '')) if pd.notna(akce.get('odkaz')) else ""
     
-    # Vytvoření souboru
-    ics_content = f"""BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//RBK Kalendar//CZ
-CALSCALE:GREGORIAN
-BEGIN:VEVENT
-DTSTART;VALUE=DATE:{start_str}
-DTEND;VALUE=DATE:{end_str}
-SUMMARY:{akce['název']}
-DESCRIPTION:{full_desc}
-LOCATION:{akce['místo']}
-UID:{uid}
-STATUS:CONFIRMED
-END:VEVENT
-END:VCALENDAR"""
-    return ics_content
+    # Sestavení textu popisu
+    full_desc_list = []
+    if popis_raw:
+        full_desc_list.append(popis_raw)
+    if odkaz_raw:
+        full_desc_list.append(f"Web: {odkaz_raw}")
+    
+    # Spojíme to a nahradíme reálné entery za escaped sekvenci
+    full_desc = "\\n\\n".join(full_desc_list)
+    # Důležité: Nahrazení případných enterů uvnitř textu poznámky
+    full_desc = full_desc.replace("\r\n", "\\n").replace("\n", "\\n").replace(",", "\\,")
+    
+    # Čištění názvu a místa (taky nesmí obsahovat čárky bez lomítka)
+    summary = akce['název'].replace(",", "\\,")
+    location = str(akce['místo']).replace(",", "\\,")
+    
+    # Unikátní ID
+    uid = f"rbk_{akce.get('id', 'unknown')}_{start_str}@rbk-kalendar"
+    
+    # 4. Sestavení souboru s povinnými CRLF (\r\n) konci řádků
+    ics_lines = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//RBK Kalendar//CZ",
+        "METHOD:PUBLISH",
+        "BEGIN:VEVENT",
+        f"UID:{uid}",
+        f"DTSTAMP:{now_str}",
+        f"DTSTART;VALUE=DATE:{start_str}",
+        f"DTEND;VALUE=DATE:{end_str}",
+        f"SUMMARY:{summary}",
+        f"DESCRIPTION:{full_desc}",
+        f"LOCATION:{location}",
+        "STATUS:CONFIRMED",
+        "TRANSP:TRANSPARENT", # Událost je zobrazena jako "Volno" (celodenní), změň na OPAQUE pro "Obsazeno"
+        "END:VEVENT",
+        "END:VCALENDAR"
+    ]
+    
+    # Spojíme řádky pomocí standardního CRLF
+    return "\r\n".join(ics_lines)
+    
 def vykreslit_detail_akce(akce, unique_key):
     """
     Vykreslí kompletní obsah popoveru (info, formulář, MAPA NA ŠÍŘKU, seznam).
