@@ -235,6 +235,38 @@ def get_base64_image(image_path):
         return None
     with open(image_path, "rb") as img_file:
         return base64.b64encode(img_file.read()).decode()
+def generate_ics(akce):
+    """Vygeneruje obsah .ics souboru pro danou akci."""
+    fmt = "%Y%m%d"
+    start_str = akce['datum'].strftime(fmt)
+    # Pro celodenní událost musí být konec o den dál
+    end_date = akce['datum_do'] + timedelta(days=1)
+    end_str = end_date.strftime(fmt)
+    
+    # Sestavení popisu (Description)
+    popis = akce.get('popis', '') if pd.notna(akce.get('popis')) else ""
+    odkaz = akce.get('odkaz', '') if pd.notna(akce.get('odkaz')) else ""
+    full_desc = f"{popis}\\n\\nWeb: {odkaz}".strip()
+    
+    # Unikátní ID (aby si kalendář pamatoval, že je to ta samá akce)
+    uid = f"rbk_{akce.get('id', 'unknown')}_{start_str}"
+    
+    # Vytvoření souboru
+    ics_content = f"""BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//RBK Kalendar//CZ
+CALSCALE:GREGORIAN
+BEGIN:VEVENT
+DTSTART;VALUE=DATE:{start_str}
+DTEND;VALUE=DATE:{end_str}
+SUMMARY:{akce['název']}
+DESCRIPTION:{full_desc}
+LOCATION:{akce['místo']}
+UID:{uid}
+STATUS:CONFIRMED
+END:VEVENT
+END:VCALENDAR"""
+    return ics_content
 def vykreslit_detail_akce(akce, unique_key):
     """
     Vykreslí kompletní obsah popoveru (info, formulář, MAPA NA ŠÍŘKU, seznam).
@@ -273,7 +305,27 @@ def vykreslit_detail_akce(akce, unique_key):
     col_info, col_form = st.columns([1.2, 1], gap="large")
     
     with col_info:
-        st.markdown(f"### {nazev_full}")
+        # --- ZMĚNA: NADPIS A TLAČÍTKO VEDLE SEBE ---
+        # Rozdělíme to na dva sloupce: 85% pro text, 15% pro tlačítko
+        c_head, c_cal = st.columns([0.85, 0.15], gap="small", vertical_alignment="center")
+        
+        with c_head:
+            # Nadpis s nulovým marginem, aby lícoval s tlačítkem
+            st.markdown(f"<h3 style='margin:0; padding:0;'>{nazev_full}</h3>", unsafe_allow_html=True)
+            
+        with c_cal:
+            # Generování souboru
+            ics_data = generate_ics(akce)
+            # Tlačítko pro stažení
+            st.download_button(
+                label="📅",
+                data=ics_data,
+                file_name=f"{akce['název']}.ics",
+                mime="text/calendar",
+                help="Přidat do kalendáře (Outlook, Google, Apple)",
+                key=f"ics_{unique_key}" # Unikátní klíč je nutný!
+            )
+
         st.markdown(
             badge(typ_label_short, bg="#F3F4F6", color="#333") + 
             badge(druh_akce.upper(), bg="#E5E7EB", color="#555"), 
