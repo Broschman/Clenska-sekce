@@ -513,15 +513,32 @@ def vykreslit_detail_akce(akce, unique_key):
             st.markdown(f"<h3 style='margin:0; padding:0;'>{nazev_full}</h3>", unsafe_allow_html=True)
         with c_cal:
             ics_data = generate_ics(akce)
-            # --- OPRAVA ZDE: Přidáno .encode('utf-8') ---
-            # Převedeme string na bytes, aby to Streamlit neztratil z paměti
-            st.download_button(
-                "📅", 
-                ics_data.encode('utf-8'), 
-                f"{akce['název']}.ics", 
-                "text/calendar", 
-                key=f"ics_{unique_key}"
-            )
+            
+            # --- ŘEŠENÍ PRO ČISTÝ LOG (Base64 odkaz) ---
+            # Zakódujeme data přímo do tlačítka. Server Streamlitu to ignoruje = žádná chyba v logu.
+            b64 = base64.b64encode(ics_data.encode('utf-8')).decode()
+            
+            # Stylování, aby to vypadalo jako hezké tlačítko
+            href = f'<a href="data:text/calendar;base64,{b64}" download="{akce["název"]}.ics" style="text-decoration:none;">'
+            href += '''
+            <div style="
+                background-color: #ffffff;
+                border: 1px solid rgba(49, 51, 63, 0.2);
+                border-radius: 8px;
+                padding: 6px 0px;
+                text-align: center;
+                cursor: pointer;
+                color: #31333F;
+                font-size: 1.2rem;
+                line-height: 1.5;
+                transition: background-color 0.2s;
+            " onmouseover="this.style.backgroundColor='#f0f2f6'; this.style.borderColor='#f0f2f6';" onmouseout="this.style.backgroundColor='#ffffff'; this.style.borderColor='rgba(49, 51, 63, 0.2)';">
+                📅
+            </div>
+            '''
+            href += '</a>'
+            
+            st.markdown(href, unsafe_allow_html=True)
 
         st.markdown(
             badge(typ_label_short, bg="#F3F4F6", color="#333") + 
@@ -1112,7 +1129,7 @@ with stylable_container(key="footer_logos", css_styles="img {height: 50px !impor
         l2.image("logo2.jpg", width="stretch")
         
     with col_center:
-        st.markdown("<div style='text-align: center; color: #9CA3AF; font-size: 0.8em; font-family: sans-serif;'><b>Členská sekce RBK</b> • Designed by Broschman • v1.2.19.2<br>&copy; 2026 All rights reserved</div>", unsafe_allow_html=True)
+        st.markdown("<div style='text-align: center; color: #9CA3AF; font-size: 0.8em; font-family: sans-serif;'><b>Členská sekce RBK</b> • Designed by Broschman • v1.2.20.4<br>&copy; 2026 All rights reserved</div>", unsafe_allow_html=True)
         
     with col_right:
         r1, r2 = st.columns(2)
