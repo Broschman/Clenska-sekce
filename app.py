@@ -237,10 +237,9 @@ def get_base64_image(image_path):
         return base64.b64encode(img_file.read()).decode()
 def vykreslit_detail_akce(akce, unique_key):
     """
-    Vykreslí kompletní obsah popoveru (info, formulář, seznam).
-    Společné pro Kalendář i Dashboard.
+    Vykreslí kompletní obsah popoveru (info, formulář, MAPA NA ŠÍŘKU, seznam).
     """
-    # Přepočet proměnných, které byly dříve v cyklu
+    # Přepočet proměnných
     akce_id_str = str(akce['id']) if 'id' in df_akce.columns else ""
     
     typ_udalosti = str(akce['typ']).lower().strip() if 'typ' in df_akce.columns and pd.notna(akce['typ']) else ""
@@ -251,7 +250,6 @@ def vykreslit_detail_akce(akce, unique_key):
     zavodni_slova = ["závod", "mčr", "žebříček", "liga", "mistrovství", "štafety", "ža", "žb"]
     je_zavod_obecne = any(s in typ_udalosti for s in zavodni_slova)
     
-    # Logika deadlinů znovu (pro jistotu, kdyby se volalo z kontextu kde není 'dnes')
     dnes = date.today()
     je_po_deadlinu = dnes > akce['deadline']
     je_dnes_deadline = dnes == akce['deadline']
@@ -260,8 +258,6 @@ def vykreslit_detail_akce(akce, unique_key):
     # Určení štítků
     style_key = "default"
     typ_label_short = "AKCE"
-    # ... zkrácená detekce pro badge (stačí zjednodušeně nebo zkopírovat celou logiku if/elif) ...
-    # Zde pro stručnost vkládám logiku mapování názvu typu na short label
     if "mčr" in typ_udalosti: typ_label_short = "MČR"
     elif "ža" in typ_udalosti: typ_label_short = "ŽA"
     elif "žb" in typ_udalosti: typ_label_short = "ŽB"
@@ -269,10 +265,11 @@ def vykreslit_detail_akce(akce, unique_key):
     elif "stafety" in typ_udalosti: typ_label_short = "ŠTAFETY"
     elif "trénink" in typ_udalosti: typ_label_short = "TRÉNINK"
     elif je_zavod_obecne: typ_label_short = "ZÁVOD"
+    elif "zimní" in typ_udalosti: typ_label_short = "ZIMNÍ LIGA"
     
     nazev_full = akce['název']
 
-    # --- LAYOUT POPOVERU ---
+    # --- LAYOUT: INFO (VLEVO) + FORMULÁŘ (VPRAVO) ---
     col_info, col_form = st.columns([1.2, 1], gap="large")
     
     with col_info:
@@ -297,13 +294,13 @@ def vykreslit_detail_akce(akce, unique_key):
             st.write(f"🎯 **Kategorie:** {kategorie_txt}")
         st.markdown("</div>", unsafe_allow_html=True)
         
-        # --- POPIS A INFO (Teď je to nahoře) ---
+        # Popis a Info
         if pd.notna(akce['popis']): 
             st.info(f"{akce['popis']}", icon="ℹ️")
         
         st.markdown("---")
         
-        # --- DEADLINE ---
+        # Deadline status
         if je_po_deadlinu:
             st.error(f"⛔ **DEADLINE BYL:** {deadline_str}")
         elif je_dnes_deadline:
@@ -311,7 +308,7 @@ def vykreslit_detail_akce(akce, unique_key):
         else:
             st.success(f"📅 **Deadline:** {deadline_str}")
 
-        # --- ORIS TLAČÍTKO ---
+        # ORIS Tlačítko
         if je_zavod_obecne:
             st.caption("Přihlášky probíhají v systému ORIS.")
             odkaz_zavodu = str(akce['odkaz']).strip() if 'odkaz' in df_akce.columns and pd.notna(akce['odkaz']) else ""
@@ -322,167 +319,11 @@ def vykreslit_detail_akce(akce, unique_key):
             
             st.markdown(f"""
             <a href="{link_target}" target="_blank" style="text-decoration:none;">
-                <div style="background-color: #2563EB; color: white; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold; margin-bottom: 20px;">
+                <div style="background-color: #2563EB; color: white; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold;">
                     👉 Otevřít ORIS
                 </div>
             </a>
             """, unsafe_allow_html=True)
-
-        # ==========================================
-        # --- MAPA (Teď je až úplně dole) ---
-        # ==========================================
-        mapa_raw = str(akce['mapa']).strip() if 'mapa' in df_akce.columns and pd.notna(akce['mapa']) else ""
-        body_k_vykresleni = [] 
-
-        # Pomocná funkce DMS -> Decimal
-        def dms_to_decimal(dms_str):
-            try:
-                dms_str = dms_str.upper().strip()
-                match = re.match(r"(\d+)[°](\d+)['′](\d+(\.\d+)?)[^NSEW]*([NSEW])?", dms_str)
-                if match:
-                    deg, minutes, seconds, _, direction = match.groups()
-                    val = float(deg) + float(minutes)/60 + float(seconds)/3600
-                    if direction in ['S', 'W']:
-                        val = -val
-                    return val
-                return float(dms_str)
-            except:
-                return None
-
-        if mapa_raw:
-            try:
-                # A) JE TO URL?
-                if "http" in mapa_raw:
-                    parsed = urlparse(mapa_raw)
-                    params = parse_qs(parsed.query)
-                    
-                    if 'ud' in params:
-                        uds = params['ud']
-                        uts = params.get('ut', [])
-                        for i, ud_val in enumerate(uds):
-                            parts = ud_val.split(',')
-                            if len(parts) >= 2:
-                                lat = dms_to_decimal(parts[0])
-                                lon = dms_to_decimal(parts[1])
-                                if lat and lon:
-                                    nazev = uts[i] if i < len(uts) else f"Bod {i+1}"
-                                    body_k_vykresleni.append((lat, lon, nazev))
-                    
-                    if not body_k_vykresleni:
-                        lat, lon = None, None
-                        if 'x' in params and 'y' in params:
-                            lon = float(params['x'][0])
-                            lat = float(params['y'][0])
-                        elif 'q' in params:
-                            q_parts = params['q'][0].replace(' ', '').split(',')
-                            if len(q_parts) >= 2:
-                                lat = float(q_parts[0])
-                                lon = float(q_parts[1])
-                        
-                        if lat and lon:
-                            body_k_vykresleni.append((lat, lon, akce['název']))
-
-                # B) PŘÍMÉ SOUŘADNICE
-                else:
-                    raw_parts = mapa_raw.split(';')
-                    for part in raw_parts:
-                        part = part.strip()
-                        if not part: continue
-                        clean_text = re.sub(r'[^\d.,]', ' ', part)
-                        num_parts = clean_text.replace(',', ' ').split()
-                        num_parts = [p for p in num_parts if len(p) > 0]
-                        if len(num_parts) >= 2:
-                            v1, v2 = float(num_parts[0]), float(num_parts[1])
-                            if 12 <= v1 <= 19 and 48 <= v2 <= 52:
-                                lat, lon = v2, v1
-                            else:
-                                lat, lon = v1, v2
-                            body_k_vykresleni.append((lat, lon, f"Bod {len(body_k_vykresleni)+1}"))
-
-            except Exception:
-                pass
-
-        if body_k_vykresleni:
-            # Nadpis mapy s oddělovačem
-            st.markdown("---")
-            st.markdown("<div style='margin-bottom: 5px; font-weight: bold;'>🗺️ Místo srazu / Parkování:</div>", unsafe_allow_html=True)
-            
-            start_lat, start_lon, _ = body_k_vykresleni[0]
-            m = folium.Map(location=[start_lat, start_lon], tiles="OpenStreetMap")
-            
-            min_lat, max_lat = 90, -90
-            min_lon, max_lon = 180, -180
-
-            pocet_bodu = len(body_k_vykresleni)
-
-            for i, (b_lat, b_lon, b_nazev) in enumerate(body_k_vykresleni):
-                if b_lat < min_lat: min_lat = b_lat
-                if b_lat > max_lat: max_lat = b_lat
-                if b_lon < min_lon: min_lon = b_lon
-                if b_lon > max_lon: max_lon = b_lon
-                
-                barva = "blue"
-                ikona = "info-sign"
-                prefix = "glyphicon"
-
-                if pocet_bodu == 1:
-                    barva = "red"
-                    ikona = "flag"
-                else:
-                    if i == 0:
-                        barva = "blue"
-                        ikona = "car"
-                        prefix = "fa"
-                    elif i == 1:
-                        barva = "red"
-                        ikona = "flag"
-                    else:
-                        barva = "blue"
-                        ikona = "info-sign"
-
-                folium.Marker(
-                    [b_lat, b_lon], 
-                    popup=b_nazev, 
-                    tooltip=b_nazev,
-                    icon=folium.Icon(color=barva, icon=ikona, prefix=prefix)
-                ).add_to(m)
-
-            sw = [min_lat - 0.005, min_lon - 0.005]
-            ne = [max_lat + 0.005, max_lon + 0.005]
-            m.fit_bounds([sw, ne])
-
-            st_data = st_folium(m, height=280, returned_objects=[], key=f"map_{unique_key}")
-            
-            if "http" in mapa_raw and ("mapy.cz" in mapa_raw or "mapy.com" in mapa_raw):
-                link_mapy_cz = mapa_raw
-            else:
-                link_mapy_cz = f"https://mapy.cz/turisticka?q={start_lat},{start_lon}"
-            
-            link_google = f"https://www.google.com/maps/search/?api=1&query={start_lat},{start_lon}"
-            link_waze = f"https://waze.com/ul?ll={start_lat},{start_lon}&navigate=yes"
-
-            st.markdown(f"""
-            <div style="display: flex; gap: 8px; margin-top: -15px; margin-bottom: 10px; flex-wrap: wrap;">
-                <a href="{link_mapy_cz}" target="_blank" style="text-decoration:none; flex: 1;">
-                    <div style="background-color: white; border: 1px solid #E5E7EB; border-radius: 6px; padding: 8px; text-align: center; color: #B91C1C; font-weight: 600; font-size: 0.85rem; transition: 0.3s;">
-                        🌲 Mapy.cz
-                    </div>
-                </a>
-                <a href="{link_google}" target="_blank" style="text-decoration:none; flex: 1;">
-                    <div style="background-color: white; border: 1px solid #E5E7EB; border-radius: 6px; padding: 8px; text-align: center; color: #2563EB; font-weight: 600; font-size: 0.85rem; transition: 0.3s;">
-                        🚗 Google
-                    </div>
-                </a>
-                <a href="{link_waze}" target="_blank" style="text-decoration:none; flex: 1;">
-                    <div style="background-color: white; border: 1px solid #E5E7EB; border-radius: 6px; padding: 8px; text-align: center; color: #3b82f6; font-weight: 600; font-size: 0.85rem; transition: 0.3s;">
-                        🚙 Waze
-                    </div>
-                </a>
-            </div>
-            """, unsafe_allow_html=True)
-            
-        elif mapa_raw:
-             st.warning(f"⚠️ Mapa se nenačetla.")
 
     with col_form:
         delete_key_state = f"confirm_delete_{unique_key}"
@@ -509,11 +350,10 @@ def vykreslit_detail_akce(akce, unique_key):
                     vybrane_jmeno = st.selectbox("Jméno", options=seznam_jmen, index=None, placeholder="Vyber ze seznamu...")
                     nove_jmeno = st.text_input("Nebo nové jméno")
                     poznamka_input = st.text_input("Poznámka")
-                                        
+                                            
                     c_check1, c_check2 = st.columns(2)
                     doprava_input = c_check1.checkbox("🚗 Sháním odvoz")
                     
-                    # Úprava: Ubytování řešíme jen pokud to NENÍ trénink
                     ubytovani_input = False
                     if "trénink" not in typ_udalosti:
                         ubytovani_input = c_check2.checkbox("🛏️ Společné ubytko")
@@ -548,7 +388,6 @@ def vykreslit_detail_akce(akce, unique_key):
                                     updated = pd.concat([aktualni, novy_zaznam], ignore_index=True)
                                     conn.update(worksheet="prihlasky", data=updated)
                                     
-                                    # Update jmen
                                     if finalni_jmeno not in seznam_jmen:
                                         try:
                                             aktualni_jmena = conn.read(worksheet="jmena", ttl=0)
@@ -563,11 +402,158 @@ def vykreslit_detail_akce(akce, unique_key):
                                 st.error(f"Chyba: {e}")
                         else: st.warning("Vyplň jméno!")
             elif je_po_deadlinu:
-                st.info("🔒 Tabulka uzavřena. Podkud chceš ještě běžet, piš na luckapetr@volny.cz nebo volej na 602 214 725.")
+                st.info("🔒 Tabulka uzavřena. Pokud chceš ještě běžet, kontaktuj trenéra.")
 
-    # --- SEZNAM PŘIHLÁŠENÝCH ---
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.divider()
+    # --- FULL-WIDTH MAPA (POD SLOUPCI) ---
+    st.markdown("<hr style='margin: 30px 0;'>", unsafe_allow_html=True)
+    
+    mapa_raw = str(akce['mapa']).strip() if 'mapa' in df_akce.columns and pd.notna(akce['mapa']) else ""
+    body_k_vykresleni = [] 
+
+    # Pomocná funkce DMS -> Decimal
+    def dms_to_decimal(dms_str):
+        try:
+            dms_str = dms_str.upper().strip()
+            match = re.match(r"(\d+)[°](\d+)['′](\d+(\.\d+)?)[^NSEW]*([NSEW])?", dms_str)
+            if match:
+                deg, minutes, seconds, _, direction = match.groups()
+                val = float(deg) + float(minutes)/60 + float(seconds)/3600
+                if direction in ['S', 'W']:
+                    val = -val
+                return val
+            return float(dms_str)
+        except:
+            return None
+
+    if mapa_raw:
+        try:
+            if "http" in mapa_raw:
+                parsed = urlparse(mapa_raw)
+                params = parse_qs(parsed.query)
+                
+                if 'ud' in params:
+                    uds = params['ud']
+                    uts = params.get('ut', [])
+                    for i, ud_val in enumerate(uds):
+                        parts = ud_val.split(',')
+                        if len(parts) >= 2:
+                            lat = dms_to_decimal(parts[0])
+                            lon = dms_to_decimal(parts[1])
+                            if lat and lon:
+                                nazev = uts[i] if i < len(uts) else f"Bod {i+1}"
+                                body_k_vykresleni.append((lat, lon, nazev))
+                
+                if not body_k_vykresleni:
+                    lat, lon = None, None
+                    if 'x' in params and 'y' in params:
+                        lon = float(params['x'][0])
+                        lat = float(params['y'][0])
+                    elif 'q' in params:
+                        q_parts = params['q'][0].replace(' ', '').split(',')
+                        if len(q_parts) >= 2:
+                            lat = float(q_parts[0])
+                            lon = float(q_parts[1])
+                    if lat and lon:
+                        body_k_vykresleni.append((lat, lon, akce['název']))
+            else:
+                raw_parts = mapa_raw.split(';')
+                for part in raw_parts:
+                    part = part.strip()
+                    if not part: continue
+                    clean_text = re.sub(r'[^\d.,]', ' ', part)
+                    num_parts = clean_text.replace(',', ' ').split()
+                    num_parts = [p for p in num_parts if len(p) > 0]
+                    if len(num_parts) >= 2:
+                        v1, v2 = float(num_parts[0]), float(num_parts[1])
+                        if 12 <= v1 <= 19 and 48 <= v2 <= 52:
+                            lat, lon = v2, v1
+                        else:
+                            lat, lon = v1, v2
+                        body_k_vykresleni.append((lat, lon, f"Bod {len(body_k_vykresleni)+1}"))
+        except Exception: pass
+
+    if body_k_vykresleni:
+        st.markdown("<div style='margin-bottom: 10px; font-weight: bold; font-size: 1.1em;'>🗺️ Místo srazu / Parkování:</div>", unsafe_allow_html=True)
+        
+        start_lat, start_lon, _ = body_k_vykresleni[0]
+        m = folium.Map(location=[start_lat, start_lon], tiles="OpenStreetMap")
+        
+        min_lat, max_lat = 90, -90
+        min_lon, max_lon = 180, -180
+        pocet_bodu = len(body_k_vykresleni)
+
+        for i, (b_lat, b_lon, b_nazev) in enumerate(body_k_vykresleni):
+            if b_lat < min_lat: min_lat = b_lat
+            if b_lat > max_lat: max_lat = b_lat
+            if b_lon < min_lon: min_lon = b_lon
+            if b_lon > max_lon: max_lon = b_lon
+            
+            barva = "blue"
+            ikona = "info-sign"
+            prefix = "glyphicon"
+
+            if pocet_bodu == 1:
+                barva = "red"
+                ikona = "flag"
+            else:
+                if i == 0:
+                    barva = "blue"
+                    ikona = "car"
+                    prefix = "fa"
+                elif i == 1:
+                    barva = "red"
+                    ikona = "flag"
+                else:
+                    barva = "blue"
+                    ikona = "info-sign"
+
+            folium.Marker(
+                [b_lat, b_lon], 
+                popup=b_nazev, 
+                tooltip=b_nazev,
+                icon=folium.Icon(color=barva, icon=ikona, prefix=prefix)
+            ).add_to(m)
+
+        sw = [min_lat - 0.005, min_lon - 0.005]
+        ne = [max_lat + 0.005, max_lon + 0.005]
+        m.fit_bounds([sw, ne])
+
+        # Vykreslení mapy na šířku (width=750px je akorát pro popover)
+        st_data = st_folium(m, height=320, width=750, returned_objects=[], key=f"map_{unique_key}")
+        
+        # ODKAZY
+        if "http" in mapa_raw and ("mapy.cz" in mapa_raw or "mapy.com" in mapa_raw):
+            link_mapy_cz = mapa_raw
+        else:
+            link_mapy_cz = f"https://mapy.cz/turisticka?q={start_lat},{start_lon}"
+        
+        link_google = f"https://www.google.com/maps/search/?api=1&query={start_lat},{start_lon}"
+        link_waze = f"https://waze.com/ul?ll={start_lat},{start_lon}&navigate=yes"
+
+        st.markdown(f"""
+        <div style="display: flex; gap: 10px; margin-top: -10px; margin-bottom: 20px; justify-content: space-between;">
+            <a href="{link_mapy_cz}" target="_blank" style="text-decoration:none; flex: 1;">
+                <div style="background-color: white; border: 1px solid #E5E7EB; border-radius: 8px; padding: 12px; text-align: center; color: #B91C1C; font-weight: 700; transition: 0.3s; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                    🌲 Otevřít Mapy.cz
+                </div>
+            </a>
+            <a href="{link_google}" target="_blank" style="text-decoration:none; flex: 1;">
+                <div style="background-color: white; border: 1px solid #E5E7EB; border-radius: 8px; padding: 12px; text-align: center; color: #2563EB; font-weight: 700; transition: 0.3s; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                    🚗 Google Maps
+                </div>
+            </a>
+            <a href="{link_waze}" target="_blank" style="text-decoration:none; flex: 1;">
+                <div style="background-color: white; border: 1px solid #E5E7EB; border-radius: 8px; padding: 12px; text-align: center; color: #3b82f6; font-weight: 700; transition: 0.3s; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                    🚙 Waze
+                </div>
+            </a>
+        </div>
+        """, unsafe_allow_html=True)
+    elif mapa_raw:
+         st.warning("⚠️ Mapa se nenačetla.")
+
+    # --- SEZNAM PŘIHLÁŠENÝCH (POD MAPOU) ---
+    st.markdown("<hr style='margin: 10px 0;'>", unsafe_allow_html=True)
 
     if akce_id_str:
         lidi = df_prihlasky[df_prihlasky['id_akce'] == akce_id_str].copy()
@@ -630,7 +616,6 @@ def vykreslit_detail_akce(akce, unique_key):
                             st.rerun()
     else:
         st.caption("Zatím nikdo. Buď první!")
-
 # --- HLAVIČKA S LOGEM ---
 col_dummy, col_title, col_help = st.columns([1, 10, 1], vertical_alignment="center")
 
@@ -975,7 +960,7 @@ with stylable_container(key="footer_logos", css_styles="img {height: 50px !impor
         l2.image("logo2.jpg", width="stretch")
         
     with col_center:
-        st.markdown("<div style='text-align: center; color: #9CA3AF; font-size: 0.8em; font-family: sans-serif;'><b>Členská sekce RBK</b> • Designed by Broschman • v1.2.17.16<br>&copy; 2026 All rights reserved</div>", unsafe_allow_html=True)
+        st.markdown("<div style='text-align: center; color: #9CA3AF; font-size: 0.8em; font-family: sans-serif;'><b>Členská sekce RBK</b> • Designed by Broschman • v1.2.17.17<br>&copy; 2026 All rights reserved</div>", unsafe_allow_html=True)
         
     with col_right:
         r1, r2 = st.columns(2)
