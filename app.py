@@ -662,24 +662,13 @@ def vykreslit_detail_akce(akce, unique_key):
                                     hodnota_dopravy = "Ano 🚗" if doprava_input else ""
                                     hodnota_ubytovani = "Ano 🛏️" if ubytovani_input else ""
                                     novy_zaznam = pd.DataFrame([{"id_akce": akce_id_str, "název": akce['název'], "jméno": finalni_jmeno, "poznámka": poznamka_input, "doprava": hodnota_dopravy, "ubytování": hodnota_ubytovani, "čas zápisu": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}])
-                                    # ... (zápis do Google Sheets proběhl výše: conn.update(...)) ...
-                                    
-                                    # Uložíme jméno do seznamu jmen, pokud je nové
+                                    conn.update(worksheet="prihlasky", data=pd.concat([aktualni, novy_zaznam], ignore_index=True))
                                     if finalni_jmeno not in seznam_jmen:
                                         try:
                                             aktualni_jmena = conn.read(worksheet="jmena", ttl=0)
                                             conn.update(worksheet="jmena", data=pd.concat([aktualni_jmena, pd.DataFrame([{"jméno": finalni_jmeno}])], ignore_index=True))
                                         except: pass
-                                    
-                                    # Animace (fajfka)
-                                    with st_lottie_spinner(lottie_success, key=f"anim_{unique_key}"):
-                                        time.sleep(2)
-                                    
-                                    # --- TADY JE TA OPRAVA ---
-                                    # Vymažeme cache, aby se při rerunu načetla čerstvá data i s novým člověkem
-                                    st.cache_data.clear() 
-                                    # -------------------------
-
+                                    with st_lottie_spinner(lottie_success, key=f"anim_{unique_key}"): time.sleep(2)
                                     st.toast(f"✅ {finalni_jmeno} zapsán(a)!")
                                     st.rerun()
                             except Exception as e: st.error(f"Chyba: {e}")
@@ -741,17 +730,10 @@ def vykreslit_detail_akce(akce, unique_key):
             c1, c2 = st.columns(2)
             if c1.button("✅ ANO", key=f"y_{unique_key}"):
                 df_curr = conn.read(worksheet="prihlasky", ttl=0)
-                # ... (úprava dataframu) ...
+                df_curr['id_akce'] = df_curr['id_akce'].astype(str).str.replace(r'\.0$', '', regex=True)
                 conn.update(worksheet="prihlasky", data=df_curr[~((df_curr['id_akce'] == akce_id_str) & (df_curr['jméno'] == clovek))])
-                
                 del st.session_state[delete_key_state]
-                
-                # --- TADY JE TA OPRAVA ---
-                st.cache_data.clear()
-
-                st.toast("🗑️ Smazáno.")
-                time.sleep(1)
-                st.rerun()
+                st.toast("🗑️ Smazáno."); time.sleep(1); st.rerun()
             if c2.button("❌ ZPĚT", key=f"n_{unique_key}"): del st.session_state[delete_key_state]; st.rerun()
 
     if not lidi.empty:
@@ -860,81 +842,47 @@ with col_help:
 
 # --- 2. PŘIPOJENÍ A NAČTENÍ DAT ---
 conn = st.connection("gsheets", type=GSheetsConnection)
+SHEET_ID = "1lW6DpUQBSm5heSO_HH9lDzm0x7t1eo8dn6FpJHh2y6U"
 
-# Tyto URL už NEBUDEME potřebovat pro čtení, smaž je nebo zakomentuj,
-# aby se ti nepletly. Vše taháme přímo přes "worksheet".
+url_akce = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=akce"
+url_prihlasky = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=prihlasky"
+url_jmena = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=jmena"
+url_navrhy = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=navrhy"
 
-@st.cache_data(ttl=300) 
-def load_all_data():
-    """
-    Načítá data přímo přes API (conn.read), což zaručuje, 
-    že po vymazání cache dostaneme okamžitě čerstvá data.
-    """
+try:
+    df_akce = pd.read_csv(url_akce)
+    df_akce['datum'] = pd.to_datetime(df_akce['datum'], dayfirst=True, errors='coerce').dt.date
+    if 'datum_do' in df_akce.columns:
+        df_akce['datum_do'] = pd.to_datetime(df_akce['datum_do'], dayfirst=True, errors='coerce').dt.date
+        df_akce['datum_do'] = df_akce['datum_do'].fillna(df_akce['datum'])
+    else:
+        df_akce['datum_do'] = df_akce['datum']
+    df_akce['deadline'] = pd.to_datetime(df_akce['deadline'], dayfirst=True, errors='coerce').dt.date
+    df_akce = df_akce.dropna(subset=['datum'])
+    def get_deadline(row):
+        if pd.isna(row['deadline']):
+            return row['datum'] - timedelta(days=14)
+        return row['deadline']
+    df_akce['deadline'] = df_akce.apply(get_deadline, axis=1)
+    if 'id' in df_akce.columns:
+        df_akce['id'] = df_akce['id'].astype(str).str.replace(r'\.0$', '', regex=True)
+    
     try:
-        # --- 1. NAČTENÍ AKCÍ (List "akce") ---
-        # ttl=0 uvnitř conn.read znamená "neukládej si to do vnitřní paměti konektoru"
-        # My si to ukládáme sami pomocí @st.cache_data
-        df_a = conn.read(worksheet="akce", ttl=0) 
+        df_prihlasky = pd.read_csv(url_prihlasky)
+        if 'doprava' not in df_prihlasky.columns: df_prihlasky['doprava'] = ""
+        if 'id_akce' not in df_prihlasky.columns: df_prihlasky['id_akce'] = ""
+        df_prihlasky['id_akce'] = df_prihlasky['id_akce'].astype(str).str.replace(r'\.0$', '', regex=True)
+    except:
+        df_prihlasky = pd.DataFrame(columns=["id_akce", "název", "jméno", "poznámka", "doprava", "čas zápisu"])
         
-        # Převod datumů
-        df_a['datum'] = pd.to_datetime(df_a['datum'], dayfirst=True, errors='coerce').dt.date
+    try:
+        df_jmena = pd.read_csv(url_jmena)
+        seznam_jmen = sorted(df_jmena['jméno'].dropna().unique().tolist())
+    except:
+        seznam_jmen = []
         
-        if 'datum_do' in df_a.columns:
-            df_a['datum_do'] = pd.to_datetime(df_a['datum_do'], dayfirst=True, errors='coerce').dt.date
-            df_a['datum_do'] = df_a['datum_do'].fillna(df_a['datum'])
-        else:
-            df_a['datum_do'] = df_a['datum']
-            
-        df_a = df_a.dropna(subset=['datum'])
-        
-        # Deadline
-        df_a['deadline'] = pd.to_datetime(df_a['deadline'], dayfirst=True, errors='coerce').dt.date
-        def get_deadline(row):
-            if pd.isna(row['deadline']):
-                return row['datum'] - timedelta(days=14)
-            return row['deadline']
-        df_a['deadline'] = df_a.apply(get_deadline, axis=1)
-        
-        # ID na string
-        if 'id' in df_a.columns:
-            df_a['id'] = df_a['id'].astype(str).str.replace(r'\.0$', '', regex=True)
-
-        # --- 2. NAČTENÍ PŘIHLÁŠEK (List "prihlasky") ---
-        try:
-            df_p = conn.read(worksheet="prihlasky", ttl=0)
-            # Ošetření prázdné tabulky nebo chybějících sloupců
-            if df_p.empty:
-                df_p = pd.DataFrame(columns=["id_akce", "název", "jméno", "poznámka", "doprava", "ubytování", "čas zápisu"])
-            
-            if 'doprava' not in df_p.columns: df_p['doprava'] = ""
-            if 'ubytování' not in df_p.columns: df_p['ubytování'] = ""
-            if 'id_akce' not in df_p.columns: df_p['id_akce'] = ""
-            
-            df_p['id_akce'] = df_p['id_akce'].astype(str).str.replace(r'\.0$', '', regex=True)
-        except:
-            df_p = pd.DataFrame(columns=["id_akce", "název", "jméno", "poznámka", "doprava", "ubytování", "čas zápisu"])
-
-        # --- 3. NAČTENÍ JMEN (List "jmena") ---
-        try:
-            df_j = conn.read(worksheet="jmena", ttl=0)
-            names_list = sorted(df_j['jméno'].dropna().unique().tolist())
-        except:
-            names_list = []
-            
-        return df_a, df_p, names_list
-
-    except Exception as e:
-        # Tady uvidíš v aplikaci chybu, pokud se něco pokazí
-        st.error(f"⚠️ Chyba při načítání dat: {e}")
-        return None, None, None
-
-# --- VOLÁNÍ FUNKCE ---
-# Tady se to skutečně provede (buď stáhne z webu, nebo načte z paměti)
-df_akce, df_prihlasky, seznam_jmen = load_all_data()
-
-# Kontrola, jestli se to povedlo
-if df_akce is None:
-    st.error("⚠️ Nepodařilo se načíst data z Google Sheets. Zkuste stránku obnovit (F5).")
+except Exception as e:
+    st.error(f"⚠️ Chyba načítání dat: {e}")
     st.stop()
 
 # --- 3. LOGIKA KALENDÁŘE ---
@@ -1184,7 +1132,7 @@ with stylable_container(key="footer_logos", css_styles="img {height: 50px !impor
         l2.image("logo2.jpg", width="stretch")
         
     with col_center:
-        st.markdown("<div style='text-align: center; color: #9CA3AF; font-size: 0.8em; font-family: sans-serif;'><b>Členská sekce RBK</b> • Designed by Broschman • v1.2.20.6<br>&copy; 2026 All rights reserved</div>", unsafe_allow_html=True)
+        st.markdown("<div style='text-align: center; color: #9CA3AF; font-size: 0.8em; font-family: sans-serif;'><b>Členská sekce RBK</b> • Designed by Broschman • v1.2.20.5<br>&copy; 2026 All rights reserved</div>", unsafe_allow_html=True)
         
     with col_right:
         r1, r2 = st.columns(2)
