@@ -860,37 +860,34 @@ with col_help:
 
 # --- 2. PŘIPOJENÍ A NAČTENÍ DAT ---
 conn = st.connection("gsheets", type=GSheetsConnection)
-SHEET_ID = "1lW6DpUQBSm5heSO_HH9lDzm0x7t1eo8dn6FpJHh2y6U"
 
-url_akce = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=akce"
-url_prihlasky = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=prihlasky"
-url_jmena = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=jmena"
-url_navrhy = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=navrhy"
+# Tyto URL už NEBUDEME potřebovat pro čtení, smaž je nebo zakomentuj,
+# aby se ti nepletly. Vše taháme přímo přes "worksheet".
 
-@st.cache_data(ttl=300) # Data se uloží do mezipaměti na 5 minut (300 sekund)
+@st.cache_data(ttl=300) 
 def load_all_data():
     """
-    Načte všechna data najednou, zpracuje je a uloží do cache.
-    Tím se výrazně zrychlí odezva aplikace při klikání.
+    Načítá data přímo přes API (conn.read), což zaručuje, 
+    že po vymazání cache dostaneme okamžitě čerstvá data.
     """
     try:
-        # --- 1. NAČTENÍ AKCÍ ---
-        df_a = pd.read_csv(url_akce)
+        # --- 1. NAČTENÍ AKCÍ (List "akce") ---
+        # ttl=0 uvnitř conn.read znamená "neukládej si to do vnitřní paměti konektoru"
+        # My si to ukládáme sami pomocí @st.cache_data
+        df_a = conn.read(worksheet="akce", ttl=0) 
         
         # Převod datumů
         df_a['datum'] = pd.to_datetime(df_a['datum'], dayfirst=True, errors='coerce').dt.date
         
-        # Ošetření sloupce 'datum_do'
         if 'datum_do' in df_a.columns:
             df_a['datum_do'] = pd.to_datetime(df_a['datum_do'], dayfirst=True, errors='coerce').dt.date
             df_a['datum_do'] = df_a['datum_do'].fillna(df_a['datum'])
         else:
             df_a['datum_do'] = df_a['datum']
             
-        # Vyhození řádků bez data
         df_a = df_a.dropna(subset=['datum'])
         
-        # Výpočet deadline (pokud chybí, tak 14 dní před akcí)
+        # Deadline
         df_a['deadline'] = pd.to_datetime(df_a['deadline'], dayfirst=True, errors='coerce').dt.date
         def get_deadline(row):
             if pd.isna(row['deadline']):
@@ -898,25 +895,28 @@ def load_all_data():
             return row['deadline']
         df_a['deadline'] = df_a.apply(get_deadline, axis=1)
         
-        # Čištění ID (odstranění ".0" na konci čísel)
+        # ID na string
         if 'id' in df_a.columns:
             df_a['id'] = df_a['id'].astype(str).str.replace(r'\.0$', '', regex=True)
 
-        # --- 2. NAČTENÍ PŘIHLÁŠEK ---
+        # --- 2. NAČTENÍ PŘIHLÁŠEK (List "prihlasky") ---
         try:
-            df_p = pd.read_csv(url_prihlasky)
-            # Zajištění existence sloupců
+            df_p = conn.read(worksheet="prihlasky", ttl=0)
+            # Ošetření prázdné tabulky nebo chybějících sloupců
+            if df_p.empty:
+                df_p = pd.DataFrame(columns=["id_akce", "název", "jméno", "poznámka", "doprava", "ubytování", "čas zápisu"])
+            
             if 'doprava' not in df_p.columns: df_p['doprava'] = ""
+            if 'ubytování' not in df_p.columns: df_p['ubytování'] = ""
             if 'id_akce' not in df_p.columns: df_p['id_akce'] = ""
-            # Čištění ID pro párování
+            
             df_p['id_akce'] = df_p['id_akce'].astype(str).str.replace(r'\.0$', '', regex=True)
         except:
-            # Fallback pro případ chyby nebo prázdného listu
             df_p = pd.DataFrame(columns=["id_akce", "název", "jméno", "poznámka", "doprava", "ubytování", "čas zápisu"])
 
-        # --- 3. NAČTENÍ JMEN ---
+        # --- 3. NAČTENÍ JMEN (List "jmena") ---
         try:
-            df_j = pd.read_csv(url_jmena)
+            df_j = conn.read(worksheet="jmena", ttl=0)
             names_list = sorted(df_j['jméno'].dropna().unique().tolist())
         except:
             names_list = []
@@ -924,8 +924,8 @@ def load_all_data():
         return df_a, df_p, names_list
 
     except Exception as e:
-        # V případě kritické chyby vrátíme None
-        print(f"Chyba load_all_data: {e}")
+        # Tady uvidíš v aplikaci chybu, pokud se něco pokazí
+        st.error(f"⚠️ Chyba při načítání dat: {e}")
         return None, None, None
 
 # --- VOLÁNÍ FUNKCE ---
