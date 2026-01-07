@@ -229,6 +229,32 @@ BARVY_AKCI = {
 def badge(text, bg="#f3f4f6", color="#111"):
     return f"<span style='background-color: {bg}; color: {color}; padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; margin-right: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);'>{text}</span>"
 
+@st.cache_data(ttl=3600*24) # Uložíme si to na 24 hodin
+def get_coords_from_place(place_name):
+    """Zjistí souřadnice podle názvu místa (Geocoding přes Nominatim)."""
+    if not place_name or len(place_name) < 3:
+        return None, None
+        
+    try:
+        # User-Agent je povinný pro Nominatim (identifikace aplikace)
+        headers = {'User-Agent': 'RBK_Kalendar_App/1.0'}
+        url = "https://nominatim.openstreetmap.org/search"
+        params = {
+            "q": place_name,
+            "format": "json",
+            "limit": 1,
+            "countrycodes": "cz" # Preferujeme Česko
+        }
+        
+        r = requests.get(url, params=params, headers=headers, timeout=2)
+        data = r.json()
+        
+        if data:
+            return float(data[0]['lat']), float(data[0]['lon'])
+        return None, None
+    except:
+        return None, None
+        
 def get_base64_image(image_path):
     """Načte obrázek a převede ho na base64 string pro HTML."""
     if not os.path.exists(image_path):
@@ -384,6 +410,18 @@ def vykreslit_detail_akce(akce, unique_key):
     mapa_raw = str(akce['mapa']).strip() if 'mapa' in df_akce.columns and pd.notna(akce['mapa']) else ""
     body_k_vykresleni = [] 
     main_lat, main_lon = None, None
+    
+    if body_k_vykresleni:
+        main_lat, main_lon, _ = body_k_vykresleni[0]
+
+    # === NOVÝ FALLBACK: Zkusíme zjistit polohu podle názvu místa ===
+    if (not main_lat or not main_lon) and akce['místo']:
+        # Pokud nemáme souřadnice z mapy, zkusíme geocoding
+        found_lat, found_lon = get_coords_from_place(str(akce['místo']))
+        if found_lat and found_lon:
+            main_lat, main_lon = found_lat, found_lon
+            # Poznámka: Mapu dole vykreslovat nebudeme (nemáme přesný bod srazu),
+            # ale použijeme to aspoň pro počasí.
 
     # Pomocná funkce DMS -> Decimal
     def dms_to_decimal(dms_str):
