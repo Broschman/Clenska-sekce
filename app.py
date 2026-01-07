@@ -31,6 +31,53 @@ def load_lottieurl(url: str):
 # Načtení animace "Success" (zelená fajfka)
 lottie_success = load_lottieurl("https://assets9.lottiefiles.com/packages/lf20_jbrw3hcz.json")
 
+def get_weather_emoji(wmo_code):
+    """Převede WMO kód počasí na emoji a text."""
+    # Kódy dle Open-Meteo documentation
+    if wmo_code == 0: return "☀️", "Jasno"
+    if wmo_code in [1, 2, 3]: return "⛅", "Polojasno"
+    if wmo_code in [45, 48]: return "🌫️", "Mlha"
+    if wmo_code in [51, 53, 55]: return "🚿", "Mrholení"
+    if wmo_code in [61, 63, 65]: return "🌧️", "Déšť"
+    if wmo_code in [71, 73, 75]: return "❄️", "Sníh"
+    if wmo_code in [80, 81, 82]: return "💧", "Přeháňky"
+    if wmo_code in [95, 96, 99]: return "⚡", "Bouřky"
+    return "🌡️", "Neznámé"
+
+@st.cache_data(ttl=3600) # Cache na 1 hodinu
+def get_forecast(lat, lon, target_date):
+    """Stáhne předpověď z Open-Meteo pro konkrétní souřadnice a den."""
+    try:
+        # Pokud je datum v minulosti nebo moc daleko (>10 dní), API nic nevrátí
+        days_diff = (target_date - date.today()).days
+        if days_diff < 0 or days_diff > 10:
+            return None
+
+        url = "https://api.open-meteo.com/v1/forecast"
+        params = {
+            "latitude": lat,
+            "longitude": lon,
+            "daily": ["weathercode", "temperature_2m_max", "precipitation_sum", "windspeed_10m_max"],
+            "timezone": "auto",
+            "start_date": target_date.strftime("%Y-%m-%d"),
+            "end_date": target_date.strftime("%Y-%m-%d")
+        }
+        
+        r = requests.get(url, params=params, timeout=2)
+        data = r.json()
+        
+        if "daily" in data:
+            d = data["daily"]
+            return {
+                "code": d["weathercode"][0],
+                "temp_max": d["temperature_2m_max"][0],
+                "precip": d["precipitation_sum"][0],
+                "wind": d["windspeed_10m_max"][0]
+            }
+        return None
+    except:
+        return None
+
 # --- CSS VZHLED (DESIGN 4.2 - LOGO IN HEADER) ---
 st.markdown("""
 <style>
