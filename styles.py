@@ -208,3 +208,6 @@ BARVY_AKCI = {
         "shadow": "0 1px 2px rgba(0,0,0,0.05)"
     }
 }
+# --- POMOCNÉ FUNKCE ---
+def badge(text, bg="#f3f4f6", color="#111"):
+    return f"<span style='background-color: {bg}; color: {color}; padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; margin-right: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);'>{text}</span>"
