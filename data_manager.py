@@ -8,13 +8,14 @@ SHEET_ID = "1lW6DpUQBSm5heSO_HH9lDzm0x7t1eo8dn6FpJHh2y6U"
 URL_AKCE = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=akce"
 URL_PRIHLASKY = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=prihlasky"
 URL_JMENA = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=jmena"
+URL_NAVRHY = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=navrhy"
 
 def get_connection():
     return st.connection("gsheets", type=GSheetsConnection)
 
-def load_data():
-    """Stáhne a zpracuje všechna data (Akce, Přihlášky, Jména)"""
-    # 1. Akce
+# --- 1. AKCE (Mění se málo -> Cache na 1 hodinu) ---
+@st.cache_data(ttl=3600)
+def load_akce():
     try:
         df_akce = pd.read_csv(URL_AKCE)
         df_akce['datum'] = pd.to_datetime(df_akce['datum'], dayfirst=True, errors='coerce').dt.date
@@ -35,25 +36,33 @@ def load_data():
         
         if 'id' in df_akce.columns:
             df_akce['id'] = df_akce['id'].astype(str).str.replace(r'\.0$', '', regex=True)
+        return df_akce
     except Exception as e:
-        st.error(f"Chyba akce: {e}")
-        df_akce = pd.DataFrame()
+        # st.error je lepší volat v main app, tady jen vrátíme prázdné
+        return pd.DataFrame()
 
-    # 2. Přihlášky
+# --- 2. PŘIHLÁŠKY (Mění se často -> Cache na 60 vteřin) ---
+@st.cache_data(ttl=60)
+def load_prihlasky():
     try:
         df_prihlasky = pd.read_csv(URL_PRIHLASKY)
         if 'doprava' not in df_prihlasky.columns: df_prihlasky['doprava'] = ""
         if 'ubytování' not in df_prihlasky.columns: df_prihlasky['ubytování'] = ""
         if 'id_akce' not in df_prihlasky.columns: df_prihlasky['id_akce'] = ""
         df_prihlasky['id_akce'] = df_prihlasky['id_akce'].astype(str).str.replace(r'\.0$', '', regex=True)
+        return df_prihlasky
     except:
-        df_prihlasky = pd.DataFrame(columns=["id_akce", "název", "jméno", "poznámka", "doprava", "ubytování", "čas zápisu"])
+        return pd.DataFrame(columns=["id_akce", "název", "jméno", "poznámka", "doprava", "ubytování", "čas zápisu"])
 
-    # 3. Jména
+# --- 3. JMÉNA (Mění se málo -> Cache na 1 hodinu) ---
+@st.cache_data(ttl=3600)
+def load_jmena():
     try:
         df_jmena = pd.read_csv(URL_JMENA)
-        seznam_jmen = sorted(df_jmena['jméno'].dropna().unique().tolist())
+        return sorted(df_jmena['jméno'].dropna().unique().tolist())
     except:
-        seznam_jmen = []
+        return []
 
-    return df_akce, df_prihlasky, seznam_jmen
+# --- FUNKCE PRO SMAZÁNÍ CACHE (Nutné po zápisu!) ---
+def clear_cache():
+    st.cache_data.clear()
