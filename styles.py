@@ -3,6 +3,7 @@ import requests
 from streamlit_lottie import st_lottie_spinner
 
 # --- NOVÉ: NAČTENÍ LOTTIE ANIMACE ---
+@st.cache_data(ttl=3600*24)
 def load_lottieurl(url: str):
     try:
         r = requests.get(url)
