@@ -41,7 +41,7 @@ def vykreslit_detail_akce(akce, unique_key):
     # === NOVÝ FALLBACK: Zkusíme zjistit polohu podle názvu místa ===
     if (not main_lat or not main_lon) and akce['místo']:
         # Pokud nemáme souřadnice z mapy, zkusíme geocoding
-        found_lat, found_lon = get_coords_from_place(str(akce['místo']))
+        found_lat, found_lon = utils.get_coords_from_place(str(akce['místo']))
         if found_lat and found_lon:
             main_lat, main_lon = found_lat, found_lon
             # Poznámka: Mapu dole vykreslovat nebudeme (nemáme přesný bod srazu),
