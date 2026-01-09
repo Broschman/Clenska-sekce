@@ -374,7 +374,6 @@ def vykreslit_detail_akce(akce, unique_key):
                 df_curr['id_akce'] = df_curr['id_akce'].astype(str).str.replace(r'\.0$', '', regex=True)
                 conn.update(worksheet="prihlasky", data=df_curr[~((df_curr['id_akce'] == akce_id_str) & (df_curr['jméno'] == clovek))])
                 del st.session_state[delete_key_state]
-                data_manager.refresh_prihlasky()
                 st.toast("🗑️ Smazáno."); time.sleep(1); st.rerun()
             if c2.button("❌ ZPĚT", key=f"n_{unique_key}"): del st.session_state[delete_key_state]; st.rerun()
 
