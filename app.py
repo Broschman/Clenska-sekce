@@ -115,6 +115,12 @@ def vykreslit_detail_akce(akce, unique_key):
     deadline_str = akce['deadline'].strftime('%d.%m.%Y')
     nazev_full = akce['název']
 
+    if akce_id_str: 
+        lidi = df_prihlasky[df_prihlasky['id_akce'] == akce_id_str].copy()
+        lidi = lidi.fillna("") 
+    else: 
+        lidi = pd.DataFrame()
+
     style_key = "default"
     typ_label_short = "AKCE"
     if "mčr" in typ_udalosti: typ_label_short = "MČR"
@@ -354,11 +360,7 @@ def vykreslit_detail_akce(akce, unique_key):
 
     # --- SEZNAM ---
     st.markdown("<hr style='margin: 10px 0;'>", unsafe_allow_html=True)
-    if akce_id_str: 
-        lidi = df_prihlasky[df_prihlasky['id_akce'] == akce_id_str].copy()
-        lidi = lidi.fillna("") 
-    else: 
-        lidi = pd.DataFrame()
+    
     st.markdown(f"#### 👥 Zapsaní ({len(lidi)})")
     
     # Mazání
