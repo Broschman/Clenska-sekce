@@ -19,6 +19,8 @@ import styles
 import utils
 import data_manager
 
+print("--- ZAČÁTEK RERUNU ---")
+
 # Načtení CSS
 styles.load_css()
 
