@@ -580,11 +580,10 @@ ceske_mesice = ["", "Leden", "Únor", "Březen", "Duben", "Květen", "Červen", 
 with col_nav2:
     st.markdown(f"<h2 style='text-align: center; color: #111; margin-top: -5px; font-weight: 800; letter-spacing: -0.5px;'>{ceske_mesice[mesic]} <span style='color:#666'>{rok}</span></h2>", unsafe_allow_html=True)
 
-# --- 4. VYKRESLENÍ MŘÍŽKY (OPTIMALIZOVANÉ) ---
+# --- 4. VYKRESLENÍ MŘÍŽKY ---
 cal = calendar.Calendar(firstweekday=0)
-month_days = cal.monthdayscalendar(year, month)
+month_days = cal.monthdayscalendar(rok, mesic)
 
-# Hlavička dnů
 dny_v_tydnu = ["Po", "Út", "St", "Čt", "Pá", "So", "Ne"]
 cols_header = st.columns(7)
 for i, d in enumerate(dny_v_tydnu):
@@ -593,36 +592,7 @@ for i, d in enumerate(dny_v_tydnu):
 st.markdown("<hr style='margin: 0 0 15px 0; border: 0; border-top: 1px solid #E5E7EB;'>", unsafe_allow_html=True)
 
 dnes = date.today()
-
-# === ZRYCHLENÍ: PŘEDPOČÍTÁNÍ AKCÍ ===
-# Místo filtrování Pandas uvnitř smyčky (což je pomalé),
-# si připravíme slovník {datum: [seznam_akci]}.
-# Je to 100x rychlejší.
-
-events_map = {}
-# Filtrujeme jen akce, které se týkají aktuálního měsíce (plus minus týden, aby se chytly i přechody)
-start_view = date(year, month, 1) - timedelta(days=7)
-end_view = date(year, month, 28) + timedelta(days=14)
-
-# Projdeme akce jen jednou
-relevant_events = df_akce[
-    (df_akce['datum'] <= end_view) & 
-    (df_akce['datum_do'] >= start_view)
-]
-
-for _, akce in relevant_events.iterrows():
-    # Rozsah data akce
-    curr = akce['datum']
-    konec = akce['datum_do']
     
-    # Projdeme dny trvání akce a přidáme do slovníku
-    while curr <= konec:
-        if curr not in events_map:
-            events_map[curr] = []
-        events_map[curr].append(akce)
-        curr += timedelta(days=1)
-# === KONEC PŘEDPOČÍTÁNÍ ===
-
 for tyden in month_days:
     cols = st.columns(7, gap="small")
     
@@ -632,63 +602,94 @@ for tyden in month_days:
                 st.write("")
                 continue
             
-            aktualni_den = date(year, month, den_cislo)
+            aktualni_den = date(rok, mesic, den_cislo)
             
-            # Vykreslení čísla dne
             if aktualni_den == dnes:
                 st.markdown(f"<div style='text-align: center;'><span class='today-box'>{den_cislo}</span></div>", unsafe_allow_html=True)
             else:
                 st.markdown(f"<span class='day-number'>{den_cislo}</span>", unsafe_allow_html=True)
 
-            # === RYCHLÉ NAČTENÍ Z PŘEDPOČÍTANÉ MAPY ===
-            # Žádné sekání, saháme přímo do paměti
-            akce_dne = events_map.get(aktualni_den, [])
+            maska_dne = (df_akce['datum'] <= aktualni_den) & (df_akce['datum_do'] >= aktualni_den)
+            akce_dne = df_akce[maska_dne]
             
-            for akce in akce_dne:
+            for _, akce in akce_dne.iterrows():
                 je_po_deadlinu = dnes > akce['deadline']
-                akce_id_str = str(akce['id'])
+                
+                akce_id_str = str(akce['id']) if 'id' in df_akce.columns else ""
                 unique_key = f"{akce_id_str}_{aktualni_den.strftime('%Y%m%d')}"
 
-                # Styl a Text
-                typ_udalosti = str(akce.get('typ', '')).lower()
-                druh_akce = str(akce.get('druh', '')).lower()
+                # 1. Definice typu události a druhu
+                typ_udalosti = str(akce['typ']).lower().strip() if 'typ' in df_akce.columns and pd.notna(akce['typ']) else ""
+                druh_akce = str(akce['druh']).lower().strip() if 'druh' in df_akce.columns and pd.notna(akce['druh']) else "ostatní"
                 
+                # 2. Pomocné proměnné (TOTO MUSÍ BÝT PŘED PODMÍNKAMI!)
+                zavodni_slova = ["závod", "mčr", "žebříček", "liga", "mistrovství", "štafety", "ža", "žb"]
+                je_zavod_obecne = any(s in typ_udalosti for s in zavodni_slova)
+
+                # 3. LOGIKA BAREV
                 style_key = "default"
-                # Rychlé určení barvy (slovníkové hledání je rychlejší než if/else řetězec)
-                for k in styles.BARVY_AKCI.keys():
-                    if k in typ_udalosti:
-                        style_key = k
-                        break
-                
+
+                if "mčr" in typ_udalosti or "mistrovství" in typ_udalosti:
+                    style_key = "mcr"
+                elif "ža" in typ_udalosti or "žebříček a" in typ_udalosti:
+                    style_key = "za"
+                elif "žb" in typ_udalosti or "žebříček b" in typ_udalosti:
+                    style_key = "zb"
+                elif "soustředění" in typ_udalosti:
+                    style_key = "soustredeni"
+                elif "oblastní" in typ_udalosti or "žebříček" in typ_udalosti:
+                    style_key = "oblastni"
+                elif "zimní liga" in typ_udalosti or "bzl" in typ_udalosti:
+                    style_key = "zimni_liga"
+                elif "štafety" in typ_udalosti:
+                    style_key = "stafety"
+                elif "trénink" in typ_udalosti:
+                    style_key = "trenink"
+                elif je_zavod_obecne:
+                    style_key = "zavod"
+                    
+                # 4. Načtení stylu z konfigurace
                 vybrany_styl = styles.BARVY_AKCI.get(style_key, styles.BARVY_AKCI["default"])
 
-                ikony = { "les": "🌲", "krátká trať": "🌲", "klasická trať": "🌲", "sprint": "🏙️", "nočák": "🌗" }
-                emoji = ikony.get(druh_akce, "🏃")
+                # 5. Ikony a Text tlačítka
+                ikony_mapa = { "les": "🌲", "krátká trať": "🌲", "klasická trať": "🌲", "sprint": "🏙️", "nočák": "🌗" }
+                emoji_druh = ikony_mapa.get(druh_akce, "🏃")
                 
-                nazev = akce['název'].split('-')[0].strip()
-                label = f"{emoji} {nazev}"
-                if je_po_deadlinu: label = "🔒 " + label
+                nazev_full = akce['název']
+                display_text = nazev_full.split('-')[0].strip() if '-' in nazev_full else nazev_full
+                final_text = f"{emoji_druh} {display_text}".strip()
+                
+                if je_po_deadlinu:
+                    final_text = "🔒 " + final_text
 
-                # Vykreslení
+                # 6. Vykreslení tlačítka s Popoverem
                 with stylable_container(
-                    key=f"btn_c_{unique_key}",
+                    key=f"btn_container_{unique_key}",
                     css_styles=f"""
                         button {{
                             background: {vybrany_styl['bg']} !important;
                             color: {vybrany_styl['color']} !important;
                             border: {vybrany_styl['border']} !important;
                             width: 100%;
-                            padding: 4px 8px !important;
-                            border-radius: 6px;
-                            font-size: 0.8rem;
+                            border-radius: 8px;
+                            padding: 8px 10px !important;
+                            transition: all 0.2s ease;
                             text-align: left;
-                            margin-bottom: 4px;
-                            height: auto !important;
-                            min-height: 0px !important;
+                            font-size: 0.85rem;
+                            font-weight: 600;
+                            box-shadow: {vybrany_styl.get('shadow', 'none')};
+                            margin-bottom: 6px;
+                            text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+                        }}
+                        button:hover {{
+                            filter: brightness(1.1);
+                            transform: translateY(-2px);
+                            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+                            z-index: 5;
                         }}
                     """
                 ):
-                    with st.popover(label, use_container_width=True):
+                    with st.popover(final_text, use_container_width=True):
                         vykreslit_detail_akce(akce, unique_key)
 st.markdown("<div style='margin-bottom: 50px'></div>", unsafe_allow_html=True)
 
