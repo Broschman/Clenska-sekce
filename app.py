@@ -15,392 +15,15 @@ import time
 import base64
 import os
 from io import BytesIO
+import styles
+import utils
+import data_manager
+
+# Načtení CSS
+styles.load_css()
 
 # --- 1. NASTAVENÍ STRÁNKY ---
 st.set_page_config(page_title="Kalendář RBK", page_icon="🌲", layout="wide")
-
-# --- NOVÉ: NAČTENÍ LOTTIE ANIMACE ---
-def load_lottieurl(url: str):
-    try:
-        r = requests.get(url)
-        if r.status_code != 200:
-            return None
-        return r.json()
-    except:
-        return None
-
-# Načtení animace "Success" (zelená fajfka)
-lottie_success = load_lottieurl("https://assets9.lottiefiles.com/packages/lf20_jbrw3hcz.json")
-
-# --- CSS VZHLED (DESIGN 4.2 - LOGO IN HEADER) ---
-st.markdown("""
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
-
-    html, body, [class*="css"] {
-        font-family: 'Inter', sans-serif;
-        color: #1f2937;
-    }
-    /* === STEALTH MODE (SKRYTÍ UI STREAMLITU) === */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
-    .stDeployButton {display:none;}
-    [data-testid="stToolbar"] {visibility: hidden;}
-    [data-testid="stDecoration"] {display:none;}
-
-    /* Nadpis - Textová část s gradientem */
-    h1 span.gradient-text {
-        background: -webkit-linear-gradient(45deg, #166534, #15803d);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        font-weight: 900;
-        text-transform: uppercase;
-        letter-spacing: -1px;
-    }
-    
-    /* Nadpis - Kontejner */
-    h1 {
-        text-align: center !important;
-        margin: 0;
-        padding-bottom: 20px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 15px; /* Mezera mezi textem a logem */
-    }
-
-    /* Logo v nadpisu */
-    h1 img.header-logo {
-        height: 60px; /* Výška loga v nadpisu */
-        width: auto;
-        vertical-align: middle;
-        margin-top: -5px; /* Jemné doladění pozice */
-        transition: transform 0.3s ease;
-    }
-    
-    h1 img.header-logo:hover {
-        transform: scale(1.1) rotate(5deg);
-    }
-
-    h3 {
-        font-weight: 700;
-        color: #111;
-        margin-bottom: 0.5rem;
-    }
-
-    /* === ŠIROKÁ BUBLINA (POPOVER) === */
-    div[data-testid="stPopoverBody"] {
-        width: 800px !important;      
-        max-width: 95vw !important;   
-        max-height: 85vh !important;
-        border-radius: 12px !important;
-        box-shadow: 0 20px 40px rgba(0,0,0,0.2) !important;
-        padding: 20px !important; 
-        overflow-y: auto !important;
-    }
-
-    /* Plovoucí tlačítko */
-    .floating-container {
-        position: fixed;
-        bottom: 30px;
-        right: 30px;
-        z-index: 9999;
-    }
-    .floating-container button {
-        background: linear-gradient(135deg, #2563EB, #1D4ED8) !important;
-        color: white !important;
-        border: none !important;
-        border-radius: 50px !important;
-        box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4) !important;
-        font-weight: 600 !important;
-        padding: 12px 24px !important;
-        transition: all 0.3s ease !important;
-    }
-    .floating-container button:hover {
-        transform: translateY(-5px) scale(1.05) !important;
-        box-shadow: 0 8px 25px rgba(37, 99, 235, 0.6) !important;
-    }
-
-    /* Dnešní den */
-    .today-box {
-        background: #DC2626;
-        color: white;
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-weight: 700;
-        box-shadow: 0 4px 10px rgba(220, 38, 38, 0.4);
-        display: inline-block;
-        margin-bottom: 8px;
-    }
-
-    .day-number {
-        font-size: 1.1em;
-        font-weight: 700;
-        color: #6B7280;
-        margin-bottom: 8px;
-        display: block;
-        text-align: center;
-    }
-    
-    div[data-testid="column"] {
-        padding: 2px;
-    }
-    
-    /* Inputy */
-    .stTextInput input, .stSelectbox div[data-baseweb="select"] {
-        border-radius: 8px !important;
-        border: 1px solid #E5E7EB;
-    }
-    .stTextInput input:focus, .stSelectbox div[data-baseweb="select"]:focus-within {
-        border-color: #2563EB !important;
-        box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2) !important;
-    }
-
-    footer {visibility: hidden;}
-    #MainMenu {visibility: hidden;}
-</style>
-""", unsafe_allow_html=True)
-
-# --- DEFINICE BAREV ---
-BARVY_AKCI = {
-    "mcr": {
-        "bg": "linear-gradient(90deg, #EF4444, #F59E0B, #10B981, #3B82F6, #8B5CF6)", 
-        "color": "white",
-        "border": "none",
-        "shadow": "0 4px 6px rgba(0,0,0,0.15)"
-    },
-    "za": {
-        "bg": "#DC2626", 
-        "color": "white",
-        "border": "none",
-        "shadow": "0 2px 4px rgba(220, 38, 38, 0.3)"
-    },
-    "zb": {
-        "bg": "#EA580C", 
-        "color": "white",
-        "border": "none",
-        "shadow": "0 2px 4px rgba(234, 88, 12, 0.3)"
-    },
-    "soustredeni": {
-        "bg": "#D97706", 
-        "color": "white",
-        "border": "none",
-        "shadow": "0 2px 4px rgba(217, 119, 6, 0.3)"
-    },
-    "oblastni": {
-        "bg": "#2563EB", 
-        "color": "white",
-        "border": "none",
-        "shadow": "0 2px 4px rgba(37, 99, 235, 0.3)"
-    },
-    "zimni_liga": {
-        "bg": "#4B5563", 
-        "color": "white",
-        "border": "none",
-        "shadow": "0 2px 4px rgba(75, 85, 99, 0.3)"
-    },
-    "stafety": {
-        "bg": "#9333EA", 
-        "color": "white",
-        "border": "none",
-        "shadow": "0 2px 4px rgba(147, 51, 234, 0.3)"
-    },
-    "trenink": {
-        "bg": "#16A34A", 
-        "color": "white",
-        "border": "none",
-        "shadow": "0 2px 4px rgba(22, 163, 74, 0.3)"
-    },
-    "zavod": {
-        "bg": "#0D9488",  # Teal barva
-        "color": "white",
-        "border": "none",
-        "shadow": "0 2px 4px rgba(13, 148, 136, 0.3)"
-    },
-    "default": {
-        "bg": "#FFFFFF",
-        "color": "#374151",
-        "border": "1px solid #E5E7EB",
-        "shadow": "0 1px 2px rgba(0,0,0,0.05)"
-    }
-}
-
-# --- POMOCNÉ FUNKCE ---
-def badge(text, bg="#f3f4f6", color="#111"):
-    return f"<span style='background-color: {bg}; color: {color}; padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; margin-right: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);'>{text}</span>"
-
-@st.cache_data(ttl=3600*24) # Uložíme si to na 24 hodin
-def get_coords_from_place(place_name):
-    """Zjistí souřadnice podle názvu místa (Geocoding přes Nominatim)."""
-    if not place_name or len(place_name) < 3:
-        return None, None
-        
-    try:
-        # User-Agent je povinný pro Nominatim (identifikace aplikace)
-        headers = {'User-Agent': 'RBK_Kalendar_App/1.0'}
-        url = "https://nominatim.openstreetmap.org/search"
-        params = {
-            "q": place_name,
-            "format": "json",
-            "limit": 1,
-            "countrycodes": "cz" # Preferujeme Česko
-        }
-        
-        r = requests.get(url, params=params, headers=headers, timeout=2)
-        data = r.json()
-        
-        if data:
-            return float(data[0]['lat']), float(data[0]['lon'])
-        return None, None
-    except:
-        return None, None
-        
-def get_base64_image(image_path):
-    """Načte obrázek a převede ho na base64 string pro HTML."""
-    if not os.path.exists(image_path):
-        return None
-    with open(image_path, "rb") as img_file:
-        return base64.b64encode(img_file.read()).decode()
-def generate_ics(akce):
-    """
-    Vygeneruje robustní .ics soubor kompatibilní s Google Calendar i Outlook.
-    """
-    # 1. Formátování data (YYYYMMDD)
-    fmt = "%Y%m%d"
-    start_str = akce['datum'].strftime(fmt)
-    # Pro celodenní událost musí být konec o den dál
-    end_date = akce['datum_do'] + timedelta(days=1)
-    end_str = end_date.strftime(fmt)
-    
-    # 2. Timestamp vytvoření (Google to vyžaduje pro validaci)
-    now_str = datetime.now().strftime("%Y%m%dT%H%M%SZ")
-    
-    # 3. Příprava popisu - POZOR: Google nesnáší skutečné odřádkování v textu
-    # Musíme nahradit reálný enter znakem '\\n' (textové lomítko a n)
-    popis_raw = str(akce.get('popis', '')) if pd.notna(akce.get('popis')) else ""
-    odkaz_raw = str(akce.get('odkaz', '')) if pd.notna(akce.get('odkaz')) else ""
-    
-    # Sestavení textu popisu
-    full_desc_list = []
-    if popis_raw:
-        full_desc_list.append(popis_raw)
-    if odkaz_raw:
-        full_desc_list.append(f"Web: {odkaz_raw}")
-    
-    # Spojíme to a nahradíme reálné entery za escaped sekvenci
-    full_desc = "\\n\\n".join(full_desc_list)
-    # Důležité: Nahrazení případných enterů uvnitř textu poznámky
-    full_desc = full_desc.replace("\r\n", "\\n").replace("\n", "\\n").replace(",", "\\,")
-    
-    # Čištění názvu a místa (taky nesmí obsahovat čárky bez lomítka)
-    summary = akce['název'].replace(",", "\\,")
-    location = str(akce['místo']).replace(",", "\\,")
-    
-    # Unikátní ID
-    uid = f"rbk_{akce.get('id', 'unknown')}_{start_str}@rbk-kalendar"
-    
-    # 4. Sestavení souboru s povinnými CRLF (\r\n) konci řádků
-    ics_lines = [
-        "BEGIN:VCALENDAR",
-        "VERSION:2.0",
-        "PRODID:-//RBK Kalendar//CZ",
-        "METHOD:PUBLISH",
-        "BEGIN:VEVENT",
-        f"UID:{uid}",
-        f"DTSTAMP:{now_str}",
-        f"DTSTART;VALUE=DATE:{start_str}",
-        f"DTEND;VALUE=DATE:{end_str}",
-        f"SUMMARY:{summary}",
-        f"DESCRIPTION:{full_desc}",
-        f"LOCATION:{location}",
-        "STATUS:CONFIRMED",
-        "TRANSP:TRANSPARENT", # Událost je zobrazena jako "Volno" (celodenní), změň na OPAQUE pro "Obsazeno"
-        "END:VEVENT",
-        "END:VCALENDAR"
-    ]
-    
-    # Spojíme řádky pomocí standardního CRLF
-    return "\r\n".join(ics_lines)
-
-# --- POČASÍ A KALENDÁŘ ---
-
-def get_weather_emoji(wmo_code):
-    """Převede WMO kód počasí na emoji a text."""
-    if wmo_code == 0: return "☀️", "Jasno"
-    if wmo_code in [1, 2, 3]: return "⛅", "Polojasno"
-    if wmo_code in [45, 48]: return "🌫️", "Mlha"
-    if wmo_code in [51, 53, 55]: return "🚿", "Mrholení"
-    if wmo_code in [61, 63, 65]: return "🌧️", "Déšť"
-    if wmo_code in [71, 73, 75]: return "❄️", "Sníh"
-    if wmo_code in [80, 81, 82]: return "💧", "Přeháňky"
-    if wmo_code in [95, 96, 99]: return "⚡", "Bouřky"
-    return "🌡️", "Neznámé"
-
-@st.cache_data(ttl=3600)
-def get_forecast(lat, lon, target_date):
-    """Stáhne předpověď z Open-Meteo pro konkrétní souřadnice a den."""
-    try:
-        # Pokud je datum v minulosti nebo moc daleko (>10 dní), API nic nevrátí
-        days_diff = (target_date - date.today()).days
-        if days_diff < 0 or days_diff > 10:
-            return None
-
-        url = "https://api.open-meteo.com/v1/forecast"
-        params = {
-            "latitude": lat,
-            "longitude": lon,
-            "daily": ["weathercode", "temperature_2m_max", "precipitation_sum", "windspeed_10m_max"],
-            "timezone": "auto",
-            "start_date": target_date.strftime("%Y-%m-%d"),
-            "end_date": target_date.strftime("%Y-%m-%d")
-        }
-        
-        r = requests.get(url, params=params, timeout=2)
-        data = r.json()
-        
-        if "daily" in data:
-            d = data["daily"]
-            return {
-                "code": d["weathercode"][0],
-                "temp_max": d["temperature_2m_max"][0],
-                "precip": d["precipitation_sum"][0],
-                "wind": d["windspeed_10m_max"][0]
-            }
-        return None
-    except:
-        return None
-
-def generate_ics(akce):
-    """Vygeneruje robustní .ics soubor kompatibilní s Google Calendar i Outlook."""
-    fmt = "%Y%m%d"
-    start_str = akce['datum'].strftime(fmt)
-    end_date = akce['datum_do'] + timedelta(days=1)
-    end_str = end_date.strftime(fmt)
-    now_str = datetime.now().strftime("%Y%m%dT%H%M%SZ")
-    
-    popis_raw = str(akce.get('popis', '')) if pd.notna(akce.get('popis')) else ""
-    odkaz_raw = str(akce.get('odkaz', '')) if pd.notna(akce.get('odkaz')) else ""
-    
-    full_desc_list = []
-    if popis_raw: full_desc_list.append(popis_raw)
-    if odkaz_raw: full_desc_list.append(f"Web: {odkaz_raw}")
-    
-    full_desc = "\\n\\n".join(full_desc_list)
-    full_desc = full_desc.replace("\r\n", "\\n").replace("\n", "\\n").replace(",", "\\,")
-    
-    summary = akce['název'].replace(",", "\\,")
-    location = str(akce['místo']).replace(",", "\\,")
-    uid = f"rbk_{akce.get('id', 'unknown')}_{start_str}@rbk-kalendar"
-    
-    ics_lines = [
-        "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//RBK Kalendar//CZ", "METHOD:PUBLISH",
-        "BEGIN:VEVENT", f"UID:{uid}", f"DTSTAMP:{now_str}",
-        f"DTSTART;VALUE=DATE:{start_str}", f"DTEND;VALUE=DATE:{end_str}",
-        f"SUMMARY:{summary}", f"DESCRIPTION:{full_desc}", f"LOCATION:{location}",
-        "STATUS:CONFIRMED", "TRANSP:TRANSPARENT", "END:VEVENT", "END:VCALENDAR"
-    ]
-    return "\r\n".join(ics_lines)
     
 def vykreslit_detail_akce(akce, unique_key):
     """
@@ -512,7 +135,7 @@ def vykreslit_detail_akce(akce, unique_key):
         with c_head:
             st.markdown(f"<h3 style='margin:0; padding:0;'>{nazev_full}</h3>", unsafe_allow_html=True)
         with c_cal:
-            ics_data = generate_ics(akce)
+            ics_data = utils.generate_ics(akce)
             
             # --- ŘEŠENÍ PRO ČISTÝ LOG (Base64 odkaz) ---
             # Zakódujeme data přímo do tlačítka. Server Streamlitu to ignoruje = žádná chyba v logu.
@@ -541,8 +164,8 @@ def vykreslit_detail_akce(akce, unique_key):
             st.markdown(href, unsafe_allow_html=True)
 
         st.markdown(
-            badge(typ_label_short, bg="#F3F4F6", color="#333") + 
-            badge(druh_akce.upper(), bg="#E5E7EB", color="#555"), 
+            styles.badge(typ_label_short, bg="#F3F4F6", color="#333") + 
+            styles.badge(druh_akce.upper(), bg="#E5E7EB", color="#555"), 
             unsafe_allow_html=True
         )
         
@@ -575,10 +198,10 @@ def vykreslit_detail_akce(akce, unique_key):
 
         # 3. 🌦️ POČASÍ
         if main_lat and main_lon:
-            forecast = get_forecast(main_lat, main_lon, akce['datum'])
+            forecast = utils.get_forecast(main_lat, main_lon, akce['datum'])
             
             if forecast:
-                w_icon, w_text = get_weather_emoji(forecast['code'])
+                w_icon, w_text = utils.get_weather_emoji(forecast['code'])
                 temp = round(forecast['temp_max'])
                 rain = forecast['precip']
                 wind = forecast['wind']
@@ -665,7 +288,7 @@ def vykreslit_detail_akce(akce, unique_key):
                                     conn.update(worksheet="prihlasky", data=pd.concat([aktualni, novy_zaznam], ignore_index=True))
                                     if finalni_jmeno not in seznam_jmen:
                                         try:
-                                            aktualni_jmena = conn.read(worksheet="jmena", ttl=0)
+                                            aktualni_jmena = data_managerconn.read(worksheet="jmena", ttl=0)
                                             conn.update(worksheet="jmena", data=pd.concat([aktualni_jmena, pd.DataFrame([{"jméno": finalni_jmeno}])], ignore_index=True))
                                         except: pass
                                     with st_lottie_spinner(lottie_success, key=f"anim_{unique_key}"): time.sleep(2)
@@ -796,7 +419,7 @@ with col_title:
     logo_path = "logo_rbk.jpg" 
     
     # Zkusíme načíst lokální logo, jinak placeholder
-    logo_b64 = get_base64_image(logo_path)
+    logo_b64 = utils.get_base64_image(logo_path)
     
     if logo_b64:
         img_src = f"data:image/png;base64,{logo_b64}"
@@ -841,49 +464,8 @@ with col_help:
         """)
 
 # --- 2. PŘIPOJENÍ A NAČTENÍ DAT ---
-conn = st.connection("gsheets", type=GSheetsConnection)
-SHEET_ID = "1lW6DpUQBSm5heSO_HH9lDzm0x7t1eo8dn6FpJHh2y6U"
-
-url_akce = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=akce"
-url_prihlasky = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=prihlasky"
-url_jmena = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=jmena"
-url_navrhy = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=navrhy"
-
-try:
-    df_akce = pd.read_csv(url_akce)
-    df_akce['datum'] = pd.to_datetime(df_akce['datum'], dayfirst=True, errors='coerce').dt.date
-    if 'datum_do' in df_akce.columns:
-        df_akce['datum_do'] = pd.to_datetime(df_akce['datum_do'], dayfirst=True, errors='coerce').dt.date
-        df_akce['datum_do'] = df_akce['datum_do'].fillna(df_akce['datum'])
-    else:
-        df_akce['datum_do'] = df_akce['datum']
-    df_akce['deadline'] = pd.to_datetime(df_akce['deadline'], dayfirst=True, errors='coerce').dt.date
-    df_akce = df_akce.dropna(subset=['datum'])
-    def get_deadline(row):
-        if pd.isna(row['deadline']):
-            return row['datum'] - timedelta(days=14)
-        return row['deadline']
-    df_akce['deadline'] = df_akce.apply(get_deadline, axis=1)
-    if 'id' in df_akce.columns:
-        df_akce['id'] = df_akce['id'].astype(str).str.replace(r'\.0$', '', regex=True)
-    
-    try:
-        df_prihlasky = pd.read_csv(url_prihlasky)
-        if 'doprava' not in df_prihlasky.columns: df_prihlasky['doprava'] = ""
-        if 'id_akce' not in df_prihlasky.columns: df_prihlasky['id_akce'] = ""
-        df_prihlasky['id_akce'] = df_prihlasky['id_akce'].astype(str).str.replace(r'\.0$', '', regex=True)
-    except:
-        df_prihlasky = pd.DataFrame(columns=["id_akce", "název", "jméno", "poznámka", "doprava", "čas zápisu"])
-        
-    try:
-        df_jmena = pd.read_csv(url_jmena)
-        seznam_jmen = sorted(df_jmena['jméno'].dropna().unique().tolist())
-    except:
-        seznam_jmen = []
-        
-except Exception as e:
-    st.error(f"⚠️ Chyba načítání dat: {e}")
-    st.stop()
+conn = data_manager.get_connection()
+df_akce, df_prihlasky, seznam_jmen = data_manager.load_data()
 
 # --- 3. LOGIKA KALENDÁŘE ---
 if 'vybrany_datum' not in st.session_state:
@@ -1042,7 +624,7 @@ for tyden in month_days:
                     style_key = "zavod"
                     
                 # 4. Načtení stylu z konfigurace
-                vybrany_styl = BARVY_AKCI.get(style_key, BARVY_AKCI["default"])
+                vybrany_styl = styles.BARVY_AKCI.get(style_key, styles.BARVY_AKCI["default"])
 
                 # 5. Ikony a Text tlačítka
                 ikony_mapa = { "les": "🌲", "krátká trať": "🌲", "klasická trať": "🌲", "sprint": "🏙️", "nočák": "🌗" }
