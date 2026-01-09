@@ -64,5 +64,6 @@ def load_jmena():
         return []
 
 # --- FUNKCE PRO SMAZÁNÍ CACHE (Nutné po zápisu!) ---
-def clear_cache():
-    st.cache_data.clear()
+def refresh_prihlasky():
+    """Smaže cache pouze pro funkci load_prihlasky. Kalendář zůstane v paměti."""
+    load_prihlasky.clear()
