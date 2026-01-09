@@ -292,7 +292,7 @@ def vykreslit_detail_akce(akce, unique_key):
                                             conn.update(worksheet="jmena", data=pd.concat([aktualni_jmena, pd.DataFrame([{"jméno": finalni_jmeno}])], ignore_index=True))
                                         except: pass
 
-                                    data_manager.clear_cache()
+                                    data_manager.refresh_prihlasky()
                                     
                                     with utils.st_lottie_spinner(lottie_success, key=f"anim_{unique_key}"): time.sleep(2)
                                     st.toast(f"✅ {finalni_jmeno} zapsán(a)!")
@@ -359,7 +359,7 @@ def vykreslit_detail_akce(akce, unique_key):
                 df_curr['id_akce'] = df_curr['id_akce'].astype(str).str.replace(r'\.0$', '', regex=True)
                 conn.update(worksheet="prihlasky", data=df_curr[~((df_curr['id_akce'] == akce_id_str) & (df_curr['jméno'] == clovek))])
                 del st.session_state[delete_key_state]
-                data_manager.clear_cache()
+                data_manager.refresh_prihlasky()
                 st.toast("🗑️ Smazáno."); time.sleep(1); st.rerun()
             if c2.button("❌ ZPĚT", key=f"n_{unique_key}"): del st.session_state[delete_key_state]; st.rerun()
 
