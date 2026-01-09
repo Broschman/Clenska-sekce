@@ -15,6 +15,7 @@ def get_connection():
 # --- 1. AKCE (Cachujeme, aby kalendář neblikal) ---
 @st.cache_data(ttl=3600) 
 def load_akce():
+    print("STAHUJI AKCE Z WEBU...")
     try:
         df_akce = pd.read_csv(URL_AKCE)
         # ... (zbytek logiky preprocessingu akcí, stejné jako dřív) ...
