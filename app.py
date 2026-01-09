@@ -294,7 +294,7 @@ def vykreslit_detail_akce(akce, unique_key):
 
                                     data_manager.clear_cache()
                                     
-                                    with st_lottie_spinner(lottie_success, key=f"anim_{unique_key}"): time.sleep(2)
+                                    with utils.st_lottie_spinner(lottie_success, key=f"anim_{unique_key}"): time.sleep(2)
                                     st.toast(f"✅ {finalni_jmeno} zapsán(a)!")
                                     st.rerun()
                             except Exception as e: st.error(f"Chyba: {e}")
