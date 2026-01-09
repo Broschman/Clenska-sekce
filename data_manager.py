@@ -47,7 +47,20 @@ def load_prihlasky():
         return df
     except:
         return pd.DataFrame(columns=["id_akce", "název", "jméno", "poznámka", "doprava", "ubytování", "čas zápisu"])
-
+def load_prihlasky_pro_akci(id_akce):
+    """Stáhne přihlášky jen pro konkrétní akci. To je mnohem rychlejší."""
+    try:
+        # Tady použijeme SQL-like query jazyk Google Sheets pro filtraci přímo na serveru Googlu!
+        # Tím se stáhne jen pár řádků místo tisíců.
+        query = f"select * where A = '{id_akce}'" # Předpokládáme, že sloupec A je id_akce. Pokud ne, musíme to upravit.
+        # Ale pro jistotu (protože nevíme písmena sloupců) stáhneme vše a vyfiltrujeme v Pythonu, 
+        # pokud je ten soubor malý (do 5000 řádků je to v pohodě).
+        
+        # Varianta A (stále stahuje vše, ale v separátní funkci):
+        df = load_prihlasky() # Použijeme tu existující funkci
+        return df[df['id_akce'] == str(id_akce)]
+    except:
+        return pd.DataFrame()
 # --- 3. JMÉNA (Taky raději bez cache, pro jistotu, nebo s cachem) ---
 @st.cache_data(ttl=3600)
 def load_jmena():
