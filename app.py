@@ -115,8 +115,12 @@ def vykreslit_detail_akce(akce, unique_key):
     deadline_str = akce['deadline'].strftime('%d.%m.%Y')
     nazev_full = akce['název']
 
-    if akce_id_str: 
-        lidi = df_prihlasky[df_prihlasky['id_akce'] == akce_id_str].copy()
+    if akce_id_str:
+        # TADY SE STAHUJÍ DATA AŽ TEĎ!
+        # Načteme všechny přihlášky (živě), ale až když uživatel klikl na popover.
+        # Zdržení bude jen při otevření detailu, ne při listování kalendářem.
+        df_full = data_manager.load_prihlasky()
+        lidi = df_full[df_full['id_akce'] == akce_id_str].copy()
         lidi = lidi.fillna("") 
     else: 
         lidi = pd.DataFrame()
@@ -484,7 +488,6 @@ with col_help:
 # --- 2. PŘIPOJENÍ A NAČTENÍ DAT ---
 conn = data_manager.get_connection()
 df_akce = data_manager.load_akce()
-df_prihlasky = data_manager.load_prihlasky()
 seznam_jmen = data_manager.load_jmena()
 
 # --- 3. LOGIKA KALENDÁŘE ---
