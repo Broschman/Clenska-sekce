@@ -580,9 +580,9 @@ ceske_mesice = ["", "Leden", "Únor", "Březen", "Duben", "Květen", "Červen", 
 with col_nav2:
     st.markdown(f"<h2 style='text-align: center; color: #111; margin-top: -5px; font-weight: 800; letter-spacing: -0.5px;'>{ceske_mesice[mesic]} <span style='color:#666'>{rok}</span></h2>", unsafe_allow_html=True)
 
-# --- 4. VYKRESLENÍ MŘÍŽKY (BAREVNÁ + RYCHLÁ) ---
+# --- 4. VYKRESLENÍ MŘÍŽKY (ORIGINÁLNÍ DESIGN + RYCHLÁ DATA) ---
 
-# 1. Získání roku a měsíce (Bezpečně)
+# 1. Získání roku a měsíce
 if 'vybrany_datum' in st.session_state:
     year = st.session_state.vybrany_datum.year
     month = st.session_state.vybrany_datum.month
@@ -607,7 +607,7 @@ st.markdown("<hr style='margin: 0 0 15px 0; border: 0; border-top: 1px solid #E5
 
 dnes = date.today()
 
-# 3. PŘEDPOČÍTÁNÍ AKCÍ (Tohle je to zrychlení!)
+# 3. PŘEDPOČÍTÁNÍ AKCÍ (Zrychlení bez vlivu na vzhled)
 events_map = {}
 start_view = date(year, month, 1) - timedelta(days=7)
 end_view = date(year, month, 28) + timedelta(days=14)
@@ -621,7 +621,7 @@ for _, akce in relevant_events.iterrows():
         events_map[curr].append(akce)
         curr += timedelta(days=1)
 
-# 4. Vykreslení kalendáře
+# 4. VYKRESLENÍ KALENDÁŘE
 for tyden in month_days:
     cols = st.columns(7, gap="small")
     
@@ -638,7 +638,7 @@ for tyden in month_days:
             else:
                 st.markdown(f"<span class='day-number'>{den_cislo}</span>", unsafe_allow_html=True)
 
-            # Načtení akcí z rychlé mapy
+            # Data bereme z rychlé mapy
             akce_dne = events_map.get(aktualni_den, [])
             
             for akce in akce_dne:
@@ -646,7 +646,7 @@ for tyden in month_days:
                 akce_id_str = str(akce['id'])
                 unique_key = f"{akce_id_str}_{aktualni_den.strftime('%Y%m%d')}"
 
-                # --- LOGIKA BAREV (VRÁCENO ZPĚT) ---
+                # --- PŮVODNÍ LOGIKA BAREV ---
                 typ_udalosti = str(akce.get('typ', '')).lower()
                 druh_akce = str(akce.get('druh', '')).lower()
                 zavodni_slova = ["závod", "mčr", "žebříček", "liga", "mistrovství", "štafety", "ža", "žb"]
@@ -663,10 +663,9 @@ for tyden in month_days:
                 elif "trénink" in typ_udalosti: style_key = "trenink"
                 elif je_zavod_obecne: style_key = "zavod"
 
-                # Vytáhneme styly ze souboru styles.py
+                # Styly z styles.py
                 styly = styles.BARVY_AKCI.get(style_key, styles.BARVY_AKCI["default"])
 
-                # Ikony
                 ikony_mapa = { "les": "🌲", "krátká trať": "🌲", "klasická trať": "🌲", "sprint": "🏙️", "nočák": "🌗" }
                 emoji = ikony_mapa.get(druh_akce, "🏃")
                 
@@ -674,8 +673,7 @@ for tyden in month_days:
                 label = f"{emoji} {nazev}"
                 if je_po_deadlinu: label = "🔒 " + label
 
-                # --- VYKRESLENÍ BAREVNÉHO TLAČÍTKA ---
-                # Zde používáme stylable_container, aby to mělo barvu
+                # --- VYKRESLENÍ TLAČÍTKA (Původní bohaté CSS) ---
                 with stylable_container(
                     key=f"btn_c_{unique_key}",
                     css_styles=f"""
@@ -684,22 +682,24 @@ for tyden in month_days:
                             color: {styly['color']} !important;
                             border: {styly['border']} !important;
                             width: 100%;
-                            padding: 4px 8px !important;
-                            border-radius: 6px;
-                            font-size: 0.8rem;
+                            border-radius: 8px;
+                            padding: 8px 10px !important; /* Původní větší padding */
+                            transition: all 0.2s ease;
                             text-align: left;
-                            margin-bottom: 4px;
-                            height: auto !important;
-                            min-height: 0px !important;
-                            white-space: nowrap;
-                            overflow: hidden;
-                            text-overflow: ellipsis;
+                            font-size: 0.85rem;
+                            font-weight: 600;
                             box-shadow: {styly.get('shadow', 'none')};
+                            margin-bottom: 6px;
+                            text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+                            white-space: normal !important; /* Aby se text zalamoval */
+                            height: auto !important;
+                            min-height: 40px; /* Aby to mělo "masitost" */
                         }}
                         button:hover {{
                             filter: brightness(1.1);
-                            transform: translateY(-1px);
-                            z-index: 10;
+                            transform: translateY(-2px);
+                            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+                            z-index: 5;
                         }}
                     """
                 ):
