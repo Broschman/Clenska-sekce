@@ -14,10 +14,11 @@ import calendar
 import time
 import base64
 import os
-from io import BytesIO
+from io import BytesIOe
 import styles
 import utils
 import data_manager
+pip install -U streamlit
 
 print("--- ZAČÁTEK RERUNU ---")
 
@@ -559,152 +560,155 @@ if not future_deadlines.empty:
 
     st.markdown("<div style='margin-bottom: 25px'></div>", unsafe_allow_html=True)
     
-    # --- NAVIGACE MĚSÍCŮ ---
-col_nav1, col_nav2, col_nav3 = st.columns([2, 5, 2])
-with col_nav1:
-    if st.button("⬅️ Předchozí", use_container_width=True):
-        curr = st.session_state.vybrany_datum
-        prev_month = curr.replace(day=1) - timedelta(days=1)
-        st.session_state.vybrany_datum = prev_month.replace(day=1)
+    # ==============================================================================
+# 🆕 IZOLOVANÝ FRAGMENT KALENDÁŘE (ZRYCHLENÍ + PŮVODNÍ DESIGN)
+# ==============================================================================
+@st.fragment
+def show_calendar_fragment():
+    # --- 1. NAVIGACE MĚSÍCŮ ---
+    if 'vybrany_datum' not in st.session_state:
+        st.session_state.vybrany_datum = date.today()
 
-with col_nav3:
-    if st.button("Další ➡️", use_container_width=True):
-        curr = st.session_state.vybrany_datum
-        next_month = (curr.replace(day=28) + timedelta(days=4)).replace(day=1)
-        st.session_state.vybrany_datum = next_month
+    col_nav1, col_nav2, col_nav3 = st.columns([2, 5, 2], vertical_alignment="center")
+    
+    with col_nav1:
+        if st.button("⬅️ Předchozí", use_container_width=True):
+            curr = st.session_state.vybrany_datum
+            prev_month = curr.replace(day=1) - timedelta(days=1)
+            st.session_state.vybrany_datum = prev_month.replace(day=1)
+            st.rerun()
 
-rok = st.session_state.vybrany_datum.year
-mesic = st.session_state.vybrany_datum.month
-ceske_mesice = ["", "Leden", "Únor", "Březen", "Duben", "Květen", "Červen", "Červenec", "Srpen", "Září", "Říjen", "Listopad", "Prosinec"]
+    with col_nav3:
+        if st.button("Další ➡️", use_container_width=True):
+            curr = st.session_state.vybrany_datum
+            next_month = (curr.replace(day=28) + timedelta(days=4)).replace(day=1)
+            st.session_state.vybrany_datum = next_month
+            st.rerun()
 
-with col_nav2:
-    st.markdown(f"<h2 style='text-align: center; color: #111; margin-top: -5px; font-weight: 800; letter-spacing: -0.5px;'>{ceske_mesice[mesic]} <span style='color:#666'>{rok}</span></h2>", unsafe_allow_html=True)
-
-# --- 4. VYKRESLENÍ MŘÍŽKY (ORIGINÁLNÍ DESIGN + RYCHLÁ DATA) ---
-
-# 1. Získání roku a měsíce
-if 'vybrany_datum' in st.session_state:
     year = st.session_state.vybrany_datum.year
     month = st.session_state.vybrany_datum.month
-elif 'date' in st.session_state:
-    year = st.session_state.date.year
-    month = st.session_state.date.month
-else:
-    dnes = date.today()
-    year = dnes.year
-    month = dnes.month
-
-cal = calendar.Calendar(firstweekday=0)
-month_days = cal.monthdayscalendar(year, month)
-
-# 2. Hlavička dnů
-dny_v_tydnu = ["Po", "Út", "St", "Čt", "Pá", "So", "Ne"]
-cols_header = st.columns(7)
-for i, d in enumerate(dny_v_tydnu):
-    cols_header[i].markdown(f"<div style='text-align: center; color: #6B7280; font-weight: 700; text-transform: uppercase; font-size: 0.8rem; margin-bottom: 10px;'>{d}</div>", unsafe_allow_html=True)
-
-st.markdown("<hr style='margin: 0 0 15px 0; border: 0; border-top: 1px solid #E5E7EB;'>", unsafe_allow_html=True)
-
-dnes = date.today()
-
-# 3. PŘEDPOČÍTÁNÍ AKCÍ (Zrychlení bez vlivu na vzhled)
-events_map = {}
-start_view = date(year, month, 1) - timedelta(days=7)
-end_view = date(year, month, 28) + timedelta(days=14)
-relevant_events = df_akce[(df_akce['datum'] <= end_view) & (df_akce['datum_do'] >= start_view)]
-
-for _, akce in relevant_events.iterrows():
-    curr = akce['datum']
-    konec = akce['datum_do']
-    while curr <= konec:
-        if curr not in events_map: events_map[curr] = []
-        events_map[curr].append(akce)
-        curr += timedelta(days=1)
-
-# 4. VYKRESLENÍ KALENDÁŘE
-for tyden in month_days:
-    cols = st.columns(7, gap="small")
+    ceske_mesice = ["", "Leden", "Únor", "Březen", "Duben", "Květen", "Červen", "Červenec", "Srpen", "Září", "Říjen", "Listopad", "Prosinec"]
     
-    for i, den_cislo in enumerate(tyden):
-        with cols[i]:
-            if den_cislo == 0:
-                st.write("")
-                continue
-            
-            aktualni_den = date(year, month, den_cislo)
-            
-            if aktualni_den == dnes:
-                st.markdown(f"<div style='text-align: center;'><span class='today-box'>{den_cislo}</span></div>", unsafe_allow_html=True)
-            else:
-                st.markdown(f"<span class='day-number'>{den_cislo}</span>", unsafe_allow_html=True)
+    with col_nav2:
+        st.markdown(f"<h2 style='text-align: center; margin:0; padding:0;'>{ceske_mesice[month]} <span style='color:#666'>{year}</span></h2>", unsafe_allow_html=True)
 
-            # Data bereme z rychlé mapy
-            akce_dne = events_map.get(aktualni_den, [])
-            
-            for akce in akce_dne:
-                je_po_deadlinu = dnes > akce['deadline']
-                akce_id_str = str(akce['id'])
-                unique_key = f"{akce_id_str}_{aktualni_den.strftime('%Y%m%d')}"
+    st.markdown("<div style='margin-bottom: 20px'></div>", unsafe_allow_html=True)
 
-                # --- PŮVODNÍ LOGIKA BAREV ---
-                typ_udalosti = str(akce.get('typ', '')).lower()
-                druh_akce = str(akce.get('druh', '')).lower()
-                zavodni_slova = ["závod", "mčr", "žebříček", "liga", "mistrovství", "štafety", "ža", "žb"]
-                je_zavod_obecne = any(s in typ_udalosti for s in zavodni_slova)
+    # --- 2. PŘÍPRAVA DAT (OPTIMALIZACE) ---
+    cal = calendar.Calendar(firstweekday=0)
+    month_days = cal.monthdayscalendar(year, month)
+    dnes = date.today()
 
-                style_key = "default"
-                if "mčr" in typ_udalosti or "mistrovství" in typ_udalosti: style_key = "mcr"
-                elif "ža" in typ_udalosti or "žebříček a" in typ_udalosti: style_key = "za"
-                elif "žb" in typ_udalosti or "žebříček b" in typ_udalosti: style_key = "zb"
-                elif "soustředění" in typ_udalosti: style_key = "soustredeni"
-                elif "oblastní" in typ_udalosti: style_key = "oblastni"
-                elif "zimní liga" in typ_udalosti: style_key = "zimni_liga"
-                elif "štafety" in typ_udalosti: style_key = "stafety"
-                elif "trénink" in typ_udalosti: style_key = "trenink"
-                elif je_zavod_obecne: style_key = "zavod"
+    # Rychlé přednačtení akcí do mapy {datum: [akce]}
+    events_map = {}
+    start_view = date(year, month, 1) - timedelta(days=7)
+    end_view = date(year, month, 28) + timedelta(days=14)
+    # df_akce je globální proměnná načtená na začátku skriptu
+    relevant_events = df_akce[(df_akce['datum'] <= end_view) & (df_akce['datum_do'] >= start_view)]
 
-                # Styly z styles.py
-                styly = styles.BARVY_AKCI.get(style_key, styles.BARVY_AKCI["default"])
+    for _, akce in relevant_events.iterrows():
+        curr = akce['datum']
+        konec = akce['datum_do']
+        while curr <= konec:
+            if curr not in events_map: events_map[curr] = []
+            events_map[curr].append(akce)
+            curr += timedelta(days=1)
 
-                ikony_mapa = { "les": "🌲", "krátká trať": "🌲", "klasická trať": "🌲", "sprint": "🏙️", "nočák": "🌗" }
-                emoji = ikony_mapa.get(druh_akce, "🏃")
+    # --- 3. VYKRESLENÍ MŘÍŽKY ---
+    dny_v_tydnu = ["Po", "Út", "St", "Čt", "Pá", "So", "Ne"]
+    cols_header = st.columns(7)
+    for i, d in enumerate(dny_v_tydnu):
+        cols_header[i].markdown(f"<div style='text-align: center; color: #6B7280; font-weight: 700; text-transform: uppercase; font-size: 0.8rem; margin-bottom: 10px;'>{d}</div>", unsafe_allow_html=True)
+
+    st.markdown("<hr style='margin: 0 0 15px 0; border: 0; border-top: 1px solid #E5E7EB;'>", unsafe_allow_html=True)
+
+    for tyden in month_days:
+        cols = st.columns(7, gap="small")
+        
+        for i, den_cislo in enumerate(tyden):
+            with cols[i]:
+                if den_cislo == 0:
+                    st.write("")
+                    continue
                 
-                nazev = akce['název'].split('-')[0].strip()
-                label = f"{emoji} {nazev}"
-                if je_po_deadlinu: label = "🔒 " + label
+                aktualni_den = date(year, month, den_cislo)
+                
+                # Zvýraznění dneška
+                if aktualni_den == dnes:
+                    st.markdown(f"<div style='text-align: center;'><span class='today-box'>{den_cislo}</span></div>", unsafe_allow_html=True)
+                else:
+                    st.markdown(f"<span class='day-number'>{den_cislo}</span>", unsafe_allow_html=True)
 
-                # --- VYKRESLENÍ TLAČÍTKA (Původní bohaté CSS) ---
-                with stylable_container(
-                    key=f"btn_c_{unique_key}",
-                    css_styles=f"""
-                        button {{
-                            background: {styly['bg']} !important;
-                            color: {styly['color']} !important;
-                            border: {styly['border']} !important;
-                            width: 100%;
-                            border-radius: 8px;
-                            padding: 8px 10px !important; /* Původní větší padding */
-                            transition: all 0.2s ease;
-                            text-align: left;
-                            font-size: 0.85rem;
-                            font-weight: 600;
-                            box-shadow: {styly.get('shadow', 'none')};
-                            margin-bottom: 6px;
-                            text-shadow: 0 1px 2px rgba(0,0,0,0.1);
-                            white-space: normal !important; /* Aby se text zalamoval */
-                            height: auto !important;
-                            min-height: 40px; /* Aby to mělo "masitost" */
-                        }}
-                        button:hover {{
-                            filter: brightness(1.1);
-                            transform: translateY(-2px);
-                            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
-                            z-index: 5;
-                        }}
-                    """
-                ):
-                    with st.popover(label, use_container_width=True):
-                        vykreslit_detail_akce(akce, unique_key)
+                # Vykreslení akcí z mapy
+                akce_dne = events_map.get(aktualni_den, [])
+                
+                for akce in akce_dne:
+                    je_po_deadlinu = dnes > akce['deadline']
+                    akce_id_str = str(akce['id'])
+                    unique_key = f"{akce_id_str}_{aktualni_den.strftime('%Y%m%d')}"
+
+                    # --- LOGIKA BAREV ---
+                    typ_udalosti = str(akce.get('typ', '')).lower()
+                    druh_akce = str(akce.get('druh', '')).lower()
+                    zavodni_slova = ["závod", "mčr", "žebříček", "liga", "mistrovství", "štafety", "ža", "žb"]
+                    je_zavod_obecne = any(s in typ_udalosti for s in zavodni_slova)
+
+                    style_key = "default"
+                    if "mčr" in typ_udalosti or "mistrovství" in typ_udalosti: style_key = "mcr"
+                    elif "ža" in typ_udalosti or "žebříček a" in typ_udalosti: style_key = "za"
+                    elif "žb" in typ_udalosti or "žebříček b" in typ_udalosti: style_key = "zb"
+                    elif "soustředění" in typ_udalosti: style_key = "soustredeni"
+                    elif "oblastní" in typ_udalosti: style_key = "oblastni"
+                    elif "zimní liga" in typ_udalosti: style_key = "zimni_liga"
+                    elif "štafety" in typ_udalosti: style_key = "stafety"
+                    elif "trénink" in typ_udalosti: style_key = "trenink"
+                    elif je_zavod_obecne: style_key = "zavod"
+
+                    styly = styles.BARVY_AKCI.get(style_key, styles.BARVY_AKCI["default"])
+
+                    # Ikony a Text
+                    ikony_mapa = { "les": "🌲", "krátká trať": "🌲", "klasická trať": "🌲", "sprint": "🏙️", "nočák": "🌗" }
+                    emoji = ikony_mapa.get(druh_akce, "🏃")
+                    
+                    nazev = akce['název'].split('-')[0].strip()
+                    label = f"{emoji} {nazev}"
+                    if je_po_deadlinu: label = "🔒 " + label
+
+                    # --- VYKRESLENÍ TLAČÍTKA (PŮVODNÍ DESIGN) ---
+                    with stylable_container(
+                        key=f"btn_c_{unique_key}",
+                        css_styles=f"""
+                            button {{
+                                background: {styly['bg']} !important;
+                                color: {styly['color']} !important;
+                                border: {styly['border']} !important;
+                                width: 100%;
+                                border-radius: 8px;
+                                padding: 8px 10px !important;
+                                transition: all 0.2s ease;
+                                text-align: left;
+                                font-size: 0.85rem;
+                                font-weight: 600;
+                                box-shadow: {styly.get('shadow', 'none')};
+                                margin-bottom: 6px;
+                                text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+                                white-space: normal !important;
+                                height: auto !important;
+                                min-height: 40px;
+                            }}
+                            button:hover {{
+                                filter: brightness(1.1);
+                                transform: translateY(-2px);
+                                box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+                                z-index: 5;
+                            }}
+                        """
+                    ):
+                        with st.popover(label, use_container_width=True):
+                            vykreslit_detail_akce(akce, unique_key)
+
+# 4. SPOUŠTĚNÍ FRAGMENTU
+show_calendar_fragment()
 st.markdown("<div style='margin-bottom: 50px'></div>", unsafe_allow_html=True)
 
 
