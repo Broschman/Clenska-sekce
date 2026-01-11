@@ -14,7 +14,7 @@ import calendar
 import time
 import base64
 import os
-from io import BytesIOe
+from io import BytesIO
 import styles
 import utils
 import data_manager
