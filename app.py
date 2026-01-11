@@ -666,27 +666,48 @@ for tyden in month_days:
                 akce_id_str = str(akce['id'])
                 unique_key = f"{akce_id_str}_{aktualni_den.strftime('%Y%m%d')}"
 
-                # Styl a Text
+                # 1. Definice typu a druhu
                 typ_udalosti = str(akce.get('typ', '')).lower()
                 druh_akce = str(akce.get('druh', '')).lower()
                 
+                # 2. Pomocná logika pro "obecné závody" (jako v původním kódu)
+                zavodni_slova = ["závod", "mčr", "žebříček", "liga", "mistrovství", "štafety", "ža", "žb"]
+                je_zavod_obecne = any(s in typ_udalosti for s in zavodni_slova)
+
+                # 3. PŮVODNÍ LOGIKA BAREV (VRÁCENO ZPĚT)
                 style_key = "default"
-                # Rychlé určení barvy (slovníkové hledání je rychlejší než if/else řetězec)
-                for k in styles.BARVY_AKCI.keys():
-                    if k in typ_udalosti:
-                        style_key = k
-                        break
-                
+
+                if "mčr" in typ_udalosti or "mistrovství" in typ_udalosti:
+                    style_key = "mcr"
+                elif "ža" in typ_udalosti or "žebříček a" in typ_udalosti:
+                    style_key = "za"
+                elif "žb" in typ_udalosti or "žebříček b" in typ_udalosti:
+                    style_key = "zb"
+                elif "soustředění" in typ_udalosti:
+                    style_key = "soustredeni"
+                elif "oblastní" in typ_udalosti or "žebříček" in typ_udalosti:
+                    style_key = "oblastni"
+                elif "zimní liga" in typ_udalosti or "bzl" in typ_udalosti:
+                    style_key = "zimni_liga"
+                elif "štafety" in typ_udalosti:
+                    style_key = "stafety"
+                elif "trénink" in typ_udalosti:
+                    style_key = "trenink"
+                elif je_zavod_obecne:
+                    style_key = "zavod"
+
+                # Načtení stylu ze styles.py
                 vybrany_styl = styles.BARVY_AKCI.get(style_key, styles.BARVY_AKCI["default"])
 
-                ikony = { "les": "🌲", "krátká trať": "🌲", "klasická trať": "🌲", "sprint": "🏙️", "nočák": "🌗" }
-                emoji = ikony.get(druh_akce, "🏃")
+                # 4. Ikony
+                ikony_mapa = { "les": "🌲", "krátká trať": "🌲", "klasická trať": "🌲", "sprint": "🏙️", "nočák": "🌗" }
+                emoji = ikony_mapa.get(druh_akce, "🏃")
                 
                 nazev = akce['název'].split('-')[0].strip()
                 label = f"{emoji} {nazev}"
                 if je_po_deadlinu: label = "🔒 " + label
 
-                # Vykreslení
+                # 5. Vykreslení tlačítka
                 with stylable_container(
                     key=f"btn_c_{unique_key}",
                     css_styles=f"""
@@ -702,6 +723,11 @@ for tyden in month_days:
                             margin-bottom: 4px;
                             height: auto !important;
                             min-height: 0px !important;
+                            box-shadow: {vybrany_styl.get('shadow', 'none')};
+                        }}
+                        button:hover {{
+                            filter: brightness(1.1);
+                            transform: translateY(-1px);
                         }}
                     """
                 ):
