@@ -15,7 +15,7 @@ import time
 import base64
 import os
 from io import BytesIO
-import stylese
+import styles
 import utils
 import data_manager
 
