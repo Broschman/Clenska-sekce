@@ -18,7 +18,6 @@ from io import BytesIOe
 import styles
 import utils
 import data_manager
-pip install -U streamlit
 
 print("--- ZAČÁTEK RERUNU ---")
 
