@@ -580,20 +580,16 @@ ceske_mesice = ["", "Leden", "Únor", "Březen", "Duben", "Květen", "Červen", 
 with col_nav2:
     st.markdown(f"<h2 style='text-align: center; color: #111; margin-top: -5px; font-weight: 800; letter-spacing: -0.5px;'>{ceske_mesice[mesic]} <span style='color:#666'>{rok}</span></h2>", unsafe_allow_html=True)
 
-# --- 4. VYKRESLENÍ MŘÍŽKY (OPTIMALIZOVANÉ) ---
+# --- 4. VYKRESLENÍ MŘÍŽKY (BAREVNÁ + RYCHLÁ) ---
 
-# === OPRAVA PROMENNÝCH ===
-# Zjistíme rok a měsíc z tvého session state
+# 1. Získání roku a měsíce (Bezpečně)
 if 'vybrany_datum' in st.session_state:
-    # Pokud používáš svůj původní název proměnné
     year = st.session_state.vybrany_datum.year
     month = st.session_state.vybrany_datum.month
 elif 'date' in st.session_state:
-    # Pokud používáš novější název
     year = st.session_state.date.year
     month = st.session_state.date.month
 else:
-    # Záchrana, kdyby nebylo nic
     dnes = date.today()
     year = dnes.year
     month = dnes.month
@@ -601,7 +597,7 @@ else:
 cal = calendar.Calendar(firstweekday=0)
 month_days = cal.monthdayscalendar(year, month)
 
-# Hlavička dnů
+# 2. Hlavička dnů
 dny_v_tydnu = ["Po", "Út", "St", "Čt", "Pá", "So", "Ne"]
 cols_header = st.columns(7)
 for i, d in enumerate(dny_v_tydnu):
@@ -611,35 +607,21 @@ st.markdown("<hr style='margin: 0 0 15px 0; border: 0; border-top: 1px solid #E5
 
 dnes = date.today()
 
-# === ZRYCHLENÍ: PŘEDPOČÍTÁNÍ AKCÍ ===
-# Místo filtrování Pandas uvnitř smyčky (což je pomalé),
-# si připravíme slovník {datum: [seznam_akci]}.
-# Je to 100x rychlejší.
-
+# 3. PŘEDPOČÍTÁNÍ AKCÍ (Tohle je to zrychlení!)
 events_map = {}
-# Filtrujeme jen akce, které se týkají aktuálního měsíce (plus minus týden, aby se chytly i přechody)
 start_view = date(year, month, 1) - timedelta(days=7)
 end_view = date(year, month, 28) + timedelta(days=14)
-
-# Projdeme akce jen jednou
-relevant_events = df_akce[
-    (df_akce['datum'] <= end_view) & 
-    (df_akce['datum_do'] >= start_view)
-]
+relevant_events = df_akce[(df_akce['datum'] <= end_view) & (df_akce['datum_do'] >= start_view)]
 
 for _, akce in relevant_events.iterrows():
-    # Rozsah data akce
     curr = akce['datum']
     konec = akce['datum_do']
-    
-    # Projdeme dny trvání akce a přidáme do slovníku
     while curr <= konec:
-        if curr not in events_map:
-            events_map[curr] = []
+        if curr not in events_map: events_map[curr] = []
         events_map[curr].append(akce)
         curr += timedelta(days=1)
-# === KONEC PŘEDPOČÍTÁNÍ ===
 
+# 4. Vykreslení kalendáře
 for tyden in month_days:
     cols = st.columns(7, gap="small")
     
@@ -651,14 +633,12 @@ for tyden in month_days:
             
             aktualni_den = date(year, month, den_cislo)
             
-            # Vykreslení čísla dne
             if aktualni_den == dnes:
                 st.markdown(f"<div style='text-align: center;'><span class='today-box'>{den_cislo}</span></div>", unsafe_allow_html=True)
             else:
                 st.markdown(f"<span class='day-number'>{den_cislo}</span>", unsafe_allow_html=True)
 
-            # === RYCHLÉ NAČTENÍ Z PŘEDPOČÍTANÉ MAPY ===
-            # Žádné sekání, saháme přímo do paměti
+            # Načtení akcí z rychlé mapy
             akce_dne = events_map.get(aktualni_den, [])
             
             for akce in akce_dne:
@@ -666,40 +646,27 @@ for tyden in month_days:
                 akce_id_str = str(akce['id'])
                 unique_key = f"{akce_id_str}_{aktualni_den.strftime('%Y%m%d')}"
 
-                # 1. Definice typu a druhu
+                # --- LOGIKA BAREV (VRÁCENO ZPĚT) ---
                 typ_udalosti = str(akce.get('typ', '')).lower()
                 druh_akce = str(akce.get('druh', '')).lower()
-                
-                # 2. Pomocná logika pro "obecné závody" (jako v původním kódu)
                 zavodni_slova = ["závod", "mčr", "žebříček", "liga", "mistrovství", "štafety", "ža", "žb"]
                 je_zavod_obecne = any(s in typ_udalosti for s in zavodni_slova)
 
-                # 3. PŮVODNÍ LOGIKA BAREV (VRÁCENO ZPĚT)
                 style_key = "default"
+                if "mčr" in typ_udalosti or "mistrovství" in typ_udalosti: style_key = "mcr"
+                elif "ža" in typ_udalosti or "žebříček a" in typ_udalosti: style_key = "za"
+                elif "žb" in typ_udalosti or "žebříček b" in typ_udalosti: style_key = "zb"
+                elif "soustředění" in typ_udalosti: style_key = "soustredeni"
+                elif "oblastní" in typ_udalosti: style_key = "oblastni"
+                elif "zimní liga" in typ_udalosti: style_key = "zimni_liga"
+                elif "štafety" in typ_udalosti: style_key = "stafety"
+                elif "trénink" in typ_udalosti: style_key = "trenink"
+                elif je_zavod_obecne: style_key = "zavod"
 
-                if "mčr" in typ_udalosti or "mistrovství" in typ_udalosti:
-                    style_key = "mcr"
-                elif "ža" in typ_udalosti or "žebříček a" in typ_udalosti:
-                    style_key = "za"
-                elif "žb" in typ_udalosti or "žebříček b" in typ_udalosti:
-                    style_key = "zb"
-                elif "soustředění" in typ_udalosti:
-                    style_key = "soustredeni"
-                elif "oblastní" in typ_udalosti or "žebříček" in typ_udalosti:
-                    style_key = "oblastni"
-                elif "zimní liga" in typ_udalosti or "bzl" in typ_udalosti:
-                    style_key = "zimni_liga"
-                elif "štafety" in typ_udalosti:
-                    style_key = "stafety"
-                elif "trénink" in typ_udalosti:
-                    style_key = "trenink"
-                elif je_zavod_obecne:
-                    style_key = "zavod"
+                # Vytáhneme styly ze souboru styles.py
+                styly = styles.BARVY_AKCI.get(style_key, styles.BARVY_AKCI["default"])
 
-                # Načtení stylu ze styles.py
-                vybrany_styl = styles.BARVY_AKCI.get(style_key, styles.BARVY_AKCI["default"])
-
-                # 4. Ikony
+                # Ikony
                 ikony_mapa = { "les": "🌲", "krátká trať": "🌲", "klasická trať": "🌲", "sprint": "🏙️", "nočák": "🌗" }
                 emoji = ikony_mapa.get(druh_akce, "🏃")
                 
@@ -707,14 +674,15 @@ for tyden in month_days:
                 label = f"{emoji} {nazev}"
                 if je_po_deadlinu: label = "🔒 " + label
 
-                # 5. Vykreslení tlačítka
+                # --- VYKRESLENÍ BAREVNÉHO TLAČÍTKA ---
+                # Zde používáme stylable_container, aby to mělo barvu
                 with stylable_container(
                     key=f"btn_c_{unique_key}",
                     css_styles=f"""
                         button {{
-                            background: {vybrany_styl['bg']} !important;
-                            color: {vybrany_styl['color']} !important;
-                            border: {vybrany_styl['border']} !important;
+                            background: {styly['bg']} !important;
+                            color: {styly['color']} !important;
+                            border: {styly['border']} !important;
                             width: 100%;
                             padding: 4px 8px !important;
                             border-radius: 6px;
@@ -723,11 +691,15 @@ for tyden in month_days:
                             margin-bottom: 4px;
                             height: auto !important;
                             min-height: 0px !important;
-                            box-shadow: {vybrany_styl.get('shadow', 'none')};
+                            white-space: nowrap;
+                            overflow: hidden;
+                            text-overflow: ellipsis;
+                            box-shadow: {styly.get('shadow', 'none')};
                         }}
                         button:hover {{
                             filter: brightness(1.1);
                             transform: translateY(-1px);
+                            z-index: 10;
                         }}
                     """
                 ):
