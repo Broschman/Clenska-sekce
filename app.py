@@ -678,19 +678,32 @@ def show_calendar_fragment():
                             vykreslit_detail_akce(akce, unique_key)
 
 # ==============================================================================
-# 2. TEPRVE TEĎ PROBÍHÁ VYKRESLOVÁNÍ UI A VOLÁNÍ FUNKCE
+# 2. VYKRESLOVÁNÍ UI - HLEDÁNÍ A KALENDÁŘ
 # ==============================================================================
 
 st.markdown("### 📅 Kalendář akcí")
 
-# Input field s ikonou lupy
-col_search, _ = st.columns([1, 2])
+# 1. Inicializace stavu pro hledání (pokud neexistuje)
+if "search_query" not in st.session_state:
+    st.session_state.search_query = ""
+
+# 2. Funkce pro vymazání hledání (callback pro křížek)
+def clear_search():
+    st.session_state.search_query = ""
+
+# 3. Layout: Input + Křížek
+# Použijeme sloupce, aby byl křížek hned vedle lupy
+col_search, col_close, _ = st.columns([3, 0.5, 5], vertical_alignment="bottom")
+
 with col_search:
-    search_query = st.text_input(
+    # DŮLEŽITÉ: Přidali jsme key="search_query", aby šlo pole ovládat programově
+    search_text = st.text_input(
         "Hledat", 
         placeholder="🔍 Hledat akci nebo místo...", 
-        label_visibility="collapsed"
+        label_visibility="collapsed",
+        key="search_query"
     )
+
 with col_close:
     # Křížek zobrazíme jen tehdy, když je něco napsáno
     if search_text:
@@ -699,22 +712,23 @@ with col_close:
 
 # === VÝHYBKA: HLEDÁNÍ vs. KALENDÁŘ ===
 
-if search_query:
+if search_text:
     # 🅰️ REŽIM VYHLEDÁVÁNÍ
     mask = (
-        df_akce['název'].str.contains(search_query, case=False, na=False) | 
-        df_akce['místo'].str.contains(search_query, case=False, na=False)
+        df_akce['název'].str.contains(search_text, case=False, na=False) | 
+        df_akce['místo'].str.contains(search_text, case=False, na=False)
     )
     results = df_akce[mask].sort_values(by='datum')
     
-    st.info(f"Nalezeno {len(results)} akcí pro výraz: **{search_query}**")
+    # Header s počtem výsledků
+    st.markdown(f"<div style='color: #4B5563; margin-bottom: 10px; font-size: 0.9rem;'>Nalezeno {len(results)} akcí</div>", unsafe_allow_html=True)
     
     if results.empty:
-        st.warning("Nic jsme nenašli. Zkus hledat jinak.")
+        st.warning(f"Pro výraz '{search_text}' jsme nic nenašli.")
     else:
         dnes = date.today()
         for _, akce in results.iterrows():
-            # --- VYKRESLENÍ VÝSLEDKU ---
+            # --- VYKRESLENÍ VÝSLEDKU (Stejná logika jako v kalendáři) ---
             akce_id_str = str(akce['id'])
             unique_key = f"search_{akce_id_str}"
             je_po_deadlinu = dnes > akce['deadline']
@@ -724,7 +738,7 @@ if search_query:
             zavodni_slova = ["závod", "mčr", "žebříček", "liga", "mistrovství", "štafety", "ža", "žb"]
             je_zavod_obecne = any(s in typ_udalosti for s in zavodni_slova)
 
-            # Barvičky (opakujeme logiku pro search výsledky)
+            # Barvičky
             style_key = "default"
             if "mčr" in typ_udalosti: style_key = "mcr"
             elif "ža" in typ_udalosti: style_key = "za"
@@ -770,8 +784,7 @@ if search_query:
                     vykreslit_detail_akce(akce, unique_key)
 
 else:
-    # 🅱️ REŽIM KALENDÁŘE (Když se nic nehledá)
-    # Teď už to bude fungovat, protože funkce je definovaná výše
+    # 🅱️ REŽIM KALENDÁŘE (Když je pole prázdné)
     show_calendar_fragment()
 st.markdown("<div style='margin-bottom: 50px'></div>", unsafe_allow_html=True)
 
