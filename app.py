@@ -707,39 +707,12 @@ st.markdown("### 📅 Kalendář akcí")
 # 1. Inicializace stavu
 if "search_query" not in st.session_state:
     st.session_state.search_query = ""
+# (search_date se inicializuje samo ve widgetu)
 
-# 2. Pomocné funkce pro tlačítka
+# 2. Funkce pro vymazání
 def clear_search():
     st.session_state.search_query = ""
     st.session_state.search_date = []
-
-def set_quick_date(mode):
-    dnes = date.today()
-    
-    if mode == "this_week":
-        # Od dneška do neděle
-        days_to_sunday = 6 - dnes.weekday()
-        end = dnes + timedelta(days=days_to_sunday)
-        st.session_state.search_date = [dnes, end]
-        
-    elif mode == "next_week":
-        # Příští pondělí až neděle
-        days_to_monday = 7 - dnes.weekday()
-        start = dnes + timedelta(days=days_to_monday)
-        end = start + timedelta(days=6)
-        st.session_state.search_date = [start, end]
-        
-    elif mode == "next_month":
-        # Celý příští měsíc
-        if dnes.month == 12:
-            start = date(dnes.year + 1, 1, 1)
-        else:
-            start = date(dnes.year, dnes.month + 1, 1)
-        
-        # Poslední den měsíce
-        _, last_day = calendar.monthrange(start.year, start.month)
-        end = date(start.year, start.month, last_day)
-        st.session_state.search_date = [start, end]
 
 # 3. Layout: Text | Datum | Křížek
 col_text, col_date, col_close = st.columns([2, 2, 0.5], vertical_alignment="bottom")
@@ -753,7 +726,7 @@ with col_text:
     )
 
 with col_date:
-    # Samotný Date Input
+    # Čistý výběr data bez presetů
     search_date_value = st.date_input(
         "Vyber datum",
         value=[], 
@@ -761,23 +734,12 @@ with col_date:
         max_value=date(2030, 12, 31),
         key="search_date",
         label_visibility="collapsed",
-        help="Vyber rozmezí ručně, nebo použij tlačítka níže"
+        help="Vyber rozmezí (klikni na začátek a konec)"
     )
 
 with col_close:
     if search_text or search_date_value:
-        st.button("❌", on_click=clear_search, help="Zrušit všechny filtry")
-
-# 4. Tlačítka rychlých voleb (pod datumem)
-# Zobrazíme je jen v případě, že uživatel ještě nic nevybral, aby to nepřekáželo
-if not search_date_value:
-    c1, c2, c3, _ = st.columns([1, 1, 1, 3])
-    with c1:
-        st.button("Tento týden", on_click=set_quick_date, args=("this_week",), use_container_width=True)
-    with c2:
-        st.button("Příští týden", on_click=set_quick_date, args=("next_week",), use_container_width=True)
-    with c3:
-        st.button("Příští měsíc", on_click=set_quick_date, args=("next_month",), use_container_width=True)
+        st.button("❌", on_click=clear_search, help="Zrušit filtry")
 
 # === 🆕 JAVASCRIPT PRO ESCAPE KLÁVESU ===
 components.html(
@@ -797,10 +759,10 @@ components.html(
 )
 
 # === VÝHYBKA: FILTROVÁNÍ vs. KALENDÁŘ ===
-# (Zbytek kódu zůstává beze změny...)
 
-if search_text or len(search_date_value) > 0:    
-    # 🅰️ PŘÍPRAVA FILTRŮ
+if search_text or len(search_date_value) > 0:
+    
+    # 🅰️ FILTROVÁNÍ
     dnes = date.today()
     mask = pd.Series([True] * len(df_akce))
 
@@ -810,7 +772,7 @@ if search_text or len(search_date_value) > 0:
             df_akce['název'].str.contains(search_text, case=False, na=False) | 
             df_akce['místo'].str.contains(search_text, case=False, na=False)
         )
-        # Pokud hledám JEN textem (bez data), chci jen budoucí
+        # Pokud je zadán jen text (bez data), filtrujeme minulost
         if len(search_date_value) == 0:
             mask = mask & (df_akce['datum'] >= dnes)
 
@@ -839,7 +801,7 @@ if search_text or len(search_date_value) > 0:
         st.warning("Žádné akce neodpovídají zadání.")
     else:
         for _, akce in results.iterrows():
-            # --- VYKRESLENÍ VÝSLEDKŮ (Beze změny) ---
+            # --- VYKRESLENÍ VÝSLEDKŮ ---
             akce_id_str = str(akce['id'])
             unique_key = f"search_{akce_id_str}"
             je_po_deadlinu = dnes > akce['deadline']
