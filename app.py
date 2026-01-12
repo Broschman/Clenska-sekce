@@ -322,27 +322,20 @@ def vykreslit_detail_akce(akce, unique_key):
                                     update_data = pd.concat([aktualni_data, novy_zaznam], ignore_index=True)
                                     conn.update(worksheet="prihlasky", data=update_data)
                                     
-                                    # 4. === OPRAVA: ULOŽENÍ NOVÉHO JMÉNA ===
-                                    # Pokud jméno není v seznamu, uložíme ho do listu 'jmena'
+                                    # 4. ULOŽENÍ NOVÉHO JMÉNA
                                     if finalni_jmeno not in seznam_jmen:
                                         try:
-                                            # Načteme aktuální list jmen z Google Sheets
                                             jmena_df = conn.read(worksheet="jmena")
-                                            
-                                            # Přidáme nové jméno
                                             nove_jmeno_df = pd.DataFrame([{"jméno": finalni_jmeno}])
                                             jmena_update = pd.concat([jmena_df, nove_jmeno_df], ignore_index=True)
-                                            
-                                            # Zapíšeme zpět
                                             conn.update(worksheet="jmena", data=jmena_update)
                                             
+                                        except Exception as e:
+                                            # TADY BYLA CHYBA (console.log -> print)
+                                            print(f"Chyba při ukládání jména: {e}")        
                                             # DŮLEŽITÉ: Smažeme cache, aby se příště jméno načetlo
                                             data_manager.load_jmena.clear()
                                             
-                                        except Exception as e:
-                                            # I když se nepovede uložit jméno, přihláška už tam je, takže jen varování
-                                            console.log(f"Chyba při ukládání jména: {e}")
-
                                     # 5. Animace úspěchu
                                     with st_lottie_spinner(styles.lottie_success, key=f"anim_{unique_key}"): 
                                         time.sleep(1)
