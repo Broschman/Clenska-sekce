@@ -292,44 +292,72 @@ def vykreslit_detail_akce(akce, unique_key):
                     
                     if odeslat_btn:
                         finalni_jmeno = nove_jmeno.strip() if nove_jmeno else vybrane_jmeno
+                        
                         if finalni_jmeno:
                             try:
-                                # 1. Kontrola duplicity v AKTUÁLNÍM staženém souboru (protože nemáme cache, je to fresh)
-                                aktualni = data_manager.load_prihlasky() # Pro jistotu načteme aktuální stav před zápisem
-                                duplicita = not aktualni[(aktualni['id_akce'] == akce_id_str) & (aktualni['jméno'] == finalni_jmeno)].empty
+                                # 1. Kontrola duplicity (načteme aktuální stav pro jistotu)
+                                full_df = data_manager.load_prihlasky()
+                                duplicita = not full_df[(full_df['id_akce'] == akce_id_str) & (full_df['jméno'] == finalni_jmeno)].empty
                                 
                                 if duplicita:
                                     st.warning(f"⚠️ {finalni_jmeno}, na této akci už jsi!")
                                 else:
                                     hodnota_dopravy = "Ano 🚗" if doprava_input else ""
                                     hodnota_ubytovani = "Ano 🛏️" if ubytovani_input else ""
+                                    cas_zapisu = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                                     
-                                    # 2. Vytvoření nového řádku
-                                    novy_zaznam = pd.DataFrame([{"id_akce": akce_id_str, "název": akce['název'], "jméno": finalni_jmeno, "poznámka": poznamka_input, "doprava": hodnota_dopravy, "ubytování": hodnota_ubytovani, "čas zápisu": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}])
+                                    # 2. Příprava řádku s přihláškou
+                                    novy_zaznam = pd.DataFrame([{
+                                        "id_akce": akce_id_str, 
+                                        "název": akce['název'], 
+                                        "jméno": finalni_jmeno, 
+                                        "poznámka": poznamka_input, 
+                                        "doprava": hodnota_dopravy, 
+                                        "ubytování": hodnota_ubytovani, 
+                                        "čas zápisu": cas_zapisu
+                                    }])
                                     
-                                    # 3. Zápis do Google Sheets
-                                    conn.update(worksheet="prihlasky", data=pd.concat([aktualni, novy_zaznam], ignore_index=True))
+                                    # 3. Zápis přihlášky do Google Sheets
+                                    aktualni_data = data_manager.load_prihlasky()
+                                    update_data = pd.concat([aktualni_data, novy_zaznam], ignore_index=True)
+                                    conn.update(worksheet="prihlasky", data=update_data)
                                     
-                                    # Zápis nového jména pokud je nové
+                                    # 4. === OPRAVA: ULOŽENÍ NOVÉHO JMÉNA ===
+                                    # Pokud jméno není v seznamu, uložíme ho do listu 'jmena'
                                     if finalni_jmeno not in seznam_jmen:
-                                        # ... (logika pro jména) ...
-                                        pass
+                                        try:
+                                            # Načteme aktuální list jmen z Google Sheets
+                                            jmena_df = conn.read(worksheet="jmena")
+                                            
+                                            # Přidáme nové jméno
+                                            nove_jmeno_df = pd.DataFrame([{"jméno": finalni_jmeno}])
+                                            jmena_update = pd.concat([jmena_df, nove_jmeno_df], ignore_index=True)
+                                            
+                                            # Zapíšeme zpět
+                                            conn.update(worksheet="jmena", data=jmena_update)
+                                            
+                                            # DŮLEŽITÉ: Smažeme cache, aby se příště jméno načetlo
+                                            data_manager.load_jmena.clear()
+                                            
+                                        except Exception as e:
+                                            # I když se nepovede uložit jméno, přihláška už tam je, takže jen varování
+                                            console.log(f"Chyba při ukládání jména: {e}")
 
-                                    # 4. ANIMACE A UPDATE BEZ RERUNU
+                                    # 5. Animace úspěchu
                                     with st_lottie_spinner(styles.lottie_success, key=f"anim_{unique_key}"): 
-                                        time.sleep(1) # Zkrátil jsem čas, ať se nečeká
+                                        time.sleep(1)
                                     
                                     st.toast(f"✅ {finalni_jmeno} zapsán(a)!")
                                     
-                                    # === TRIK: Ruční aktualizace tabulky pro toto zobrazení ===
-                                    # Protože neděláme rerun, musíme nový řádek přidat do proměnné 'lidi',
-                                    # která se teprve bude vykreslovat níže.
+                                    # 6. === OPRAVA: OKAMŽITÁ AKTUALIZACE TABULKY ===
+                                    # Ručně přidáme řádek do proměnné 'lidi', která se vykresluje pod formulářem.
+                                    # Díky tomu uživatel hned uvidí, že je přihlášený.
                                     lidi = pd.concat([lidi, novy_zaznam], ignore_index=True)
-                                    
-                                    # ŽÁDNÝ ST.RERUN() ZDE NENÍ!
 
-                            except Exception as e: st.error(f"Chyba: {e}")
-                        else: st.warning("Vyplň jméno!")
+                            except Exception as e: 
+                                st.error(f"Chyba zápisu: {e}")
+                        else: 
+                            st.warning("Musíš vyplnit jméno!")
             elif je_po_deadlinu: st.info("🔒 Tabulka uzavřena. Kontaktuj trenéra.")
 
     # --- MAPA (DOLE) ---
