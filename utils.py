@@ -117,9 +117,8 @@ def get_weather_emoji(wmo_code):
 
 @st.cache_data(ttl=3600)
 def get_forecast(lat, lon, target_date):
-    """Stáhne předpověď z Open-Meteo pro konkrétní souřadnice a den."""
+    """Stáhne předpověď z Open-Meteo."""
     try:
-        # Pokud je datum v minulosti nebo moc daleko (>10 dní), API nic nevrátí
         days_diff = (target_date - date.today()).days
         if days_diff < 0 or days_diff > 10:
             return None
@@ -128,7 +127,8 @@ def get_forecast(lat, lon, target_date):
         params = {
             "latitude": lat,
             "longitude": lon,
-            "daily": ["weathercode", "temperature_2m_max", "precipitation_sum", "windspeed_10m_max"],
+            # PŘIDÁNO "sunset" DO SEZNAMU:
+            "daily": ["weathercode", "temperature_2m_max", "precipitation_sum", "windspeed_10m_max", "sunset"],
             "timezone": "auto",
             "start_date": target_date.strftime("%Y-%m-%d"),
             "end_date": target_date.strftime("%Y-%m-%d")
@@ -143,7 +143,8 @@ def get_forecast(lat, lon, target_date):
                 "code": d["weathercode"][0],
                 "temp_max": d["temperature_2m_max"][0],
                 "precip": d["precipitation_sum"][0],
-                "wind": d["windspeed_10m_max"][0]
+                "wind": d["windspeed_10m_max"][0],
+                "sunset": d["sunset"][0]  # <--- PŘIDÁNO TOTO (vrací formát "2023-10-25T17:45")
             }
         return None
     except:
