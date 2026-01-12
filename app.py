@@ -660,7 +660,9 @@ if search_query:
 
 else:
     # 🅱️ REŽIM KALENDÁŘE (Když se nic nehledá)
-    # ==============================================================================
+    # Tady voláme ten náš rychlý fragment
+    show_calendar_fragment()
+# ==============================================================================
 # 🆕 IZOLOVANÝ FRAGMENT KALENDÁŘE (ZRYCHLENÍ + PŮVODNÍ DESIGN)
 # ==============================================================================
 @st.fragment
