@@ -704,16 +704,15 @@ def show_calendar_fragment():
 
 st.markdown("### 📅 Kalendář akcí")
 
-# 1. Inicializace stavu (musíme mít uložené i datum)
+# 1. Inicializace stavu
+# (Smazali jsme inicializaci 'search_date', protože to si widget vyřeší sám přes value=[])
 if "search_query" not in st.session_state:
     st.session_state.search_query = ""
-if "search_date" not in st.session_state:
-    st.session_state.search_date = [] # Prázdný seznam = nevybráno nic
 
 # 2. Funkce pro vymazání (vymaže text I datum)
 def clear_search():
     st.session_state.search_query = ""
-    st.session_state.search_date = []
+    st.session_state.search_date = [] # Tady to nevadí, to je reakce na kliknutí
 
 # 3. Layout: Text | Datum | Křížek
 col_text, col_date, col_close = st.columns([2, 2, 0.5], vertical_alignment="bottom")
@@ -727,24 +726,23 @@ with col_text:
     )
 
 with col_date:
-    # Date Input, který umí i rozmezí
+    # Date Input
+    # Tady je 'value=[]'. Streamlit to použije jako výchozí, pokud v session_state nic není.
     search_date_value = st.date_input(
         "Vyber datum",
-        value=[], # Výchozí je prázdno
+        value=[], 
         min_value=date(2023, 1, 1),
         max_value=date(2030, 12, 31),
         key="search_date",
         label_visibility="collapsed",
-        help="Vyber konkrétní den nebo rozmezí (klikni na začátek a konec)"
+        help="Vyber konkrétní den nebo rozmezí"
     )
 
 with col_close:
-    # Křížek se ukáže, pokud je vyplněný text NEBO datum
     if search_text or search_date_value:
         st.button("❌", on_click=clear_search, help="Zrušit všechny filtry")
 
 # === 🆕 JAVASCRIPT PRO ESCAPE KLÁVESU ===
-# Simuluje kliknutí na ❌ při stisku Escape
 components.html(
     """
     <script>
@@ -763,12 +761,11 @@ components.html(
 
 # === VÝHYBKA: FILTROVÁNÍ vs. KALENDÁŘ ===
 
-# Podmínka: Aktivujeme hledání, pokud je zadán text NEBO datum
 if search_text or len(search_date_value) > 0:
     
     # 🅰️ PŘÍPRAVA FILTRŮ
     dnes = date.today()
-    mask = pd.Series([True] * len(df_akce)) # Na začátku platí všechno
+    mask = pd.Series([True] * len(df_akce))
 
     # 1. Filtr podle TEXTU
     if search_text:
@@ -776,25 +773,22 @@ if search_text or len(search_date_value) > 0:
             df_akce['název'].str.contains(search_text, case=False, na=False) | 
             df_akce['místo'].str.contains(search_text, case=False, na=False)
         )
-        # Pokud hledám JEN textem (bez data), chci jen budoucí akce (tvůj požadavek z minula)
+        # Pokud hledám JEN textem (bez data), chci jen budoucí
         if len(search_date_value) == 0:
             mask = mask & (df_akce['datum'] >= dnes)
 
     # 2. Filtr podle DATA
     if len(search_date_value) > 0:
         if len(search_date_value) == 1:
-            # Uživatel klikl jen na jeden den
             vybrane_datum = search_date_value[0]
             mask = mask & (df_akce['datum'] == vybrane_datum)
         elif len(search_date_value) == 2:
-            # Uživatel vybral rozmezí (od - do)
             start, end = search_date_value
             mask = mask & (df_akce['datum'] >= start) & (df_akce['datum'] <= end)
 
-    # Aplikace filtru
     results = df_akce[mask].sort_values(by='datum')
     
-    # Header s počtem výsledků
+    # Header
     info_text = f"Nalezeno {len(results)} akcí"
     if search_text: info_text += f" pro '{search_text}'"
     if len(search_date_value) > 0: 
@@ -808,7 +802,7 @@ if search_text or len(search_date_value) > 0:
         st.warning("Žádné akce neodpovídají zadání.")
     else:
         for _, akce in results.iterrows():
-            # --- VYKRESLENÍ KARTY (Stejná logika jako vždy) ---
+            # --- VYKRESLENÍ VÝSLEDKŮ (Beze změny) ---
             akce_id_str = str(akce['id'])
             unique_key = f"search_{akce_id_str}"
             je_po_deadlinu = dnes > akce['deadline']
@@ -818,7 +812,6 @@ if search_text or len(search_date_value) > 0:
             zavodni_slova = ["závod", "mčr", "žebříček", "liga", "mistrovství", "štafety", "ža", "žb"]
             je_zavod_obecne = any(s in typ_udalosti for s in zavodni_slova)
 
-            # Barvičky
             style_key = "default"
             if "mčr" in typ_udalosti: style_key = "mcr"
             elif "ža" in typ_udalosti: style_key = "za"
@@ -864,7 +857,7 @@ if search_text or len(search_date_value) > 0:
                     vykreslit_detail_akce(akce, unique_key)
 
 else:
-    # 🅱️ REŽIM KALENDÁŘE (Když je vše prázdné)
+    # 🅱️ REŽIM KALENDÁŘE
     show_calendar_fragment()
 st.markdown("<div style='margin-bottom: 50px'></div>", unsafe_allow_html=True)
 
