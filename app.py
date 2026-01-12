@@ -743,10 +743,18 @@ components.html(
 
 if search_text:
     # 🅰️ REŽIM VYHLEDÁVÁNÍ
+    dnes = date.today() # Definujeme dnešek
+
     mask = (
-        df_akce['název'].str.contains(search_text, case=False, na=False) | 
-        df_akce['místo'].str.contains(search_text, case=False, na=False)
+        # 1. Textová shoda (hledáme v názvu NEBO místě)
+        (df_akce['název'].str.contains(search_text, case=False, na=False) | 
+         df_akce['místo'].str.contains(search_text, case=False, na=False))
+        & 
+        # 2. Časová shoda (Datum musí být dnes nebo v budoucnu)
+        # Tím odfiltrujeme všechny staré akce
+        (df_akce['datum'] >= dnes)
     )
+    
     results = df_akce[mask].sort_values(by='datum')
     
     # Header s počtem výsledků
