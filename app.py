@@ -27,6 +27,51 @@ styles.load_css()
 
 # --- 1. NASTAVENÍ STRÁNKY ---
 st.set_page_config(page_title="Kalendář RBK", page_icon="🌲", layout="wide")
+
+# === VYNUCENÍ OTOČENÍ NA MOBILU (OPONA) ===
+st.markdown("""
+<style>
+    /* Ve výchozím stavu je varování skryté */
+    #rotate-warning {
+        display: none; 
+    }
+
+    /* Pokud je zařízení na VÝŠKU (portrait) a je to MOBIL (max-width cca 900px) */
+    @media only screen and (orientation: portrait) and (max-width: 900px) {
+        
+        /* 1. Zobrazíme varovnou oponu přes celou obrazovku */
+        #rotate-warning {
+            display: flex !important;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #ffffff;
+            z-index: 999999; /* Musí to být nad vším ostatním */
+            text-align: center;
+            padding: 20px;
+        }
+
+        /* 2. Skryjeme samotnou aplikaci, aby tam neproblikávala */
+        .stApp {
+            display: none !important; 
+        }
+    }
+</style>
+
+<div id="rotate-warning">
+    <div style="font-size: 80px;">📱➡️🔄</div>
+    <h1 style="color: #1f2937; margin-top: 20px;">Otoč telefon</h1>
+    <p style="color: #4b5563; font-size: 1.2rem; margin-top: 10px;">
+        Tato aplikace funguje pouze na šířku.<br>
+        Prosím, otoč své zařízení.
+    </p>
+</div>
+""", unsafe_allow_html=True)
     
 def vykreslit_detail_akce(akce, unique_key):
     """
