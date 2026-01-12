@@ -707,7 +707,6 @@ st.markdown("### 📅 Kalendář akcí")
 # 1. Inicializace stavu
 if "search_query" not in st.session_state:
     st.session_state.search_query = ""
-# (search_date se inicializuje samo ve widgetu)
 
 # 2. Funkce pro vymazání
 def clear_search():
@@ -726,15 +725,15 @@ with col_text:
     )
 
 with col_date:
-    # Čistý výběr data bez presetů
+    # ZMĚNA: min_value=date.today() -> Zakáže minulost
     search_date_value = st.date_input(
         "Vyber datum",
         value=[], 
-        min_value=date(2023, 1, 1),
+        min_value=date.today(),      # <--- TOTO ZAJISTÍ, ŽE MINULOST JE NEAKTIVNÍ
         max_value=date(2030, 12, 31),
         key="search_date",
         label_visibility="collapsed",
-        help="Vyber rozmezí (klikni na začátek a konec)"
+        help="Vyber termín (minulost nelze vybrat)"
     )
 
 with col_close:
@@ -772,7 +771,7 @@ if search_text or len(search_date_value) > 0:
             df_akce['název'].str.contains(search_text, case=False, na=False) | 
             df_akce['místo'].str.contains(search_text, case=False, na=False)
         )
-        # Pokud je zadán jen text (bez data), filtrujeme minulost
+        # Při textovém hledání automaticky filtrujeme minulost
         if len(search_date_value) == 0:
             mask = mask & (df_akce['datum'] >= dnes)
 
@@ -798,7 +797,7 @@ if search_text or len(search_date_value) > 0:
     st.markdown(f"<div style='color: #4B5563; margin-bottom: 10px; font-size: 0.9rem;'>{info_text}</div>", unsafe_allow_html=True)
     
     if results.empty:
-        st.warning("Žádné akce neodpovídají zadání.")
+        st.warning("Žádné budoucí akce neodpovídají zadání.")
     else:
         for _, akce in results.iterrows():
             # --- VYKRESLENÍ VÝSLEDKŮ ---
