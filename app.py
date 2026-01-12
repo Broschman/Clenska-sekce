@@ -221,52 +221,34 @@ def vykreslit_detail_akce(akce, unique_key):
                 
                 # Zjištění času západu slunce
                 sunset_raw = forecast.get('sunset')
-                sunset_html = "" 
+                html_zapad = "" 
                 
-                # Pokud je to nočák, připravíme si HTML pro západ
+                # Pokud je to nočák, připravíme si HTML pro západ (VŠE NA JEDEN ŘÁDEK)
                 if "nočák" in druh_akce and sunset_raw:
                     try:
                         sunset_time = sunset_raw.split('T')[1]
-                        # Tady musíme dát pozor na odsazení
-                        sunset_html = f"""
-                        <div style="text-align: right; border-left: 1px solid #d1d5db; padding-left: 15px; margin-left: 15px;">
-                            <div style="font-size: 1.5rem; line-height: 1;">🌑</div>
-                            <div style="font-size: 0.7rem; font-weight: bold; color: #1f2937; text-transform: uppercase;">Západ</div>
-                            <div style="font-size: 0.9rem; color: #4b5563;">{sunset_time}</div>
-                        </div>
-                        """
+                        html_zapad = f"""<div style="text-align: right; border-left: 1px solid #d1d5db; padding-left: 15px; margin-left: 15px;"><div style="font-size: 1.5rem; line-height: 1;">🌑</div><div style="font-size: 0.7rem; font-weight: bold; color: #1f2937; text-transform: uppercase;">Západ</div><div style="font-size: 0.9rem; color: #4b5563;">{sunset_time}</div></div>"""
                     except: pass
 
                 bg_weather = "#eff6ff" if rain > 1 else "#f9fafb" 
                 border_weather = "#bfdbfe" if rain > 1 else "#e5e7eb"
 
                 # Sestavení finálního HTML
-                # Použijeme textwrap.dedent, aby Streamlit nechápal mezery jako kód
+                # Vytvoříme to klidně s mezerami, ale...
                 final_html = f"""
-                <div style="
-                    margin-top: 10px;
-                    margin-bottom: 20px;
-                    padding: 10px; 
-                    background-color: {bg_weather}; 
-                    border: 1px solid {border_weather}; 
-                    border-radius: 10px; 
-                    display: flex; 
-                    align-items: center; 
-                    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-                ">
+                <div style="margin-top: 10px; margin-bottom: 20px; padding: 10px; background-color: {bg_weather}; border: 1px solid {border_weather}; border-radius: 10px; display: flex; align-items: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
                     <div style="font-size: 2rem; margin-right: 15px;">{w_icon}</div>
                     <div style="line-height: 1.2; flex-grow: 1;">
                         <div style="font-weight: 700; color: #1f2937;">{w_text}, {temp}°C</div>
-                        <div style="font-size: 0.85rem; color: #4b5563;">
-                            💧 {rain} mm  •  💨 {wind} km/h
-                        </div>
+                        <div style="font-size: 0.85rem; color: #4b5563;">💧 {rain} mm • 💨 {wind} km/h</div>
                     </div>
-                    {sunset_html}
+                    {html_zapad}
                 </div>
                 """
                 
-                # ZDE JE OPRAVA - textwrap.dedent odstraní odsazení
-                st.markdown(textwrap.dedent(final_html), unsafe_allow_html=True)
+                # ... TADY JE TA FLIGNA: Odstraníme všechny nové řádky (.replace)
+                # Tím vznikne jeden dlouhý text, který Streamlit vždy pochopí jako HTML.
+                st.markdown(final_html.replace("\n", ""), unsafe_allow_html=True)
                 
         # 4. ORIS Link
         if je_zavod_obecne:
