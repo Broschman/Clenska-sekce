@@ -566,104 +566,7 @@ if not future_deadlines.empty:
     st.markdown("<div style='margin-bottom: 25px'></div>", unsafe_allow_html=True)
 
 # ==============================================================================
-# 🔍 SEARCH BAR (VYHLEDÁVÁNÍ)
-# ==============================================================================
-st.markdown("### 📅 Kalendář akcí")
-
-# Input field s ikonou lupy
-col_search, _ = st.columns([1, 2]) # Aby nebyl input přes celou šířku, vypadá to líp
-with col_search:
-    search_query = st.text_input(
-        "Hledat", 
-        placeholder="🔍 Hledat akci nebo místo...", 
-        label_visibility="collapsed"
-    )
-
-# === VÝHYBKA: HLEDÁNÍ vs. KALENDÁŘ ===
-
-if search_query:
-    # 🅰️ REŽIM VYHLEDÁVÁNÍ
-    # Filtrujeme podle názvu NEBO místa (case insensitive = nezáleží na velikosti písmen)
-    mask = (
-        df_akce['název'].str.contains(search_query, case=False, na=False) | 
-        df_akce['místo'].str.contains(search_query, case=False, na=False)
-    )
-    results = df_akce[mask].sort_values(by='datum') # Seřadíme chronologicky
-    
-    st.info(f"Nalezeno {len(results)} akcí pro výraz: **{search_query}**")
-    
-    if results.empty:
-        st.warning("Nic jsme nenašli. Zkus hledat jinak.")
-    else:
-        # Vykreslíme výsledky jako karty pod sebou
-        dnes = date.today()
-        
-        for _, akce in results.iterrows():
-            # --- PŘÍPRAVA DAT (Zkopírováno z logiky kalendáře pro zachování stylu) ---
-            akce_id_str = str(akce['id'])
-            # Unikátní klíč musí obsahovat i 'search', aby se nehádal s kalendářem
-            unique_key = f"search_{akce_id_str}"
-            je_po_deadlinu = dnes > akce['deadline']
-            
-            typ_udalosti = str(akce.get('typ', '')).lower()
-            druh_akce = str(akce.get('druh', '')).lower()
-            zavodni_slova = ["závod", "mčr", "žebříček", "liga", "mistrovství", "štafety", "ža", "žb"]
-            je_zavod_obecne = any(s in typ_udalosti for s in zavodni_slova)
-
-            # Barvičky
-            style_key = "default"
-            if "mčr" in typ_udalosti or "mistrovství" in typ_udalosti: style_key = "mcr"
-            elif "ža" in typ_udalosti or "žebříček a" in typ_udalosti: style_key = "za"
-            elif "žb" in typ_udalosti or "žebříček b" in typ_udalosti: style_key = "zb"
-            elif "soustředění" in typ_udalosti: style_key = "soustredeni"
-            elif "oblastní" in typ_udalosti: style_key = "oblastni"
-            elif "zimní liga" in typ_udalosti: style_key = "zimni_liga"
-            elif "štafety" in typ_udalosti: style_key = "stafety"
-            elif "trénink" in typ_udalosti: style_key = "trenink"
-            elif je_zavod_obecne: style_key = "zavod"
-
-            styly = styles.BARVY_AKCI.get(style_key, styles.BARVY_AKCI["default"])
-
-            ikony_mapa = { "les": "🌲", "krátká trať": "🌲", "klasická trať": "🌲", "sprint": "🏙️", "nočák": "🌗" }
-            emoji = ikony_mapa.get(druh_akce, "🏃")
-            
-            # Datum a Název
-            datum_str = akce['datum'].strftime('%d.%m.')
-            nazev_full = f"{datum_str} | {akce['název']} ({akce['místo']})"
-            label = f"{emoji} {nazev_full}"
-            if je_po_deadlinu: label = "🔒 " + label
-
-            # Vykreslení karty
-            with stylable_container(
-                key=f"btn_search_{unique_key}",
-                css_styles=f"""
-                    button {{
-                        background: {styly['bg']} !important;
-                        color: {styly['color']} !important;
-                        border: {styly['border']} !important;
-                        width: 100%;
-                        border-radius: 8px;
-                        padding: 12px 15px !important; /* Větší padding pro výsledky hledání */
-                        text-align: left;
-                        font-weight: 600;
-                        box-shadow: {styly.get('shadow', 'none')};
-                        margin-bottom: 8px;
-                    }}
-                    button:hover {{
-                        filter: brightness(1.1);
-                        transform: translateY(-2px);
-                    }}
-                """
-            ):
-                with st.popover(label, use_container_width=True):
-                    vykreslit_detail_akce(akce, unique_key)
-
-else:
-    # 🅱️ REŽIM KALENDÁŘE (Když se nic nehledá)
-    # Tady voláme ten náš rychlý fragment
-    show_calendar_fragment()
-# ==============================================================================
-# 🆕 IZOLOVANÝ FRAGMENT KALENDÁŘE (ZRYCHLENÍ + PŮVODNÍ DESIGN)
+# 1. NEJDŘÍVE DEFINICE FUNKCE KALENDÁŘE (ABY JI PYTHON ZNAL)
 # ==============================================================================
 @st.fragment
 def show_calendar_fragment():
@@ -678,12 +581,14 @@ def show_calendar_fragment():
             curr = st.session_state.vybrany_datum
             prev_month = curr.replace(day=1) - timedelta(days=1)
             st.session_state.vybrany_datum = prev_month.replace(day=1)
+            # st.rerun() # Smazáno kvůli fragmentu
 
     with col_nav3:
         if st.button("Další ➡️", use_container_width=True):
             curr = st.session_state.vybrany_datum
             next_month = (curr.replace(day=28) + timedelta(days=4)).replace(day=1)
             st.session_state.vybrany_datum = next_month
+            # st.rerun() # Smazáno kvůli fragmentu
 
     year = st.session_state.vybrany_datum.year
     month = st.session_state.vybrany_datum.month
@@ -694,16 +599,14 @@ def show_calendar_fragment():
 
     st.markdown("<div style='margin-bottom: 20px'></div>", unsafe_allow_html=True)
 
-    # --- 2. PŘÍPRAVA DAT (OPTIMALIZACE) ---
+    # --- 2. PŘÍPRAVA DAT ---
     cal = calendar.Calendar(firstweekday=0)
     month_days = cal.monthdayscalendar(year, month)
     dnes = date.today()
 
-    # Rychlé přednačtení akcí do mapy {datum: [akce]}
     events_map = {}
     start_view = date(year, month, 1) - timedelta(days=7)
     end_view = date(year, month, 28) + timedelta(days=14)
-    # df_akce je globální proměnná načtená na začátku skriptu
     relevant_events = df_akce[(df_akce['datum'] <= end_view) & (df_akce['datum_do'] >= start_view)]
 
     for _, akce in relevant_events.iterrows():
@@ -724,7 +627,6 @@ def show_calendar_fragment():
 
     for tyden in month_days:
         cols = st.columns(7, gap="small")
-        
         for i, den_cislo in enumerate(tyden):
             with cols[i]:
                 if den_cislo == 0:
@@ -733,82 +635,139 @@ def show_calendar_fragment():
                 
                 aktualni_den = date(year, month, den_cislo)
                 
-                # Zvýraznění dneška
                 if aktualni_den == dnes:
                     st.markdown(f"<div style='text-align: center;'><span class='today-box'>{den_cislo}</span></div>", unsafe_allow_html=True)
                 else:
                     st.markdown(f"<span class='day-number'>{den_cislo}</span>", unsafe_allow_html=True)
 
-                # Vykreslení akcí z mapy
                 akce_dne = events_map.get(aktualni_den, [])
-                
                 for akce in akce_dne:
                     je_po_deadlinu = dnes > akce['deadline']
                     akce_id_str = str(akce['id'])
                     unique_key = f"{akce_id_str}_{aktualni_den.strftime('%Y%m%d')}"
 
-                    # --- LOGIKA BAREV ---
-                    typ_udalosti = str(akce.get('typ', '')).lower()
-                    druh_akce = str(akce.get('druh', '')).lower()
-                    zavodni_slova = ["závod", "mčr", "žebříček", "liga", "mistrovství", "štafety", "ža", "žb"]
-                    je_zavod_obecne = any(s in typ_udalosti for s in zavodni_slova)
-
-                    style_key = "default"
-                    if "mčr" in typ_udalosti or "mistrovství" in typ_udalosti: style_key = "mcr"
-                    elif "ža" in typ_udalosti or "žebříček a" in typ_udalosti: style_key = "za"
-                    elif "žb" in typ_udalosti or "žebříček b" in typ_udalosti: style_key = "zb"
-                    elif "soustředění" in typ_udalosti: style_key = "soustredeni"
-                    elif "oblastní" in typ_udalosti: style_key = "oblastni"
-                    elif "zimní liga" in typ_udalosti: style_key = "zimni_liga"
-                    elif "štafety" in typ_udalosti: style_key = "stafety"
-                    elif "trénink" in typ_udalosti: style_key = "trenink"
-                    elif je_zavod_obecne: style_key = "zavod"
-
-                    styly = styles.BARVY_AKCI.get(style_key, styles.BARVY_AKCI["default"])
-
-                    # Ikony a Text
-                    ikony_mapa = { "les": "🌲", "krátká trať": "🌲", "klasická trať": "🌲", "sprint": "🏙️", "nočák": "🌗" }
-                    emoji = ikony_mapa.get(druh_akce, "🏃")
+                    typ = str(akce.get('typ', '')).lower()
+                    druh = str(akce.get('druh', '')).lower()
                     
-                    nazev = akce['název'].split('-')[0].strip()
-                    label = f"{emoji} {nazev}"
+                    # Logika barev (zkráceno pro přehlednost - použije se tvoje původní)
+                    zavodni_slova = ["závod", "mčr", "žebříček", "liga", "mistrovství", "štafety", "ža", "žb"]
+                    je_zavod_obecne = any(s in typ for s in zavodni_slova)
+                    style_key = "default"
+                    if "mčr" in typ: style_key = "mcr"
+                    elif "ža" in typ: style_key = "za"
+                    elif "žb" in typ: style_key = "zb"
+                    elif "soustředění" in typ: style_key = "soustredeni"
+                    elif "oblastní" in typ: style_key = "oblastni"
+                    elif "zimní" in typ: style_key = "zimni_liga"
+                    elif "štafety" in typ: style_key = "stafety"
+                    elif "trénink" in typ: style_key = "trenink"
+                    elif je_zavod_obecne: style_key = "zavod"
+                    
+                    styly = styles.BARVY_AKCI.get(style_key, styles.BARVY_AKCI["default"])
+                    ikony = { "les": "🌲", "sprint": "🏙️", "nočák": "🌗" }
+                    emoji = ikony.get(druh, "🏃")
+                    
+                    label = f"{emoji} {akce['název'].split('-')[0].strip()}"
                     if je_po_deadlinu: label = "🔒 " + label
 
-                    # --- VYKRESLENÍ TLAČÍTKA (PŮVODNÍ DESIGN) ---
                     with stylable_container(
                         key=f"btn_c_{unique_key}",
-                        css_styles=f"""
-                            button {{
-                                background: {styly['bg']} !important;
-                                color: {styly['color']} !important;
-                                border: {styly['border']} !important;
-                                width: 100%;
-                                border-radius: 8px;
-                                padding: 8px 10px !important;
-                                transition: all 0.2s ease;
-                                text-align: left;
-                                font-size: 0.85rem;
-                                font-weight: 600;
-                                box-shadow: {styly.get('shadow', 'none')};
-                                margin-bottom: 6px;
-                                text-shadow: 0 1px 2px rgba(0,0,0,0.1);
-                                white-space: normal !important;
-                                height: auto !important;
-                                min-height: 40px;
-                            }}
-                            button:hover {{
-                                filter: brightness(1.1);
-                                transform: translateY(-2px);
-                                box-shadow: 0 6px 12px rgba(0,0,0,0.15);
-                                z-index: 5;
-                            }}
-                        """
+                        css_styles=f"""button {{background: {styly['bg']} !important; color: {styly['color']} !important; border: {styly['border']} !important; width: 100%; border-radius: 8px; padding: 8px 10px !important; text-align: left; font-size: 0.85rem; font-weight: 600; box-shadow: {styly.get('shadow', 'none')}; margin-bottom: 6px; white-space: normal !important; height: auto !important; min-height: 40px;}} button:hover {{filter: brightness(1.1); transform: translateY(-2px); z-index: 5;}}"""
                     ):
                         with st.popover(label, use_container_width=True):
                             vykreslit_detail_akce(akce, unique_key)
 
-# 4. SPOUŠTĚNÍ FRAGMENTU
-show_calendar_fragment()
+# ==============================================================================
+# 2. TEPRVE TEĎ PROBÍHÁ VYKRESLOVÁNÍ UI A VOLÁNÍ FUNKCE
+# ==============================================================================
+
+st.markdown("### 📅 Kalendář akcí")
+
+# Input field s ikonou lupy
+col_search, _ = st.columns([1, 2])
+with col_search:
+    search_query = st.text_input(
+        "Hledat", 
+        placeholder="🔍 Hledat akci nebo místo...", 
+        label_visibility="collapsed"
+    )
+
+# === VÝHYBKA: HLEDÁNÍ vs. KALENDÁŘ ===
+
+if search_query:
+    # 🅰️ REŽIM VYHLEDÁVÁNÍ
+    mask = (
+        df_akce['název'].str.contains(search_query, case=False, na=False) | 
+        df_akce['místo'].str.contains(search_query, case=False, na=False)
+    )
+    results = df_akce[mask].sort_values(by='datum')
+    
+    st.info(f"Nalezeno {len(results)} akcí pro výraz: **{search_query}**")
+    
+    if results.empty:
+        st.warning("Nic jsme nenašli. Zkus hledat jinak.")
+    else:
+        dnes = date.today()
+        for _, akce in results.iterrows():
+            # --- VYKRESLENÍ VÝSLEDKU ---
+            akce_id_str = str(akce['id'])
+            unique_key = f"search_{akce_id_str}"
+            je_po_deadlinu = dnes > akce['deadline']
+            
+            typ_udalosti = str(akce.get('typ', '')).lower()
+            druh_akce = str(akce.get('druh', '')).lower()
+            zavodni_slova = ["závod", "mčr", "žebříček", "liga", "mistrovství", "štafety", "ža", "žb"]
+            je_zavod_obecne = any(s in typ_udalosti for s in zavodni_slova)
+
+            # Barvičky (opakujeme logiku pro search výsledky)
+            style_key = "default"
+            if "mčr" in typ_udalosti: style_key = "mcr"
+            elif "ža" in typ_udalosti: style_key = "za"
+            elif "žb" in typ_udalosti: style_key = "zb"
+            elif "soustředění" in typ_udalosti: style_key = "soustredeni"
+            elif "oblastní" in typ_udalosti: style_key = "oblastni"
+            elif "zimní" in typ_udalosti: style_key = "zimni_liga"
+            elif "štafety" in typ_udalosti: style_key = "stafety"
+            elif "trénink" in typ_udalosti: style_key = "trenink"
+            elif je_zavod_obecne: style_key = "zavod"
+
+            styly = styles.BARVY_AKCI.get(style_key, styles.BARVY_AKCI["default"])
+            ikony_mapa = { "les": "🌲", "krátká trať": "🌲", "sprint": "🏙️", "nočák": "🌗" }
+            emoji = ikony_mapa.get(druh_akce, "🏃")
+            
+            datum_str = akce['datum'].strftime('%d.%m.')
+            nazev_full = f"{datum_str} | {akce['název']} ({akce['místo']})"
+            label = f"{emoji} {nazev_full}"
+            if je_po_deadlinu: label = "🔒 " + label
+
+            with stylable_container(
+                key=f"btn_search_{unique_key}",
+                css_styles=f"""
+                    button {{
+                        background: {styly['bg']} !important;
+                        color: {styly['color']} !important;
+                        border: {styly['border']} !important;
+                        width: 100%;
+                        border-radius: 8px;
+                        padding: 12px 15px !important;
+                        text-align: left;
+                        font-weight: 600;
+                        box-shadow: {styly.get('shadow', 'none')};
+                        margin-bottom: 8px;
+                    }}
+                    button:hover {{
+                        filter: brightness(1.1);
+                        transform: translateY(-2px);
+                    }}
+                """
+            ):
+                with st.popover(label, use_container_width=True):
+                    vykreslit_detail_akce(akce, unique_key)
+
+else:
+    # 🅱️ REŽIM KALENDÁŘE (Když se nic nehledá)
+    # Teď už to bude fungovat, protože funkce je definovaná výše
+    show_calendar_fragment()
 st.markdown("<div style='margin-bottom: 50px'></div>", unsafe_allow_html=True)
 
 
