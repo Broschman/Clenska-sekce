@@ -62,8 +62,7 @@ def load_prihlasky_pro_akci(id_akce):
         return df[df['id_akce'] == str(id_akce)]
     except:
         return pd.DataFrame()
-# --- 3. JMÉNA (Taky raději bez cache, pro jistotu, nebo s cachem) ---
-@st.cache_data(ttl=3600)
+# --- 3. JMÉNA ---
 def load_jmena():
     try:
         df = pd.read_csv(URL_JMENA)
