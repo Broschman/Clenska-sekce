@@ -704,9 +704,12 @@ def show_calendar_fragment():
 
 st.markdown("### 📅 Kalendář akcí")
 
-# 1. Inicializace stavu
+# 1. Inicializace stavu (Důležité: Musíme to mít v Session State PŘED vykreslením)
 if "search_query" not in st.session_state:
     st.session_state.search_query = ""
+
+if "search_date" not in st.session_state:
+    st.session_state.search_date = [] # Výchozí stav je prázdný seznam
 
 # 2. Funkce pro vymazání
 def clear_search():
@@ -725,19 +728,20 @@ with col_text:
     )
 
 with col_date:
-    # ZMĚNA: min_value=date.today() -> Zakáže minulost
+    # OPRAVA: Odstraněn parametr 'value=[]'. 
+    # Hodnota se bere automaticky ze st.session_state.search_date (díky parametru key)
     search_date_value = st.date_input(
         "Vyber datum",
-        value=[], 
-        min_value=date.today(),      # <--- TOTO ZAJISTÍ, ŽE MINULOST JE NEAKTIVNÍ
+        min_value=date.today(),      # Zákaz minulosti
         max_value=date(2030, 12, 31),
-        key="search_date",
+        key="search_date",           # Propojení s pamětí
         label_visibility="collapsed",
         help="Vyber termín (minulost nelze vybrat)"
     )
 
 with col_close:
-    if search_text or search_date_value:
+    # Křížek zobrazíme, pokud je něco v textu NEBO v datu (pole není prázdné)
+    if search_text or len(st.session_state.search_date) > 0:
         st.button("❌", on_click=clear_search, help="Zrušit filtry")
 
 # === 🆕 JAVASCRIPT PRO ESCAPE KLÁVESU ===
@@ -759,6 +763,7 @@ components.html(
 
 # === VÝHYBKA: FILTROVÁNÍ vs. KALENDÁŘ ===
 
+# Používáme přímo hodnotu z widgetu (search_date_value)
 if search_text or len(search_date_value) > 0:
     
     # 🅰️ FILTROVÁNÍ
@@ -771,7 +776,7 @@ if search_text or len(search_date_value) > 0:
             df_akce['název'].str.contains(search_text, case=False, na=False) | 
             df_akce['místo'].str.contains(search_text, case=False, na=False)
         )
-        # Při textovém hledání automaticky filtrujeme minulost
+        # Pokud je zadán jen text (bez data), automaticky filtrujeme minulost
         if len(search_date_value) == 0:
             mask = mask & (df_akce['datum'] >= dnes)
 
