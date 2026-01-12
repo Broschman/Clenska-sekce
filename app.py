@@ -691,6 +691,11 @@ with col_search:
         placeholder="🔍 Hledat akci nebo místo...", 
         label_visibility="collapsed"
     )
+with col_close:
+    # Křížek zobrazíme jen tehdy, když je něco napsáno
+    if search_text:
+        # on_click zavolá funkci clear_search a vymaže text -> obnoví kalendář
+        st.button("❌", on_click=clear_search, help="Zrušit hledání (nebo stiskni Esc + Enter)")
 
 # === VÝHYBKA: HLEDÁNÍ vs. KALENDÁŘ ===
 
