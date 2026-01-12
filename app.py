@@ -575,14 +575,12 @@ def show_calendar_fragment():
             curr = st.session_state.vybrany_datum
             prev_month = curr.replace(day=1) - timedelta(days=1)
             st.session_state.vybrany_datum = prev_month.replace(day=1)
-            st.rerun()
 
     with col_nav3:
         if st.button("Další ➡️", use_container_width=True):
             curr = st.session_state.vybrany_datum
             next_month = (curr.replace(day=28) + timedelta(days=4)).replace(day=1)
             st.session_state.vybrany_datum = next_month
-            st.rerun()
 
     year = st.session_state.vybrany_datum.year
     month = st.session_state.vybrany_datum.month
