@@ -716,8 +716,9 @@ def clear_search():
     st.session_state.search_query = ""
     st.session_state.search_date = []
 
-# 3. Layout: Text | Datum | Křížek
-col_text, col_date, col_close = st.columns([2, 2, 0.5], vertical_alignment="bottom")
+# 3. Layout: Text | Datum | Křížek | ...zbytek místa...
+# Poměry: [1.5, 1.5, 0.5, 4] -> To znamená, že polovina řádku bude prázdná
+col_text, col_date, col_close, _ = st.columns([1.5, 1.5, 0.5, 4], vertical_alignment="bottom")
 
 with col_text:
     search_text = st.text_input(
@@ -728,22 +729,20 @@ with col_text:
     )
 
 with col_date:
-    # OPRAVA: Odstraněn parametr 'value=[]'. 
-    # Hodnota se bere automaticky ze st.session_state.search_date (díky parametru key)
     search_date_value = st.date_input(
         "Vyber datum",
-        min_value=date.today(),      # Zákaz minulosti
+        min_value=date.today(),
         max_value=date(2030, 12, 31),
-        key="search_date",           # Propojení s pamětí
+        key="search_date",
         label_visibility="collapsed",
         help="Vyber termín (minulost nelze vybrat)"
     )
 
 with col_close:
-    # Křížek zobrazíme, pokud je něco v textu NEBO v datu (pole není prázdné)
+    # Křížek
     if search_text or len(st.session_state.search_date) > 0:
         st.button("❌", on_click=clear_search, help="Zrušit filtry")
-
+        
 # === 🆕 JAVASCRIPT PRO ESCAPE KLÁVESU ===
 components.html(
     """
