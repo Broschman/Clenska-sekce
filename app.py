@@ -710,6 +710,35 @@ with col_close:
         # on_click zavolá funkci clear_search a vymaže text -> obnoví kalendář
         st.button("❌", on_click=clear_search, help="Zrušit hledání (nebo stiskni Esc + Enter)")
 
+# === 🆕 JAVASCRIPT PRO ESCAPE KLÁVESU (Simulace kliknutí na křížek) ===
+# Tento skript sleduje klávesu Escape. 
+# Jakmile ji zmáčkneš, najde tlačítko "❌" a virtuálně na něj klikne.
+components.html(
+    """
+    <script>
+    const doc = window.parent.document;
+    
+    doc.addEventListener('keydown', function(e) {
+        // Pokud zmáčkneš Escape
+        if (e.key === 'Escape') {
+            // Najdeme všechna tlačítka na stránce
+            const buttons = Array.from(doc.querySelectorAll('button'));
+            
+            // Najdeme to konkrétní tlačítko, které obsahuje křížek ❌
+            const closeBtn = buttons.find(btn => btn.innerText.includes('❌'));
+            
+            // Pokud tlačítko existuje (tzn. jsme v režimu hledání), klikneme na něj
+            if (closeBtn) {
+                closeBtn.click();
+            }
+        }
+    });
+    </script>
+    """,
+    height=0, width=0
+)
+# === KONEC JAVASCRIPTU ===
+
 # === VÝHYBKA: HLEDÁNÍ vs. KALENDÁŘ ===
 
 if search_text:
