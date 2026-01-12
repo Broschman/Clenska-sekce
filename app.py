@@ -704,89 +704,111 @@ def show_calendar_fragment():
 
 st.markdown("### 📅 Kalendář akcí")
 
-# 1. Inicializace stavu pro hledání (pokud neexistuje)
+# 1. Inicializace stavu (musíme mít uložené i datum)
 if "search_query" not in st.session_state:
     st.session_state.search_query = ""
+if "search_date" not in st.session_state:
+    st.session_state.search_date = [] # Prázdný seznam = nevybráno nic
 
-# 2. Funkce pro vymazání hledání (callback pro křížek)
+# 2. Funkce pro vymazání (vymaže text I datum)
 def clear_search():
     st.session_state.search_query = ""
+    st.session_state.search_date = []
 
-# 3. Layout: Input + Křížek
-# Použijeme sloupce, aby byl křížek hned vedle lupy
-col_search, col_close, _ = st.columns([3, 0.5, 5], vertical_alignment="bottom")
+# 3. Layout: Text | Datum | Křížek
+col_text, col_date, col_close = st.columns([2, 2, 0.5], vertical_alignment="bottom")
 
-with col_search:
-    # DŮLEŽITÉ: Přidali jsme key="search_query", aby šlo pole ovládat programově
+with col_text:
     search_text = st.text_input(
-        "Hledat", 
-        placeholder="🔍 Hledat akci nebo místo...", 
+        "Hledat text", 
+        placeholder="🔍 Název nebo místo...", 
         label_visibility="collapsed",
         key="search_query"
     )
 
-with col_close:
-    # Křížek zobrazíme jen tehdy, když je něco napsáno
-    if search_text:
-        # on_click zavolá funkci clear_search a vymaže text -> obnoví kalendář
-        st.button("❌", on_click=clear_search, help="Zrušit hledání (nebo stiskni Esc + Enter)")
+with col_date:
+    # Date Input, který umí i rozmezí
+    search_date_value = st.date_input(
+        "Vyber datum",
+        value=[], # Výchozí je prázdno
+        min_value=date(2023, 1, 1),
+        max_value=date(2030, 12, 31),
+        key="search_date",
+        label_visibility="collapsed",
+        help="Vyber konkrétní den nebo rozmezí (klikni na začátek a konec)"
+    )
 
-# === 🆕 JAVASCRIPT PRO ESCAPE KLÁVESU (Simulace kliknutí na křížek) ===
-# Tento skript sleduje klávesu Escape. 
-# Jakmile ji zmáčkneš, najde tlačítko "❌" a virtuálně na něj klikne.
+with col_close:
+    # Křížek se ukáže, pokud je vyplněný text NEBO datum
+    if search_text or search_date_value:
+        st.button("❌", on_click=clear_search, help="Zrušit všechny filtry")
+
+# === 🆕 JAVASCRIPT PRO ESCAPE KLÁVESU ===
+# Simuluje kliknutí na ❌ při stisku Escape
 components.html(
     """
     <script>
     const doc = window.parent.document;
-    
     doc.addEventListener('keydown', function(e) {
-        // Pokud zmáčkneš Escape
         if (e.key === 'Escape') {
-            // Najdeme všechna tlačítka na stránce
             const buttons = Array.from(doc.querySelectorAll('button'));
-            
-            // Najdeme to konkrétní tlačítko, které obsahuje křížek ❌
             const closeBtn = buttons.find(btn => btn.innerText.includes('❌'));
-            
-            // Pokud tlačítko existuje (tzn. jsme v režimu hledání), klikneme na něj
-            if (closeBtn) {
-                closeBtn.click();
-            }
+            if (closeBtn) closeBtn.click();
         }
     });
     </script>
     """,
     height=0, width=0
 )
-# === KONEC JAVASCRIPTU ===
 
-# === VÝHYBKA: HLEDÁNÍ vs. KALENDÁŘ ===
+# === VÝHYBKA: FILTROVÁNÍ vs. KALENDÁŘ ===
 
-if search_text:
-    # 🅰️ REŽIM VYHLEDÁVÁNÍ
-    dnes = date.today() # Definujeme dnešek
-
-    mask = (
-        # 1. Textová shoda (hledáme v názvu NEBO místě)
-        (df_akce['název'].str.contains(search_text, case=False, na=False) | 
-         df_akce['místo'].str.contains(search_text, case=False, na=False))
-        & 
-        # 2. Časová shoda (Datum musí být dnes nebo v budoucnu)
-        # Tím odfiltrujeme všechny staré akce
-        (df_akce['datum'] >= dnes)
-    )
+# Podmínka: Aktivujeme hledání, pokud je zadán text NEBO datum
+if search_text or len(search_date_value) > 0:
     
+    # 🅰️ PŘÍPRAVA FILTRŮ
+    dnes = date.today()
+    mask = pd.Series([True] * len(df_akce)) # Na začátku platí všechno
+
+    # 1. Filtr podle TEXTU
+    if search_text:
+        mask = mask & (
+            df_akce['název'].str.contains(search_text, case=False, na=False) | 
+            df_akce['místo'].str.contains(search_text, case=False, na=False)
+        )
+        # Pokud hledám JEN textem (bez data), chci jen budoucí akce (tvůj požadavek z minula)
+        if len(search_date_value) == 0:
+            mask = mask & (df_akce['datum'] >= dnes)
+
+    # 2. Filtr podle DATA
+    if len(search_date_value) > 0:
+        if len(search_date_value) == 1:
+            # Uživatel klikl jen na jeden den
+            vybrane_datum = search_date_value[0]
+            mask = mask & (df_akce['datum'] == vybrane_datum)
+        elif len(search_date_value) == 2:
+            # Uživatel vybral rozmezí (od - do)
+            start, end = search_date_value
+            mask = mask & (df_akce['datum'] >= start) & (df_akce['datum'] <= end)
+
+    # Aplikace filtru
     results = df_akce[mask].sort_values(by='datum')
     
     # Header s počtem výsledků
-    st.markdown(f"<div style='color: #4B5563; margin-bottom: 10px; font-size: 0.9rem;'>Nalezeno {len(results)} akcí</div>", unsafe_allow_html=True)
+    info_text = f"Nalezeno {len(results)} akcí"
+    if search_text: info_text += f" pro '{search_text}'"
+    if len(search_date_value) > 0: 
+        d_str = search_date_value[0].strftime('%d.%m.')
+        if len(search_date_value) == 2: d_str += f" – {search_date_value[1].strftime('%d.%m.')}"
+        info_text += f" v termínu {d_str}"
+        
+    st.markdown(f"<div style='color: #4B5563; margin-bottom: 10px; font-size: 0.9rem;'>{info_text}</div>", unsafe_allow_html=True)
     
     if results.empty:
-        st.warning(f"Pro výraz '{search_text}' jsme nic nenašli.")
+        st.warning("Žádné akce neodpovídají zadání.")
     else:
-        dnes = date.today()
         for _, akce in results.iterrows():
-            # --- VYKRESLENÍ VÝSLEDKU (Stejná logika jako v kalendáři) ---
+            # --- VYKRESLENÍ KARTY (Stejná logika jako vždy) ---
             akce_id_str = str(akce['id'])
             unique_key = f"search_{akce_id_str}"
             je_po_deadlinu = dnes > akce['deadline']
@@ -842,7 +864,7 @@ if search_text:
                     vykreslit_detail_akce(akce, unique_key)
 
 else:
-    # 🅱️ REŽIM KALENDÁŘE (Když je pole prázdné)
+    # 🅱️ REŽIM KALENDÁŘE (Když je vše prázdné)
     show_calendar_fragment()
 st.markdown("<div style='margin-bottom: 50px'></div>", unsafe_allow_html=True)
 
