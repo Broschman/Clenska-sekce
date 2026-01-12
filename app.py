@@ -564,7 +564,102 @@ if not future_deadlines.empty:
                     vykreslit_detail_akce(row, unique_key_dash)
 
     st.markdown("<div style='margin-bottom: 25px'></div>", unsafe_allow_html=True)
+
+# ==============================================================================
+# 🔍 SEARCH BAR (VYHLEDÁVÁNÍ)
+# ==============================================================================
+st.markdown("### 📅 Kalendář akcí")
+
+# Input field s ikonou lupy
+col_search, _ = st.columns([1, 2]) # Aby nebyl input přes celou šířku, vypadá to líp
+with col_search:
+    search_query = st.text_input(
+        "Hledat", 
+        placeholder="🔍 Hledat akci nebo místo...", 
+        label_visibility="collapsed"
+    )
+
+# === VÝHYBKA: HLEDÁNÍ vs. KALENDÁŘ ===
+
+if search_query:
+    # 🅰️ REŽIM VYHLEDÁVÁNÍ
+    # Filtrujeme podle názvu NEBO místa (case insensitive = nezáleží na velikosti písmen)
+    mask = (
+        df_akce['název'].str.contains(search_query, case=False, na=False) | 
+        df_akce['místo'].str.contains(search_query, case=False, na=False)
+    )
+    results = df_akce[mask].sort_values(by='datum') # Seřadíme chronologicky
     
+    st.info(f"Nalezeno {len(results)} akcí pro výraz: **{search_query}**")
+    
+    if results.empty:
+        st.warning("Nic jsme nenašli. Zkus hledat jinak.")
+    else:
+        # Vykreslíme výsledky jako karty pod sebou
+        dnes = date.today()
+        
+        for _, akce in results.iterrows():
+            # --- PŘÍPRAVA DAT (Zkopírováno z logiky kalendáře pro zachování stylu) ---
+            akce_id_str = str(akce['id'])
+            # Unikátní klíč musí obsahovat i 'search', aby se nehádal s kalendářem
+            unique_key = f"search_{akce_id_str}"
+            je_po_deadlinu = dnes > akce['deadline']
+            
+            typ_udalosti = str(akce.get('typ', '')).lower()
+            druh_akce = str(akce.get('druh', '')).lower()
+            zavodni_slova = ["závod", "mčr", "žebříček", "liga", "mistrovství", "štafety", "ža", "žb"]
+            je_zavod_obecne = any(s in typ_udalosti for s in zavodni_slova)
+
+            # Barvičky
+            style_key = "default"
+            if "mčr" in typ_udalosti or "mistrovství" in typ_udalosti: style_key = "mcr"
+            elif "ža" in typ_udalosti or "žebříček a" in typ_udalosti: style_key = "za"
+            elif "žb" in typ_udalosti or "žebříček b" in typ_udalosti: style_key = "zb"
+            elif "soustředění" in typ_udalosti: style_key = "soustredeni"
+            elif "oblastní" in typ_udalosti: style_key = "oblastni"
+            elif "zimní liga" in typ_udalosti: style_key = "zimni_liga"
+            elif "štafety" in typ_udalosti: style_key = "stafety"
+            elif "trénink" in typ_udalosti: style_key = "trenink"
+            elif je_zavod_obecne: style_key = "zavod"
+
+            styly = styles.BARVY_AKCI.get(style_key, styles.BARVY_AKCI["default"])
+
+            ikony_mapa = { "les": "🌲", "krátká trať": "🌲", "klasická trať": "🌲", "sprint": "🏙️", "nočák": "🌗" }
+            emoji = ikony_mapa.get(druh_akce, "🏃")
+            
+            # Datum a Název
+            datum_str = akce['datum'].strftime('%d.%m.')
+            nazev_full = f"{datum_str} | {akce['název']} ({akce['místo']})"
+            label = f"{emoji} {nazev_full}"
+            if je_po_deadlinu: label = "🔒 " + label
+
+            # Vykreslení karty
+            with stylable_container(
+                key=f"btn_search_{unique_key}",
+                css_styles=f"""
+                    button {{
+                        background: {styly['bg']} !important;
+                        color: {styly['color']} !important;
+                        border: {styly['border']} !important;
+                        width: 100%;
+                        border-radius: 8px;
+                        padding: 12px 15px !important; /* Větší padding pro výsledky hledání */
+                        text-align: left;
+                        font-weight: 600;
+                        box-shadow: {styly.get('shadow', 'none')};
+                        margin-bottom: 8px;
+                    }}
+                    button:hover {{
+                        filter: brightness(1.1);
+                        transform: translateY(-2px);
+                    }}
+                """
+            ):
+                with st.popover(label, use_container_width=True):
+                    vykreslit_detail_akce(akce, unique_key)
+
+else:
+    # 🅱️ REŽIM KALENDÁŘE (Když se nic nehledá)
     # ==============================================================================
 # 🆕 IZOLOVANÝ FRAGMENT KALENDÁŘE (ZRYCHLENÍ + PŮVODNÍ DESIGN)
 # ==============================================================================
