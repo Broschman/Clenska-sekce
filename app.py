@@ -208,7 +208,7 @@ def vykreslit_detail_akce(akce, unique_key):
         else:
             st.success(f"📅 **Deadline:** {deadline_str}")
 
-        # 3. 🌦️ POČASÍ
+        # 3. 🌦️ POČASÍ + 🌑 ZÁPAD SLUNCE
         if main_lat and main_lon:
             forecast = utils.get_forecast(main_lat, main_lon, akce['datum'])
             
@@ -218,12 +218,20 @@ def vykreslit_detail_akce(akce, unique_key):
                 rain = forecast['precip']
                 wind = forecast['wind']
                 
+                # Zjištění západu slunce (jen čas)
+                sunset_raw = forecast.get('sunset')
+                sunset_time = ""
+                if sunset_raw:
+                    # Formát z API je "2023-10-25T17:45", my chceme jen "17:45"
+                    sunset_time = sunset_raw.split('T')[1]
+
                 bg_weather = "#eff6ff" if rain > 1 else "#f9fafb" 
                 border_weather = "#bfdbfe" if rain > 1 else "#e5e7eb"
 
-                st.markdown(f"""
+                # HTML pro počasí
+                html_weather = f"""
                 <div style="
-                    margin-top: 10px; /* Odstup od Deadlinu */
+                    margin-top: 10px;
                     margin-bottom: 20px;
                     padding: 10px; 
                     background-color: {bg_weather}; 
@@ -235,15 +243,26 @@ def vykreslit_detail_akce(akce, unique_key):
                     box-shadow: 0 1px 2px rgba(0,0,0,0.05);
                 ">
                     <div style="font-size: 2rem;">{w_icon}</div>
-                    <div style="line-height: 1.2;">
+                    <div style="line-height: 1.2; flex-grow: 1;">
                         <div style="font-weight: 700; color: #1f2937;">{w_text}, {temp}°C</div>
                         <div style="font-size: 0.85rem; color: #4b5563;">
                             💧 {rain} mm  •  💨 {wind} km/h
                         </div>
                     </div>
-                </div>
-                """, unsafe_allow_html=True)
-
+                """
+                
+                # PŘIDÁNÍ ZÁPADU SLUNCE (POKUD JE TO NOČÁK)
+                if "nočák" in druh_akce and sunset_time:
+                    html_weather += f"""
+                    <div style="text-align: right; border-left: 1px solid #d1d5db; padding-left: 15px;">
+                        <div style="font-size: 1.5rem;">🌑</div>
+                        <div style="font-size: 0.8rem; font-weight: bold; color: #1f2937;">Západ</div>
+                        <div style="font-size: 0.9rem; color: #4b5563;">{sunset_time}</div>
+                    </div>
+                    """
+                
+                html_weather += "</div>"
+                st.markdown(html_weather, unsafe_allow_html=True)
         # 4. ORIS Link
         if je_zavod_obecne:
             st.caption("Přihlášky probíhají v systému ORIS.")
