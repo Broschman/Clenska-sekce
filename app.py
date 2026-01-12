@@ -18,6 +18,7 @@ from io import BytesIO
 import styles
 import utils
 import data_manager
+import textwrap
 
 print("--- ZAČÁTEK RERUNU ---")
 
@@ -220,14 +221,15 @@ def vykreslit_detail_akce(akce, unique_key):
                 
                 # Zjištění času západu slunce
                 sunset_raw = forecast.get('sunset')
-                sunset_html = "" # Výchozí je prázdno
+                sunset_html = "" 
                 
-                # Pokud je to nočák a máme čas, připravíme si HTML pro západ
+                # Pokud je to nočák, připravíme si HTML pro západ
                 if "nočák" in druh_akce and sunset_raw:
                     try:
                         sunset_time = sunset_raw.split('T')[1]
+                        # Tady musíme dát pozor na odsazení
                         sunset_html = f"""
-                        <div style="text-align: right; border-left: 1px solid #d1d5db; padding-left: 15px;">
+                        <div style="text-align: right; border-left: 1px solid #d1d5db; padding-left: 15px; margin-left: 15px;">
                             <div style="font-size: 1.5rem; line-height: 1;">🌑</div>
                             <div style="font-size: 0.7rem; font-weight: bold; color: #1f2937; text-transform: uppercase;">Západ</div>
                             <div style="font-size: 0.9rem; color: #4b5563;">{sunset_time}</div>
@@ -238,7 +240,8 @@ def vykreslit_detail_akce(akce, unique_key):
                 bg_weather = "#eff6ff" if rain > 1 else "#f9fafb" 
                 border_weather = "#bfdbfe" if rain > 1 else "#e5e7eb"
 
-                # Sestavení finálního HTML (vložíme proměnnou sunset_html dovnitř)
+                # Sestavení finálního HTML
+                # Použijeme textwrap.dedent, aby Streamlit nechápal mezery jako kód
                 final_html = f"""
                 <div style="
                     margin-top: 10px;
@@ -249,10 +252,9 @@ def vykreslit_detail_akce(akce, unique_key):
                     border-radius: 10px; 
                     display: flex; 
                     align-items: center; 
-                    gap: 15px;
                     box-shadow: 0 1px 2px rgba(0,0,0,0.05);
                 ">
-                    <div style="font-size: 2rem;">{w_icon}</div>
+                    <div style="font-size: 2rem; margin-right: 15px;">{w_icon}</div>
                     <div style="line-height: 1.2; flex-grow: 1;">
                         <div style="font-weight: 700; color: #1f2937;">{w_text}, {temp}°C</div>
                         <div style="font-size: 0.85rem; color: #4b5563;">
@@ -263,8 +265,8 @@ def vykreslit_detail_akce(akce, unique_key):
                 </div>
                 """
                 
-                # TADY JE TA KLÍČOVÁ ČÁST - unsafe_allow_html=True
-                st.markdown(final_html, unsafe_allow_html=True)
+                # ZDE JE OPRAVA - textwrap.dedent odstraní odsazení
+                st.markdown(textwrap.dedent(final_html), unsafe_allow_html=True)
                 
         # 4. ORIS Link
         if je_zavod_obecne:
