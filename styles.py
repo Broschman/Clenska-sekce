@@ -162,5 +162,71 @@ BARVY_AKCI = {
     }
 }
 
+# ... (tady nahoře máš BARVY_AKCI = { ... }) ...
+
+# === GLOBÁLNÍ STYLY A ANIMACE ===
+GLOBAL_CSS = """
+<style>
+    
+    /* 2. ODSTRANĚNÍ OKRAJŮ NA MOBILU */
+    .block-container {
+        padding-top: 1rem !important;
+        padding-bottom: 1rem !important;
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+        max-width: 100% !important;
+    }
+    @media (max-width: 600px) {
+        .block-container {
+            padding-left: 0.5rem !important;
+            padding-right: 0.5rem !important;
+        }
+    }
+
+    /* 3. ANIMACE PRO BLIKAJÍCÍ RÁMEČEK (Deadline) */
+    @keyframes pulse-red {
+        0% {
+            border-color: #ef4444;
+            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+        }
+        70% {
+            border-color: #b91c1c;
+            box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
+        }
+        100% {
+            border-color: #ef4444;
+            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+        }
+    }
+
+    /* 4. VAROVÁNÍ "OTOČ TELEFON" (Opona) */
+    #rotate-warning {
+        display: none; 
+        position: fixed;
+        top: 0; left: 0; width: 100vw; height: 100vh;
+        background-color: #ffffff;
+        z-index: 999999;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        padding: 20px;
+    }
+    @media only screen and (orientation: portrait) and (max-width: 900px) {
+        #rotate-warning { display: flex !important; }
+        .stApp { overflow: hidden; }
+    }
+</style>
+
+<div id="rotate-warning">
+    <div style="font-size: 60px;">📱➡️🔄</div>
+    <h1 style="color: #000000; margin-top: 20px; font-family: sans-serif;">Otoč telefon</h1>
+    <p style="color: #333333; font-size: 1.2rem; margin-top: 10px; font-family: sans-serif;">
+        Pro správné zobrazení kalendáře<br>
+        prosím otoč zařízení na šířku.
+    </p>
+</div>
+"""
+
 def badge(text, bg="#f3f4f6", color="#111"):
     return f"<span style='background-color: {bg}; color: {color}; padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; margin-right: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);'>{text}</span>"
