@@ -458,9 +458,26 @@ if not future_deadlines.empty:
     st.markdown("<div style='margin-bottom: 25px'></div>", unsafe_allow_html=True)
 
 # ==============================================================================
-# 1. NEJDŘÍVE DEFINICE FUNKCE KALENDÁŘE
+# 1. FUNKCE KALENDÁŘE (S FIXEM PROTI ZBĚLENÍ)
 # ==============================================================================
-# @st.fragment
+
+# Pomocná funkce pro změnu měsíce (Callback)
+def zmena_mesice(smer):
+    """
+    Tato funkce se zavolá PŘED tím, než se fragment překreslí.
+    smer: -1 (dozadu), +1 (dopředu)
+    """
+    curr = st.session_state.vybrany_datum
+    if smer == -1:
+        # Jdeme na předchozí měsíc
+        prev_month = curr.replace(day=1) - timedelta(days=1)
+        st.session_state.vybrany_datum = prev_month.replace(day=1)
+    elif smer == 1:
+        # Jdeme na další měsíc
+        next_month = (curr.replace(day=28) + timedelta(days=4)).replace(day=1)
+        st.session_state.vybrany_datum = next_month
+
+@st.fragment  # <--- MŮŽEME VRÁTIT FRAGMENT! ⚡
 def show_calendar_fragment():
     # --- 1. NAVIGACE MĚSÍCŮ ---
     if 'vybrany_datum' not in st.session_state:
@@ -469,19 +486,13 @@ def show_calendar_fragment():
     col_nav1, col_nav2, col_nav3 = st.columns([2, 5, 2], vertical_alignment="center")
     
     with col_nav1:
-        if st.button("⬅️ Předchozí", use_container_width=True):
-            curr = st.session_state.vybrany_datum
-            prev_month = curr.replace(day=1) - timedelta(days=1)
-            st.session_state.vybrany_datum = prev_month.replace(day=1)
-            st.rerun()
-            
+        # DŮLEŽITÉ: Používáme on_click a args. Žádné st.rerun()!
+        st.button("⬅️ Předchozí", use_container_width=True, on_click=zmena_mesice, args=(-1,))
+
     with col_nav3:
-        if st.button("Další ➡️", use_container_width=True):
-            curr = st.session_state.vybrany_datum
-            next_month = (curr.replace(day=28) + timedelta(days=4)).replace(day=1)
-            st.session_state.vybrany_datum = next_month
-            st.rerun()
-            
+        # DŮLEŽITÉ: Používáme on_click a args. Žádné st.rerun()!
+        st.button("Další ➡️", use_container_width=True, on_click=zmena_mesice, args=(1,))
+
     year = st.session_state.vybrany_datum.year
     month = st.session_state.vybrany_datum.month
     ceske_mesice = ["", "Leden", "Únor", "Březen", "Duben", "Květen", "Červen", "Červenec", "Srpen", "Září", "Říjen", "Listopad", "Prosinec"]
