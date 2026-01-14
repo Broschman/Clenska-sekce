@@ -229,7 +229,6 @@ def parse_map_coordinates(mapa_raw, nazev_akce="Bod"):
         
     return body
 
-@st.fragment
 def export_admin_section(lidi, nazev_akce, unique_key):
     """
     Izolovaná sekce pro export s automatickým stahováním po zadání hesla.
