@@ -36,7 +36,7 @@ def vykreslit_detail_akce(akce, unique_key):
     """
     # --- 1. PŘÍPRAVA DAT (SOUŘADNICE PRO POČASÍ) ---
     mapa_raw = str(akce['mapa']).strip() if 'mapa' in df_akce.columns and pd.notna(akce['mapa']) else ""
-    body_k_vykresleni = [] 
+    body_k_vykresleni = utils.parse_map_coordinates(mapa_raw, akce['název']) 
     main_lat, main_lon = None, None
     
     if body_k_vykresleni:
@@ -63,45 +63,6 @@ def vykreslit_detail_akce(akce, unique_key):
                 return val
             return float(dms_str)
         except: return None
-
-    # Logika parsování (pro počasí i mapu)
-    if mapa_raw:
-        try:
-            if "http" in mapa_raw:
-                parsed = urlparse(mapa_raw)
-                params = parse_qs(parsed.query)
-                if 'ud' in params:
-                    uds = params['ud']
-                    uts = params.get('ut', [])
-                    for i, ud_val in enumerate(uds):
-                        parts = ud_val.split(',')
-                        if len(parts) >= 2:
-                            lat, lon = dms_to_decimal(parts[0]), dms_to_decimal(parts[1])
-                            if lat and lon:
-                                nazev = uts[i] if i < len(uts) else f"Bod {i+1}"
-                                body_k_vykresleni.append((lat, lon, nazev))
-                if not body_k_vykresleni:
-                    lat, lon = None, None
-                    if 'x' in params and 'y' in params:
-                        lon, lat = float(params['x'][0]), float(params['y'][0])
-                    elif 'q' in params:
-                        q_parts = params['q'][0].replace(' ', '').split(',')
-                        if len(q_parts) >= 2: lat, lon = float(q_parts[0]), float(q_parts[1])
-                    if lat and lon: body_k_vykresleni.append((lat, lon, akce['název']))
-            else:
-                raw_parts = mapa_raw.split(';')
-                for part in raw_parts:
-                    part = part.strip()
-                    if not part: continue
-                    clean_text = re.sub(r'[^\d.,]', ' ', part)
-                    num_parts = clean_text.replace(',', ' ').split()
-                    num_parts = [p for p in num_parts if len(p) > 0]
-                    if len(num_parts) >= 2:
-                        v1, v2 = float(num_parts[0]), float(num_parts[1])
-                        if 12 <= v1 <= 19 and 48 <= v2 <= 52: lat, lon = v2, v1
-                        else: lat, lon = v1, v2
-                        body_k_vykresleni.append((lat, lon, f"Bod {len(body_k_vykresleni)+1}"))
-        except: pass
     
     if body_k_vykresleni:
         main_lat, main_lon, _ = body_k_vykresleni[0]
@@ -154,28 +115,8 @@ def vykreslit_detail_akce(akce, unique_key):
             # --- ŘEŠENÍ PRO ČISTÝ LOG (Base64 odkaz) ---
             # Zakódujeme data přímo do tlačítka. Server Streamlitu to ignoruje = žádná chyba v logu.
             b64 = base64.b64encode(ics_data.encode('utf-8')).decode()
-            
-            # Stylování, aby to vypadalo jako hezké tlačítko
-            href = f'<a href="data:text/calendar;base64,{b64}" download="{akce["název"]}.ics" style="text-decoration:none;">'
-            href += '''
-            <div style="
-                background-color: #ffffff;
-                border: 1px solid rgba(49, 51, 63, 0.2);
-                border-radius: 8px;
-                padding: 6px 0px;
-                text-align: center;
-                cursor: pointer;
-                color: #31333F;
-                font-size: 1.2rem;
-                line-height: 1.5;
-                transition: background-color 0.2s;
-            " onmouseover="this.style.backgroundColor='#f0f2f6'; this.style.borderColor='#f0f2f6';" onmouseout="this.style.backgroundColor='#ffffff'; this.style.borderColor='rgba(49, 51, 63, 0.2)';">
-                📅
-            </div>
-            '''
-            href += '</a>'
-            
-            st.markdown(href, unsafe_allow_html=True)
+            st.markdown(styles.get_ics_button_html(b64, akce["název"]), unsafe_allow_html=True)
+                
 
         st.markdown(
             styles.badge(typ_label_short, bg="#F3F4F6", color="#333") + 
@@ -231,25 +172,10 @@ def vykreslit_detail_akce(akce, unique_key):
                         html_zapad = f"""<div style="text-align: right; border-left: 1px solid #d1d5db; padding-left: 15px; margin-left: 15px;"><div style="font-size: 1.5rem; line-height: 1;">🌑</div><div style="font-size: 0.7rem; font-weight: bold; color: #1f2937; text-transform: uppercase;">Západ</div><div style="font-size: 0.9rem; color: #4b5563;">{sunset_time}</div></div>"""
                     except: pass
 
-                bg_weather = "#eff6ff" if rain > 1 else "#f9fafb" 
-                border_weather = "#bfdbfe" if rain > 1 else "#e5e7eb"
-
-                # Sestavení finálního HTML
-                # Vytvoříme to klidně s mezerami, ale...
-                final_html = f"""
-                <div style="margin-top: 10px; margin-bottom: 20px; padding: 10px; background-color: {bg_weather}; border: 1px solid {border_weather}; border-radius: 10px; display: flex; align-items: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
-                    <div style="font-size: 2rem; margin-right: 15px;">{w_icon}</div>
-                    <div style="line-height: 1.2; flex-grow: 1;">
-                        <div style="font-weight: 700; color: #1f2937;">{w_text}, {temp}°C</div>
-                        <div style="font-size: 0.85rem; color: #4b5563;">💧 {rain} mm • 💨 {wind} km/h</div>
-                    </div>
-                    {html_zapad}
-                </div>
-                """
-                
-                # ... TADY JE TA FLIGNA: Odstraníme všechny nové řádky (.replace)
-                # Tím vznikne jeden dlouhý text, který Streamlit vždy pochopí jako HTML.
-                st.markdown(final_html.replace("\n", ""), unsafe_allow_html=True)
+                st.markdown(
+                    styles.get_weather_card_html(w_icon, w_text, temp, rain, wind, html_zapad), 
+                    unsafe_allow_html=True
+                )
                 
         # 4. ORIS Link
         if je_zavod_obecne:
@@ -909,7 +835,7 @@ with stylable_container(key="footer_logos", css_styles="img {height: 50px !impor
         l2.image("logo2.jpg", width="stretch")
         
     with col_center:
-        st.markdown("<div style='text-align: center; color: #9CA3AF; font-size: 0.8em; font-family: sans-serif;'><b>Členská sekce RBK</b> • Designed by Broschman • v1.2.22.12<br>&copy; 2026 All rights reserved</div>", unsafe_allow_html=True)
+    st.markdown(styles.get_footer_html(), unsafe_allow_html=True)
         
     with col_right:
         r1, r2 = st.columns(2)
