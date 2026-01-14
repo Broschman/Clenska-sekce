@@ -22,7 +22,7 @@ import data_manager
 
 print("--- ZAČÁTEK RERUNU ---")
 
-# Načtení CSS
+# Načtení CSS a mobilního varování
 styles.load_css()
 styles.inject_mobile_warning()
 
@@ -32,40 +32,22 @@ st.set_page_config(page_title="Kalendář RBK", page_icon="🌲", layout="wide")
 def vykreslit_detail_akce(akce, unique_key):
     """
     Vykreslí kompletní obsah popoveru.
-    Úprava: Počasí je pod Deadlinem, čára odstraněna.
     """
-    # --- 1. PŘÍPRAVA DAT (SOUŘADNICE PRO POČASÍ) ---
+    # --- 1. PŘÍPRAVA DAT (SOUŘADNICE) ---
     mapa_raw = str(akce['mapa']).strip() if 'mapa' in df_akce.columns and pd.notna(akce['mapa']) else ""
+    
+    # Použití nové utils funkce pro parsování
     body_k_vykresleni = utils.parse_map_coordinates(mapa_raw, akce['název']) 
     main_lat, main_lon = None, None
     
     if body_k_vykresleni:
         main_lat, main_lon, _ = body_k_vykresleni[0]
 
-    # === NOVÝ FALLBACK: Zkusíme zjistit polohu podle názvu místa ===
+    # Fallback: Zkusíme zjistit polohu podle názvu místa
     if (not main_lat or not main_lon) and akce['místo']:
-        # Pokud nemáme souřadnice z mapy, zkusíme geocoding
         found_lat, found_lon = utils.get_coords_from_place(str(akce['místo']))
         if found_lat and found_lon:
             main_lat, main_lon = found_lat, found_lon
-            # Poznámka: Mapu dole vykreslovat nebudeme (nemáme přesný bod srazu),
-            # ale použijeme to aspoň pro počasí.
-
-    # Pomocná funkce DMS -> Decimal
-    def dms_to_decimal(dms_str):
-        try:
-            dms_str = dms_str.upper().strip()
-            match = re.match(r"(\d+)[°](\d+)['′](\d+(\.\d+)?)[^NSEW]*([NSEW])?", dms_str)
-            if match:
-                deg, minutes, seconds, _, direction = match.groups()
-                val = float(deg) + float(minutes)/60 + float(seconds)/3600
-                if direction in ['S', 'W']: val = -val
-                return val
-            return float(dms_str)
-        except: return None
-    
-    if body_k_vykresleni:
-        main_lat, main_lon, _ = body_k_vykresleni[0]
 
     # --- ZBYTEK PROMĚNNÝCH ---
     akce_id_str = str(akce['id']) if 'id' in df_akce.columns else ""
@@ -81,16 +63,13 @@ def vykreslit_detail_akce(akce, unique_key):
     nazev_full = akce['název']
 
     if akce_id_str:
-        # TADY SE STAHUJÍ DATA AŽ TEĎ!
-        # Načteme všechny přihlášky (živě), ale až když uživatel klikl na popover.
-        # Zdržení bude jen při otevření detailu, ne při listování kalendářem.
+        # Živé načítání přihlášek
         df_full = data_manager.load_prihlasky()
         lidi = df_full[df_full['id_akce'] == akce_id_str].copy()
         lidi = lidi.fillna("") 
     else: 
         lidi = pd.DataFrame()
 
-    style_key = "default"
     typ_label_short = "AKCE"
     if "mčr" in typ_udalosti: typ_label_short = "MČR"
     elif "ža" in typ_udalosti: typ_label_short = "ŽA"
@@ -111,13 +90,10 @@ def vykreslit_detail_akce(akce, unique_key):
             st.markdown(f"<h3 style='margin:0; padding:0;'>{nazev_full}</h3>", unsafe_allow_html=True)
         with c_cal:
             ics_data = utils.generate_ics(akce)
-            
-            # --- ŘEŠENÍ PRO ČISTÝ LOG (Base64 odkaz) ---
-            # Zakódujeme data přímo do tlačítka. Server Streamlitu to ignoruje = žádná chyba v logu.
             b64 = base64.b64encode(ics_data.encode('utf-8')).decode()
+            # Volání styles pro tlačítko
             st.markdown(styles.get_ics_button_html(b64, akce["název"]), unsafe_allow_html=True)
                 
-
         st.markdown(
             styles.badge(typ_label_short, bg="#F3F4F6", color="#333") + 
             styles.badge(druh_akce.upper(), bg="#E5E7EB", color="#555"), 
@@ -141,8 +117,6 @@ def vykreslit_detail_akce(akce, unique_key):
         if pd.notna(akce['popis']): 
             st.info(f"{akce['popis']}", icon="ℹ️")
         
-        # ZDE BYLA ČÁRA (st.markdown("---")) - ODSTRANĚNO
-
         # 2. Deadline (Barevný box)
         if je_po_deadlinu:
             st.error(f"⛔ **DEADLINE BYL:** {deadline_str}")
@@ -165,13 +139,13 @@ def vykreslit_detail_akce(akce, unique_key):
                 sunset_raw = forecast.get('sunset')
                 html_zapad = "" 
                 
-                # Pokud je to nočák, připravíme si HTML pro západ (VŠE NA JEDEN ŘÁDEK)
                 if "nočák" in druh_akce and sunset_raw:
                     try:
                         sunset_time = sunset_raw.split('T')[1]
                         html_zapad = f"""<div style="text-align: right; border-left: 1px solid #d1d5db; padding-left: 15px; margin-left: 15px;"><div style="font-size: 1.5rem; line-height: 1;">🌑</div><div style="font-size: 0.7rem; font-weight: bold; color: #1f2937; text-transform: uppercase;">Západ</div><div style="font-size: 0.9rem; color: #4b5563;">{sunset_time}</div></div>"""
                     except: pass
 
+                # Volání styles pro počasí
                 st.markdown(
                     styles.get_weather_card_html(w_icon, w_text, temp, rain, wind, html_zapad), 
                     unsafe_allow_html=True
@@ -222,7 +196,7 @@ def vykreslit_detail_akce(akce, unique_key):
                         
                         if finalni_jmeno:
                             try:
-                                # 1. Kontrola duplicity (načteme aktuální stav pro jistotu)
+                                # 1. Kontrola duplicity
                                 full_df = data_manager.load_prihlasky()
                                 duplicita = not full_df[(full_df['id_akce'] == akce_id_str) & (full_df['jméno'] == finalni_jmeno)].empty
                                 
@@ -249,28 +223,23 @@ def vykreslit_detail_akce(akce, unique_key):
                                     update_data = pd.concat([aktualni_data, novy_zaznam], ignore_index=True)
                                     conn.update(worksheet="prihlasky", data=update_data)
                                     
-                                    # 4. ULOŽENÍ NOVÉHO JMÉNA
+                                    # 4. ULOŽENÍ NOVÉHO JMÉNA (Bez čištění cache)
                                     if finalni_jmeno not in seznam_jmen:
                                         try:
                                             jmena_df = conn.read(worksheet="jmena")
                                             nove_jmeno_df = pd.DataFrame([{"jméno": finalni_jmeno}])
                                             jmena_update = pd.concat([jmena_df, nove_jmeno_df], ignore_index=True)
                                             conn.update(worksheet="jmena", data=jmena_update)
-                                            
                                         except Exception as e:
-                                            # TADY BYLA CHYBA (console.log -> print)
                                             print(f"Chyba při ukládání jména: {e}")        
-                                            # DŮLEŽITÉ: Smažeme cache, aby se příště jméno načetlo
-                                            
+                                    
                                     # 5. Animace úspěchu
                                     with st_lottie_spinner(styles.lottie_success, key=f"anim_{unique_key}"): 
                                         time.sleep(1)
                                     
                                     st.toast(f"✅ {finalni_jmeno} zapsán(a)!")
                                     
-                                    # 6. === OPRAVA: OKAMŽITÁ AKTUALIZACE TABULKY ===
-                                    # Ručně přidáme řádek do proměnné 'lidi', která se vykresluje pod formulářem.
-                                    # Díky tomu uživatel hned uvidí, že je přihlášený.
+                                    # 6. Okamžitá aktualizace lokální tabulky
                                     lidi = pd.concat([lidi, novy_zaznam], ignore_index=True)
 
                             except Exception as e: 
@@ -309,12 +278,9 @@ def vykreslit_detail_akce(akce, unique_key):
         link_google = f"https://www.google.com/maps/search/?api=1&query={start_lat},{start_lon}"
         link_waze = f"https://waze.com/ul?ll={start_lat},{start_lon}&navigate=yes"
 
-        st.markdown(f"""
-        <div style="display: flex; gap: 10px; margin-top: -10px; margin-bottom: 20px; justify-content: space-between;">
-            <a href="{link_mapy_cz}" target="_blank" style="text-decoration:none; flex: 1;"><div style="background-color: white; border: 1px solid #E5E7EB; border-radius: 8px; padding: 12px; text-align: center; color: #B91C1C; font-weight: 700; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">🌲 Otevřít Mapy.cz</div></a>
-            <a href="{link_google}" target="_blank" style="text-decoration:none; flex: 1;"><div style="background-color: white; border: 1px solid #E5E7EB; border-radius: 8px; padding: 12px; text-align: center; color: #2563EB; font-weight: 700; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">🚗 Google Maps</div></a>
-            <a href="{link_waze}" target="_blank" style="text-decoration:none; flex: 1;"><div style="background-color: white; border: 1px solid #E5E7EB; border-radius: 8px; padding: 12px; text-align: center; color: #3b82f6; font-weight: 700; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">🚙 Waze</div></a>
-        </div>""", unsafe_allow_html=True)
+        # Volání styles pro tlačítka map
+        st.markdown(styles.get_map_buttons_html(link_mapy_cz, link_google, link_waze), unsafe_allow_html=True)
+
     elif mapa_raw: st.warning("⚠️ Mapa se nenačetla.")
 
     # --- SEZNAM ---
@@ -354,30 +320,20 @@ def vykreslit_detail_akce(akce, unique_key):
     # === 🆕 SEKCE EXPORTU ===
     if not lidi.empty:
         st.markdown("---")
-        # Layout: Vlevo (1/3) export, Vpravo (2/3) prázdno
         c_export, c_dummy = st.columns([1, 2])
         
         with c_export:
-            # Rozbalovací menu
             with st.expander("🔐 Export pro trenéry"):
-                # Input na heslo
                 password = st.text_input("Zadej heslo:", type="password", key=f"pwd_{unique_key}")
                 
                 if password == "8848":
                     st.success("Přístup povolen.")
-                    
-                    # Generování Excelu do paměti
                     output = BytesIO()
-                    # Vybereme jen užitečné sloupce
                     df_to_export = lidi[["jméno", "poznámka", "doprava", "ubytování"]].copy()
-                    
-                    # Uložení do Excelu (bez indexu)
                     df_to_export.to_excel(output, index=False, sheet_name='Soupiska')
                     excel_data = output.getvalue()
-                    
                     file_name_safe = re.sub(r'[^\w\s-]', '', akce['název']).strip().replace(' ', '_')
                     
-                    # Tlačítko ke stažení
                     st.download_button(
                         label="📥 Stáhnout Excel",
                         data=excel_data,
@@ -392,19 +348,13 @@ def vykreslit_detail_akce(akce, unique_key):
 col_dummy, col_title, col_help = st.columns([1, 10, 1], vertical_alignment="center")
 
 with col_title:
-    # Cesta k tvému logu
     logo_path = "logo_rbk.jpg" 
-    
-    # Zkusíme načíst lokální logo, jinak placeholder
     logo_b64 = utils.get_base64_image(logo_path)
-    
     if logo_b64:
         img_src = f"data:image/png;base64,{logo_b64}"
     else:
-        # Placeholder (pokud soubor neexistuje)
         img_src = "https://cdn-icons-png.flaticon.com/512/2051/2051939.png"
 
-    # HTML Nadpis s vloženým obrázkem
     st.markdown(f"""
         <h1>
             <span class="gradient-text">🌲 Kalendář</span>
@@ -461,7 +411,7 @@ if not future_deadlines.empty:
     for i, (_, row) in enumerate(future_deadlines.iterrows()):
         days_left = (row['deadline'] - dnes).days
         
-        # Logika barev (stejná jako předtím)
+        # Logika barev
         if days_left == 0:
             bg_color, border_color, text_color, icon, time_msg = "#FEF2F2", "#EF4444", "#B91C1C", "🚨", "DNES!"
         elif days_left <= 3:
@@ -469,11 +419,9 @@ if not future_deadlines.empty:
         else:
             bg_color, border_color, text_color, icon, time_msg = "#ECFDF5", "#10B981", "#047857", "📅", row['deadline'].strftime('%d.%m.')
 
-        # Unikátní klíč pro dashboard (aby se nehádal s kalendářem)
         unique_key_dash = f"dash_{row['id']}"
 
         with cols_d[i]:
-            # Použijeme stylable_container k nastylování tlačítka popoveru
             with stylable_container(
                 key=f"dash_card_{i}",
                 css_styles=f"""
@@ -485,7 +433,7 @@ if not future_deadlines.empty:
                     width: 100% !important;
                     height: auto !important;
                     min-height: 110px !important;
-                    white-space: pre-wrap !important; /* Dovolí odřádkování */
+                    white-space: pre-wrap !important;
                     display: flex !important;
                     flex-direction: column !important;
                     justify-content: center !important;
@@ -503,17 +451,14 @@ if not future_deadlines.empty:
                 }}
                 """
             ):
-                # Text tlačítka složíme z ikony, názvu a deadlinu
                 label_text = f"{icon}\n{row['název']}\n{time_msg}"
-                
-                # Samotný popover
                 with st.popover(label_text, use_container_width=True):
                     vykreslit_detail_akce(row, unique_key_dash)
 
     st.markdown("<div style='margin-bottom: 25px'></div>", unsafe_allow_html=True)
 
 # ==============================================================================
-# 1. NEJDŘÍVE DEFINICE FUNKCE KALENDÁŘE (ABY JI PYTHON ZNAL)
+# 1. NEJDŘÍVE DEFINICE FUNKCE KALENDÁŘE
 # ==============================================================================
 @st.fragment
 def show_calendar_fragment():
@@ -528,14 +473,12 @@ def show_calendar_fragment():
             curr = st.session_state.vybrany_datum
             prev_month = curr.replace(day=1) - timedelta(days=1)
             st.session_state.vybrany_datum = prev_month.replace(day=1)
-            # st.rerun() # Smazáno kvůli fragmentu
 
     with col_nav3:
         if st.button("Další ➡️", use_container_width=True):
             curr = st.session_state.vybrany_datum
             next_month = (curr.replace(day=28) + timedelta(days=4)).replace(day=1)
             st.session_state.vybrany_datum = next_month
-            # st.rerun() # Smazáno kvůli fragmentu
 
     year = st.session_state.vybrany_datum.year
     month = st.session_state.vybrany_datum.month
@@ -596,7 +539,6 @@ def show_calendar_fragment():
                     typ = str(akce.get('typ', '')).lower()
                     druh = str(akce.get('druh', '')).lower()
                     
-                    # Logika barev (zkráceno pro přehlednost - použije se tvoje původní)
                     zavodni_slova = ["závod", "mčr", "žebříček", "liga", "mistrovství", "štafety", "ža", "žb"]
                     je_zavod_obecne = any(s in typ for s in zavodni_slova)
                     style_key = "default"
@@ -630,20 +572,16 @@ def show_calendar_fragment():
 
 st.markdown("### 📅 Kalendář akcí")
 
-# 1. Inicializace stavu (Důležité: Musíme to mít v Session State PŘED vykreslením)
 if "search_query" not in st.session_state:
     st.session_state.search_query = ""
 
 if "search_date" not in st.session_state:
-    st.session_state.search_date = [] # Výchozí stav je prázdný seznam
+    st.session_state.search_date = []
 
-# 2. Funkce pro vymazání
 def clear_search():
     st.session_state.search_query = ""
     st.session_state.search_date = []
 
-# 3. Layout: Text | Datum | Křížek | ...zbytek místa...
-# Poměry: [1.5, 1.5, 0.5, 4] -> To znamená, že polovina řádku bude prázdná
 col_text, col_date, col_close, _ = st.columns([1.5, 1.5, 0.5, 4], vertical_alignment="bottom")
 
 with col_text:
@@ -665,11 +603,10 @@ with col_date:
     )
 
 with col_close:
-    # Křížek
     if search_text or len(st.session_state.search_date) > 0:
         st.button("❌", on_click=clear_search, help="Zrušit filtry")
         
-# === 🆕 JAVASCRIPT PRO ESCAPE KLÁVESU ===
+# === JAVASCRIPT PRO ESCAPE KLÁVESU ===
 components.html(
     """
     <script>
@@ -688,7 +625,6 @@ components.html(
 
 # === VÝHYBKA: FILTROVÁNÍ vs. KALENDÁŘ ===
 
-# Používáme přímo hodnotu z widgetu (search_date_value)
 if search_text or len(search_date_value) > 0:
     
     # 🅰️ FILTROVÁNÍ
@@ -701,7 +637,6 @@ if search_text or len(search_date_value) > 0:
             df_akce['název'].str.contains(search_text, case=False, na=False) | 
             df_akce['místo'].str.contains(search_text, case=False, na=False)
         )
-        # Pokud je zadán jen text (bez data), automaticky filtrujeme minulost
         if len(search_date_value) == 0:
             mask = mask & (df_akce['datum'] >= dnes)
 
@@ -716,7 +651,6 @@ if search_text or len(search_date_value) > 0:
 
     results = df_akce[mask].sort_values(by='datum')
     
-    # Header
     info_text = f"Nalezeno {len(results)} akcí"
     if search_text: info_text += f" pro '{search_text}'"
     if len(search_date_value) > 0: 
@@ -830,16 +764,14 @@ with stylable_container(key="footer_logos", css_styles="img {height: 50px !impor
     
     with col_left:
         l1, l2 = st.columns(2)
-        # Nová syntaxe: width="stretch" místo use_container_width=True
         l1.image("logo1.jpg", width="stretch") 
         l2.image("logo2.jpg", width="stretch")
         
     with col_center:
-    st.markdown(styles.get_footer_html(), unsafe_allow_html=True)
+        st.markdown(styles.get_footer_html(), unsafe_allow_html=True)
         
     with col_right:
         r1, r2 = st.columns(2)
-        # Nová syntaxe: width="stretch" místo use_container_width=True
         r1.image("logo3.jpg", width="stretch")
         r2.image("logo4.jpg", width="stretch")
 
