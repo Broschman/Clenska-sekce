@@ -460,7 +460,7 @@ if not future_deadlines.empty:
 # ==============================================================================
 # 1. NEJDŘÍVE DEFINICE FUNKCE KALENDÁŘE
 # ==============================================================================
-@st.fragment
+# @st.fragment
 def show_calendar_fragment():
     # --- 1. NAVIGACE MĚSÍCŮ ---
     if 'vybrany_datum' not in st.session_state:
@@ -473,13 +473,15 @@ def show_calendar_fragment():
             curr = st.session_state.vybrany_datum
             prev_month = curr.replace(day=1) - timedelta(days=1)
             st.session_state.vybrany_datum = prev_month.replace(day=1)
-
+            st.rerun()
+            
     with col_nav3:
         if st.button("Další ➡️", use_container_width=True):
             curr = st.session_state.vybrany_datum
             next_month = (curr.replace(day=28) + timedelta(days=4)).replace(day=1)
             st.session_state.vybrany_datum = next_month
-
+            st.rerun()
+            
     year = st.session_state.vybrany_datum.year
     month = st.session_state.vybrany_datum.month
     ceske_mesice = ["", "Leden", "Únor", "Březen", "Duben", "Květen", "Červen", "Červenec", "Srpen", "Září", "Říjen", "Listopad", "Prosinec"]
