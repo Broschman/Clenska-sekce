@@ -288,30 +288,30 @@ def vykreslit_detail_akce(akce, unique_key):
     
     st.markdown(f"#### 👥 Zapsaní ({len(lidi)})")
     
-    # ZDE JSME SMAZALI PŮVODNÍ BLOK "Mazání", KTERÝ BYL NAD SEZNAMEM
-
     if not lidi.empty:
         h1, h2, h3, h4, h5, h6 = st.columns([0.4, 2.0, 1.5, 0.6, 0.6, 0.5]) 
         h1.markdown("<b style='color:#9CA3AF'>#</b>", unsafe_allow_html=True); h2.markdown("<b>Jméno</b>", unsafe_allow_html=True); h3.markdown("<b>Poznámka</b>", unsafe_allow_html=True); h4.markdown("🚗", unsafe_allow_html=True); h5.markdown("🛏️", unsafe_allow_html=True)
         st.markdown("<hr style='margin: 5px 0 10px 0; border-top: 1px solid #E5E7EB;'>", unsafe_allow_html=True)
         
+        # DŮLEŽITÉ: 'i' je pořadí (0, 1, 2...), 'idx' je index z DataFrame (může být divoký)
+        # Pro klíče tlačítek budeme používat 'i', protože je stabilní.
         for i, (idx, row) in enumerate(lidi.iterrows()):
             bg = "#F3F4F6" if i % 2 == 0 else "white"
             pad = "10px 5px 25px 5px !important" if i % 2 == 0 else "0px 5px 10px 5px !important"
             
-            with stylable_container(key=f"r_{unique_key}_{idx}", css_styles=f"{{background-color: {bg}; border-radius: 6px; padding: {pad}; margin-bottom: 2px; display: flex; align-items: center; min-height: 40px;}}"):
+            with stylable_container(key=f"r_{unique_key}_{i}", css_styles=f"{{background-color: {bg}; border-radius: 6px; padding: {pad}; margin-bottom: 2px; display: flex; align-items: center; min-height: 40px;}}"):
                 
-                # === ZMĚNA: LOGIKA MAZÁNÍ PŘÍMO V ŘÁDKU ===
+                # Zkontrolujeme, zda je tento řádek označen ke smazání
                 je_k_smazani = (delete_key_state in st.session_state) and (st.session_state[delete_key_state] == row['jméno'])
                 
                 if je_k_smazani:
-                    # Mód potvrzení - zobrazí se MÍSTO normálního řádku
+                    # Mód potvrzení
                     col_warn, col_yes, col_no = st.columns([3, 1, 1], vertical_alignment="center")
                     col_warn.warning(f"Opravdu smazat: **{row['jméno']}**?", icon="⚠️")
                     
-                    # Tlačítka pro potvrzení/zrušení
-                    with stylable_container(key=f"btn_yes_c_{idx}", css_styles="button {background-color: #DC2626 !important; color: white !important; border: none;}"):
-                        if col_yes.button("✅ ANO", key=f"yes_{unique_key}_{idx}"):
+                    with stylable_container(key=f"btn_yes_c_{i}", css_styles="button {background-color: #DC2626 !important; color: white !important; border: none;}"):
+                        # Klíč tlačítka používá 'i'
+                        if col_yes.button("✅ ANO", key=f"yes_{unique_key}_{i}"):
                             df_curr = conn.read(worksheet="prihlasky", ttl=0)
                             df_curr['id_akce'] = df_curr['id_akce'].astype(str).str.replace(r'\.0$', '', regex=True)
                             conn.update(worksheet="prihlasky", data=df_curr[~((df_curr['id_akce'] == akce_id_str) & (df_curr['jméno'] == row['jméno']))])
@@ -320,12 +320,12 @@ def vykreslit_detail_akce(akce, unique_key):
                             time.sleep(1)
                             st.rerun()
                             
-                    if col_no.button("❌ ZPĚT", key=f"no_{unique_key}_{idx}"):
+                    if col_no.button("❌ ZPĚT", key=f"no_{unique_key}_{i}"):
                         del st.session_state[delete_key_state]
                         st.rerun()
                 
                 else:
-                    # Normální zobrazení řádku (pokud se nemaže)
+                    # Normální řádek
                     c1, c2, c3, c4, c5, c6 = st.columns([0.4, 2.0, 1.5, 0.6, 0.6, 0.5], vertical_alignment="center")
                     c1.write(f"{i+1}.")
                     c2.markdown(f"**{row['jméno']}**")
@@ -334,10 +334,9 @@ def vykreslit_detail_akce(akce, unique_key):
                     c5.write(row.get('ubytování', ''))
                     
                     if not je_po_deadlinu:
-                         with stylable_container(key=f"delc_{unique_key}_{idx}", css_styles="button {margin:0 !important; padding:0 !important; height:auto !important; border:none; background:transparent; color: #EF4444;}"):
-                            # Po kliknutí se jen nastaví session_state a reloadne se, 
-                            # v příštím běhu se aktivuje 'if je_k_smazani' výše
-                            if c6.button("🗑️", key=f"d_{unique_key}_{idx}"): 
+                         with stylable_container(key=f"delc_{unique_key}_{i}", css_styles="button {margin:0 !important; padding:0 !important; height:auto !important; border:none; background:transparent; color: #EF4444;}"):
+                            # TADY BYLA ZMĚNA: key používá 'i' místo 'idx'
+                            if c6.button("🗑️", key=f"d_{unique_key}_{i}"): 
                                 st.session_state[delete_key_state] = row['jméno']
                                 st.rerun()
     else: st.caption("Zatím nikdo. Buď první!")
