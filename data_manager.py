@@ -13,7 +13,7 @@ def get_connection():
     return st.connection("gsheets", type=GSheetsConnection)
 
 # --- 1. AKCE (Cachujeme, aby kalendář neblikal) ---
-@st.cache_data(ttl=3600) 
+# @st.cache_data(ttl=3600) 
 def load_akce():
     print("STAHUJI AKCE Z WEBU...")
     try:
