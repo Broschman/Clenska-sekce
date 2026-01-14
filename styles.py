@@ -194,7 +194,7 @@ def get_map_buttons_html(link_mapy_cz, link_google, link_waze):
     """
 
 def get_footer_html():
-    return "<div style='text-align: center; color: #9CA3AF; font-size: 0.8em; font-family: sans-serif;'><b>Členská sekce RBK</b> • Designed by Broschman • v1.2.22.15<br>© 2026 All rights reserved</div>"
+    return "<div style='text-align: center; color: #9CA3AF; font-size: 0.8em; font-family: sans-serif;'><b>Členská sekce RBK</b> • Designed by Broschman • v1.2.22.17<br>© 2026 All rights reserved</div>"
 
 # --- 2. LOTTIE ANIMACE ---
 @st.cache_data(ttl=3600*24)
