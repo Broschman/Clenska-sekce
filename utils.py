@@ -149,3 +149,79 @@ def get_forecast(lat, lon, target_date):
         return None
     except:
         return None
+
+def dms_to_decimal(dms_str):
+    """Převede souřadnice ve formátu DMS (stupně, minuty, vteřiny) na decimal."""
+    try:
+        dms_str = dms_str.upper().strip()
+        match = re.match(r"(\d+)[°](\d+)['′](\d+(\.\d+)?)[^NSEW]*([NSEW])?", dms_str)
+        if match:
+            deg, minutes, seconds, _, direction = match.groups()
+            val = float(deg) + float(minutes)/60 + float(seconds)/3600
+            if direction in ['S', 'W']: val = -val
+            return val
+        return float(dms_str)
+    except: return None
+
+def parse_map_coordinates(mapa_raw, nazev_akce="Bod"):
+    """
+    Z textového odkazu (mapy.cz, google maps) nebo souřadnic vytáhne seznam bodů.
+    Vrací: list of tuples (lat, lon, nazev)
+    """
+    body = []
+    mapa_raw = str(mapa_raw).strip()
+    
+    if not mapa_raw:
+        return []
+
+    try:
+        # 1. Je to URL?
+        if "http" in mapa_raw:
+            parsed = urlparse(mapa_raw)
+            params = parse_qs(parsed.query)
+            
+            # Mapy.cz 'ud' parametry (vlastní body)
+            if 'ud' in params:
+                uds = params['ud']
+                uts = params.get('ut', [])
+                for i, ud_val in enumerate(uds):
+                    parts = ud_val.split(',')
+                    if len(parts) >= 2:
+                        lat, lon = dms_to_decimal(parts[0]), dms_to_decimal(parts[1])
+                        if lat and lon:
+                            nazev = uts[i] if i < len(uts) else f"Bod {i+1}"
+                            body.append((lat, lon, nazev))
+            
+            # Pokud nejsou 'ud', zkusíme střed mapy (x, y nebo q)
+            if not body:
+                lat, lon = None, None
+                if 'x' in params and 'y' in params:
+                    lon, lat = float(params['x'][0]), float(params['y'][0])
+                elif 'q' in params:
+                    q_parts = params['q'][0].replace(' ', '').split(',')
+                    if len(q_parts) >= 2: lat, lon = float(q_parts[0]), float(q_parts[1])
+                
+                if lat and lon:
+                    body.append((lat, lon, nazev_akce))
+        
+        # 2. Nejsou to jen souřadnice oddělené středníkem?
+        else:
+            raw_parts = mapa_raw.split(';')
+            for part in raw_parts:
+                part = part.strip()
+                if not part: continue
+                # Vyčistit bordel okolo čísel
+                clean_text = re.sub(r'[^\d.,]', ' ', part)
+                num_parts = clean_text.replace(',', ' ').split()
+                num_parts = [p for p in num_parts if len(p) > 0]
+                
+                if len(num_parts) >= 2:
+                    v1, v2 = float(num_parts[0]), float(num_parts[1])
+                    # Detekce prohozených souřadnic (ČR je cca 48-51 N, 12-19 E)
+                    if 12 <= v1 <= 19 and 48 <= v2 <= 52: lat, lon = v2, v1
+                    else: lat, lon = v1, v2
+                    body.append((lat, lon, f"Bod {len(body)+1}"))
+    except:
+        pass
+        
+    return body
