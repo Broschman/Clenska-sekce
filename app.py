@@ -477,11 +477,8 @@ if not future_deadlines.empty:
 
     st.markdown("<div style='margin-bottom: 25px'></div>", unsafe_allow_html=True)
 
-# ==============================================================================
-# 1. NEJDŘÍVE DEFINICE FUNKCE KALENDÁŘE
-# ==============================================================================
-# @st.fragment
-def show_calendar_fragment():
+@st.fragment  # ✅ Fragment je zpět!
+def show_calendar_section():
     # --- 1. NAVIGACE MĚSÍCŮ ---
     if 'vybrany_datum' not in st.session_state:
         st.session_state.vybrany_datum = date.today()
@@ -489,19 +486,21 @@ def show_calendar_fragment():
     col_nav1, col_nav2, col_nav3 = st.columns([2, 5, 2], vertical_alignment="center")
     
     with col_nav1:
+        # BEZ st.rerun()! Fragment se obnoví sám.
         if st.button("⬅️ Předchozí", use_container_width=True):
             curr = st.session_state.vybrany_datum
             prev_month = curr.replace(day=1) - timedelta(days=1)
             st.session_state.vybrany_datum = prev_month.replace(day=1)
-            st.rerun()
-            
+            # st.rerun() <--- TADY NIC NEPIŠ
+
     with col_nav3:
+        # BEZ st.rerun()! Fragment se obnoví sám.
         if st.button("Další ➡️", use_container_width=True):
             curr = st.session_state.vybrany_datum
             next_month = (curr.replace(day=28) + timedelta(days=4)).replace(day=1)
             st.session_state.vybrany_datum = next_month
-            st.rerun()
-            
+            # st.rerun() <--- TADY NIC NEPIŠ
+
     year = st.session_state.vybrany_datum.year
     month = st.session_state.vybrany_datum.month
     ceske_mesice = ["", "Leden", "Únor", "Březen", "Duben", "Květen", "Červen", "Červenec", "Srpen", "Září", "Říjen", "Listopad", "Prosinec"]
@@ -510,7 +509,7 @@ def show_calendar_fragment():
         st.markdown(f"<h2 style='text-align: center; margin:0; padding:0;'>{ceske_mesice[month]} <span style='color:#666'>{year}</span></h2>", unsafe_allow_html=True)
 
     st.markdown("<div style='margin-bottom: 20px'></div>", unsafe_allow_html=True)
-
+    
     # --- 2. PŘÍPRAVA DAT ---
     cal = calendar.Calendar(firstweekday=0)
     month_days = cal.monthdayscalendar(year, month)
