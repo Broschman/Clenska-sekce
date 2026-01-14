@@ -24,55 +24,10 @@ print("--- ZAČÁTEK RERUNU ---")
 
 # Načtení CSS
 styles.load_css()
+styles.inject_mobile_warning()
 
 # --- 1. NASTAVENÍ STRÁNKY ---
 st.set_page_config(page_title="Kalendář RBK", page_icon="🌲", layout="wide")
-
-# === VYNUCENÍ OTOČENÍ NA MOBILU (OPRAVA - PŘEKRYVNÁ VRSTVA) ===
-st.markdown("""
-<style>
-    /* 1. Definice varovné vrstvy - defaultně je skrytá */
-    #rotate-warning {
-        display: none; 
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        background-color: #ffffff; /* Bílé pozadí */
-        z-index: 999999; /* Musí být úplně nahoře nad vším */
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        text-align: center;
-        padding: 20px;
-    }
-
-    /* 2. Pokud je zařízení na VÝŠKU (portrait) a je to MOBIL (max-width 900px) */
-    @media only screen and (orientation: portrait) and (max-width: 900px) {
-        
-        /* Zobrazíme varovnou vrstvu */
-        #rotate-warning {
-            display: flex !important;
-        }
-        
-        /* Aplikaci pod tím můžeme nechat rozmazanou nebo ji nechat být, 
-           protože ji stejně překryje ta bílá vrstva #rotate-warning */
-        .stApp {
-            overflow: hidden; /* Zamezí scrollování pod vrstvou */
-        }
-    }
-</style>
-
-<div id="rotate-warning">
-    <div style="font-size: 60px;">📱➡️🔄</div>
-    <h1 style="color: #000000; margin-top: 20px; font-family: sans-serif;">Otoč telefon</h1>
-    <p style="color: #333333; font-size: 1.2rem; margin-top: 10px; font-family: sans-serif;">
-        Pro správné zobrazení kalendáře<br>
-        prosím otoč zařízení na šířku.
-    </p>
-</div>
-""", unsafe_allow_html=True)
 
 def vykreslit_detail_akce(akce, unique_key):
     """
