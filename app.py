@@ -24,7 +24,7 @@ print("--- ZAČÁTEK RERUNU ---")
 
 # Načtení CSS a mobilního varování
 styles.load_css()
-# styles.inject_mobile_warning()
+styles.inject_mobile_warning()
 
 # --- 1. NASTAVENÍ STRÁNKY ---
 st.set_page_config(page_title="Kalendář RBK", page_icon="🌲", layout="wide")
