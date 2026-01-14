@@ -741,7 +741,7 @@ if search_text or len(search_date_value) > 0:
 
 else:
     # 🅱️ REŽIM KALENDÁŘE
-    show_calendar_fragment()
+    show_calendar_section()
 st.markdown("<div style='margin-bottom: 50px'></div>", unsafe_allow_html=True)
 
 
