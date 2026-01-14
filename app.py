@@ -341,32 +341,61 @@ def vykreslit_detail_akce(akce, unique_key):
                                 st.rerun()
     else: st.caption("Zatím nikdo. Buď první!")
     
-    # === 🆕 SEKCE EXPORTU ===
+    # === 🆕 SEKCE EXPORTU (S AUTO-SCROLLEM) ===
     if not lidi.empty:
         st.markdown("---")
         c_export, c_dummy = st.columns([1, 2])
         
         with c_export:
-            with st.expander("🔐 Export pro trenéry"):
-                password = st.text_input("Zadej heslo:", type="password", key=f"pwd_{unique_key}")
-                
-                if password == "8848":
-                    st.success("Přístup povolen.")
-                    output = BytesIO()
-                    df_to_export = lidi[["jméno", "poznámka", "doprava", "ubytování"]].copy()
-                    df_to_export.to_excel(output, index=False, sheet_name='Soupiska')
-                    excel_data = output.getvalue()
-                    file_name_safe = re.sub(r'[^\w\s-]', '', akce['název']).strip().replace(' ', '_')
+            # Unikátní klíč pro stav otevření exportu
+            export_state_key = f"export_open_{unique_key}"
+            
+            # Tlačítko, které funguje jako přepínač (Toggle)
+            btn_label = "🔓 Zavřít export" if st.session_state.get(export_state_key) else "🔐 Export pro trenéry"
+            if st.button(btn_label, key=f"btn_toggle_exp_{unique_key}"):
+                st.session_state[export_state_key] = not st.session_state.get(export_state_key, False)
+                st.rerun()
+
+            # Pokud je otevřeno, zobrazíme obsah + JS pro scroll
+            if st.session_state.get(export_state_key, False):
+                with stylable_container(
+                    key=f"cont_exp_{unique_key}",
+                    css_styles="{background-color: #f9fafb; padding: 15px; border-radius: 8px; border: 1px solid #e5e7eb; margin-top: 10px;}"
+                ):
+                    password = st.text_input("Zadej heslo:", type="password", key=f"pwd_{unique_key}")
                     
-                    st.download_button(
-                        label="📥 Stáhnout Excel",
-                        data=excel_data,
-                        file_name=f"{file_name_safe}_soupiska.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        key=f"dl_xls_{unique_key}"
-                    )
-                elif password:
-                    st.error("❌ Špatné heslo.")
+                    if password == "8848":
+                        st.success("Přístup povolen.")
+                        output = BytesIO()
+                        df_to_export = lidi[["jméno", "poznámka", "doprava", "ubytování"]].copy()
+                        df_to_export.to_excel(output, index=False, sheet_name='Soupiska')
+                        excel_data = output.getvalue()
+                        file_name_safe = re.sub(r'[^\w\s-]', '', akce['název']).strip().replace(' ', '_')
+                        
+                        st.download_button(
+                            label="📥 Stáhnout Excel",
+                            data=excel_data,
+                            file_name=f"{file_name_safe}_soupiska.xlsx",
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            key=f"dl_xls_{unique_key}"
+                        )
+                    elif password:
+                        st.error("❌ Špatné heslo.")
+
+                # === JAVASCRIPT PRO AUTO-SCROLL ===
+                # Tento script najde popover a posune ho úplně dolů
+                components.html("""
+                <script>
+                    const popovers = window.parent.document.querySelectorAll('[data-testid="stPopoverBody"]');
+                    if (popovers.length > 0) {
+                        // Cílíme na poslední otevřený popover
+                        const lastPopover = popovers[popovers.length - 1];
+                        setTimeout(() => {
+                            lastPopover.scrollTo({ top: lastPopover.scrollHeight, behavior: 'smooth' });
+                        }, 100);
+                    }
+                </script>
+                """, height=0)
     
     # --- HLAVIČKA S LOGEM ---
 col_dummy, col_title, col_help = st.columns([1, 10, 1], vertical_alignment="center")
