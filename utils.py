@@ -232,10 +232,8 @@ def parse_map_coordinates(mapa_raw, nazev_akce="Bod"):
 @st.fragment
 def export_admin_section(lidi, nazev_akce, unique_key):
     """
-    Izolovaná sekce pro export, která se nepřenačítá celá, ale jen lokálně.
-    Přesunuto z app.py pro čistší kód.
+    Izolovaná sekce pro export s automatickým stahováním po zadání hesla.
     """
-    # Musíme si vytvořit připojení tady, protože 'conn' z app.py tu nevidíme
     conn = data_manager.get_connection()
 
     if not lidi.empty:
@@ -243,10 +241,7 @@ def export_admin_section(lidi, nazev_akce, unique_key):
         c_export, c_dummy = st.columns([1, 2])
         
         with c_export:
-            # Unikátní klíč pro stav otevření exportu
             export_state_key = f"export_open_{unique_key}"
-            
-            # Tlačítko - díky fragmentu proběhne reload jen uvnitř této funkce
             is_open = st.session_state.get(export_state_key, False)
             btn_label = "🔓 Zavřít export" if is_open else "🔐 Export pro trenéry"
             
@@ -254,33 +249,62 @@ def export_admin_section(lidi, nazev_akce, unique_key):
                 st.session_state[export_state_key] = not is_open
                 st.rerun()
 
-            # Pokud je otevřeno
             if st.session_state.get(export_state_key, False):
                 with stylable_container(
                     key=f"cont_exp_{unique_key}",
                     css_styles="{background-color: #f9fafb; padding: 15px; border-radius: 8px; border: 1px solid #e5e7eb; margin-top: 10px;}"
                 ):
-                    password = st.text_input("Zadej heslo:", type="password", key=f"pwd_{unique_key}")
+                    # Input s nápovědou (tooltip), že stačí Enter
+                    password = st.text_input("Zadej heslo (a stiskni Enter):", type="password", key=f"pwd_{unique_key}", help="Po zadání hesla stiskni Enter a soubor se sám stáhne.")
                     
                     if password == "8848":
-                        st.success("Přístup povolen.")
+                        # 1. Příprava dat
                         output = BytesIO()
                         df_to_export = lidi[["jméno", "poznámka", "doprava", "ubytování"]].copy()
                         df_to_export.to_excel(output, index=False, sheet_name='Soupiska')
                         excel_data = output.getvalue()
+                        b64 = base64.b64encode(excel_data).decode()
                         file_name_safe = re.sub(r'[^\w\s-]', '', nazev_akce).strip().replace(' ', '_')
-                        
+                        full_file_name = f"{file_name_safe}_soupiska.xlsx"
+
+                        st.success("✅ Heslo přijato. Stahování...")
+
+                        # 2. Vytvoření skrytého odkazu (kotvy) pomocí HTML
+                        # Tento odkaz není vidět (display:none), ale nese data
+                        download_link_html = f"""
+                        <a href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{b64}" 
+                           download="{full_file_name}" 
+                           id="auto_download_link_{unique_key}" 
+                           style="display:none;">Download</a>
+                        """
+                        st.markdown(download_link_html, unsafe_allow_html=True)
+
+                        # 3. JavaScript, který na ten skrytý odkaz klikne
+                        # Musíme chvíli počkat (setTimeout), než se HTML vykreslí do DOMu
+                        components.html(f"""
+                        <script>
+                            setTimeout(function() {{
+                                const link = window.parent.document.getElementById('auto_download_link_{unique_key}');
+                                if (link) {{
+                                    link.click();
+                                }}
+                            }}, 500);
+                        </script>
+                        """, height=0)
+
+                        # 4. Pro jistotu necháme i manuální tlačítko (kdyby prohlížeč blokoval skripty)
                         st.download_button(
-                            label="📥 Stáhnout Excel",
+                            label="📥 Stáhnout znovu (pokud se nestáhlo)",
                             data=excel_data,
-                            file_name=f"{file_name_safe}_soupiska.xlsx",
+                            file_name=full_file_name,
                             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                             key=f"dl_xls_{unique_key}"
                         )
+                        
                     elif password:
                         st.error("❌ Špatné heslo.")
 
-                # Javascript pro scroll (funguje i uvnitř fragmentu)
+                # Scroll script (zůstává)
                 components.html("""
                 <script>
                     const popovers = window.parent.document.querySelectorAll('[data-testid="stPopoverBody"]');
