@@ -7,6 +7,9 @@ import pandas as pd
 from datetime import datetime, date, timedelta
 from urllib.parse import urlparse, parse_qs
 from io import BytesIO
+from streamlit_extras.stylable_container import stylable_container
+import streamlit.components.v1 as components
+import data_manager
 
 @st.cache_data(ttl=3600*24) # Uložíme si to na 24 hodin
 def get_coords_from_place(place_name):
@@ -225,3 +228,67 @@ def parse_map_coordinates(mapa_raw, nazev_akce="Bod"):
         pass
         
     return body
+
+@st.fragment
+def export_admin_section(lidi, nazev_akce, unique_key):
+    """
+    Izolovaná sekce pro export, která se nepřenačítá celá, ale jen lokálně.
+    Přesunuto z app.py pro čistší kód.
+    """
+    # Musíme si vytvořit připojení tady, protože 'conn' z app.py tu nevidíme
+    conn = data_manager.get_connection()
+
+    if not lidi.empty:
+        st.markdown("---")
+        c_export, c_dummy = st.columns([1, 2])
+        
+        with c_export:
+            # Unikátní klíč pro stav otevření exportu
+            export_state_key = f"export_open_{unique_key}"
+            
+            # Tlačítko - díky fragmentu proběhne reload jen uvnitř této funkce
+            is_open = st.session_state.get(export_state_key, False)
+            btn_label = "🔓 Zavřít export" if is_open else "🔐 Export pro trenéry"
+            
+            if st.button(btn_label, key=f"btn_toggle_exp_{unique_key}"):
+                st.session_state[export_state_key] = not is_open
+                st.rerun()
+
+            # Pokud je otevřeno
+            if st.session_state.get(export_state_key, False):
+                with stylable_container(
+                    key=f"cont_exp_{unique_key}",
+                    css_styles="{background-color: #f9fafb; padding: 15px; border-radius: 8px; border: 1px solid #e5e7eb; margin-top: 10px;}"
+                ):
+                    password = st.text_input("Zadej heslo:", type="password", key=f"pwd_{unique_key}")
+                    
+                    if password == "8848":
+                        st.success("Přístup povolen.")
+                        output = BytesIO()
+                        df_to_export = lidi[["jméno", "poznámka", "doprava", "ubytování"]].copy()
+                        df_to_export.to_excel(output, index=False, sheet_name='Soupiska')
+                        excel_data = output.getvalue()
+                        file_name_safe = re.sub(r'[^\w\s-]', '', nazev_akce).strip().replace(' ', '_')
+                        
+                        st.download_button(
+                            label="📥 Stáhnout Excel",
+                            data=excel_data,
+                            file_name=f"{file_name_safe}_soupiska.xlsx",
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            key=f"dl_xls_{unique_key}"
+                        )
+                    elif password:
+                        st.error("❌ Špatné heslo.")
+
+                # Javascript pro scroll (funguje i uvnitř fragmentu)
+                components.html("""
+                <script>
+                    const popovers = window.parent.document.querySelectorAll('[data-testid="stPopoverBody"]');
+                    if (popovers.length > 0) {
+                        const lastPopover = popovers[popovers.length - 1];
+                        setTimeout(() => {
+                            lastPopover.scrollTo({ top: lastPopover.scrollHeight, behavior: 'smooth' });
+                        }, 100);
+                    }
+                </script>
+                """, height=0)
