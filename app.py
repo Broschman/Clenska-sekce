@@ -380,7 +380,6 @@ def vykreslit_detail_akce(akce, unique_key):
                                             # TADY BYLA CHYBA (console.log -> print)
                                             print(f"Chyba při ukládání jména: {e}")        
                                             # DŮLEŽITÉ: Smažeme cache, aby se příště jméno načetlo
-                                            data_manager.load_jmena.clear()
                                             
                                     # 5. Animace úspěchu
                                     with st_lottie_spinner(styles.lottie_success, key=f"anim_{unique_key}"): 
