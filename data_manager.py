@@ -4,7 +4,7 @@ import pandas as pd
 from datetime import timedelta, date
 
 # ... Konstanty (ID, URL) zůstávají stejné ...
-SHEET_ID = "1lW6DpUQBSm5heSO_HH9lDzm0x7t1eo8dn6FpJHh2y6U"
+SHEET_ID = "1LaojGRVAGtWmfQZ4DfDXDyiZs1TO7Fck4HRgT8Pyook"
 URL_AKCE = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=akce"
 URL_PRIHLASKY = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=prihlasky"
 URL_JMENA = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=jmena"
