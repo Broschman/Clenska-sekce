@@ -103,7 +103,7 @@ seznam_jmen = data_manager.load_jmena()
 if 'vybrany_datum' not in st.session_state:
     st.session_state.vybrany_datum = date.today()
 
-# --- DASHBOARD NEJBLIŽŠÍCH DEADLINŮ (CYBER-ROG EDITION) ---
+# --- DASHBOARD NEJBLIŽŠÍCH DEADLINŮ ---
 dnes = date.today()
 future_deadlines = df_akce[df_akce['deadline'] >= dnes].sort_values('deadline').head(3)
 
@@ -114,21 +114,15 @@ if not future_deadlines.empty:
     for i, (_, row) in enumerate(future_deadlines.iterrows()):
         days_left = (row['deadline'] - dnes).days
         
-        # Logika NEONOVÝCH barev a záře
+        # Logika barev pro Dashboard
         if days_left == 0:
-            border_color = styles.NEON_RED
-            bg_color = "rgba(255, 7, 58, 0.1)"
-            shadow = f"0 0 20px {styles.NEON_RED}"
+            border_color, bg_color = styles.NEON_RED, "rgba(255, 7, 58, 0.1)"
             icon, time_msg = "🚨", "DNES!"
         elif days_left <= 3:
-            border_color = styles.NEON_ORANGE
-            bg_color = "rgba(255, 95, 31, 0.1)"
-            shadow = f"0 0 15px {styles.NEON_ORANGE}"
+            border_color, bg_color = styles.NEON_ORANGE, "rgba(255, 95, 31, 0.1)"
             icon, time_msg = "⚠️", f"Za {days_left} dny"
         else:
-            border_color = styles.NEON_GREEN
-            bg_color = "rgba(57, 255, 20, 0.1)"
-            shadow = f"0 0 10px {styles.NEON_GREEN}"
+            border_color, bg_color = styles.NEON_GREEN, "rgba(57, 255, 20, 0.1)"
             icon, time_msg = "📅", row['deadline'].strftime('%d.%m.')
 
         unique_key_dash = f"dash_{row['id']}"
@@ -136,11 +130,12 @@ if not future_deadlines.empty:
         with cols_d[i]:
             with stylable_container(
                 key=f"dash_card_{i}",
+                # Tady už máme specifickou barvu v border_color, takže hover funguje správně
                 css_styles=f"""
                 button {{
                     background-color: {bg_color} !important;
                     border: 1px solid {border_color} !important;
-                    box-shadow: {shadow} !important;
+                    box-shadow: 0 0 10px {border_color} !important;
                     border-radius: 12px !important;
                     color: #fff !important;
                     width: 100% !important;
@@ -153,7 +148,6 @@ if not future_deadlines.empty:
                     align-items: center !important;
                     padding: 10px !important;
                     transition: all 0.3s !important;
-                    /* === ZDE JE ZMĚNA === */
                     font-family: 'Exo 2', sans-serif !important;
                 }}
                 button:hover {{
@@ -162,7 +156,6 @@ if not future_deadlines.empty:
                     background-color: {border_color}22 !important;
                 }}
                 button p {{
-                    /* === I ZDE PRO JISTOTU === */
                     font-family: 'Exo 2', sans-serif !important;
                     letter-spacing: 1px;
                     font-weight: 700;
@@ -172,7 +165,9 @@ if not future_deadlines.empty:
                 label_text = f"{icon}\n{row['název']}\n{time_msg}"
                 with st.popover(label_text, use_container_width=True):
                     utils.vykreslit_detail_akce(row, unique_key_dash)
-                    
+
+    st.markdown("<div style='margin-bottom: 25px'></div>", unsafe_allow_html=True)
+    
 @st.fragment  # ✅ Fragment je zpět!
 def show_calendar_section():
     # --- 1. NAVIGACE MĚSÍCŮ ---
