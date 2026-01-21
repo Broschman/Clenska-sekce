@@ -770,43 +770,51 @@ def vykreslit_detail_akce(akce, unique_key):
                              show_doprava_dialog(akce_id_str, akce.get('název', ''), akce['datum'].strftime('%d.%m.'), row['jméno'], None, None)
 
                      c5.write(row.get('ubytování', ''))
-                     if not je_po_deadlinu:
-                              # === CENTROVÁNÍ KOŠE: MARGIN AUTO TRIK ===
-                              with stylable_container(key=f"delc_{unique_key}_{i}_margin", css_styles="""
-                                button {
-                                    border: none !important; 
-                                    background: transparent !important; 
-                                    box-shadow: none !important;
-                                    padding: 0 !important;
-                                    
-                                    /* 1. Nastavíme fixní malou šířku */
-                                    width: 30px !important; 
-                                    
-                                    /* 2. Uděláme z něj blok, aby fungovaly marginy */
-                                    display: block !important; 
-                                    
-                                    /* 3. Magie: Auto marginy zleva i zprava ho vycentrují */
-                                    margin-left: auto !important;
-                                    margin-right: auto !important;
-                                    
-                                    color: #ff073a !important;
-                                }
-                                
-                                button:hover {
-                                    color: #ff5f1f !important;
-                                    background: rgba(255, 7, 58, 0.1) !important;
-                                    border-radius: 6px !important;
-                                    /* Ujistíme se, že se při hoveru nezmění pozice */
-                                    margin-left: auto !important;
-                                    margin-right: auto !important;
-                                }
-                                
-                                /* Centr ikony uvnitř */
-                                button > div {
-                                    justify-content: center !important;
-                                }
+                          
+                          # === NOVÁ LOGIKA TLAČÍTKA KOŠE (CLEAN REWRITE) ===
+                          if not je_po_deadlinu:
+                              # Použijeme unikátní klíč kontejneru, aby se styl nemíchal s ničím jiným
+                              with stylable_container(key=f"del_btn_container_{unique_key}_{i}", css_styles="""
+                                  /* 1. Resetujeme styl tlačítka na průhledné */
+                                  button {
+                                      background-color: transparent !important;
+                                      border: none !important;
+                                      box-shadow: none !important;
+                                      padding: 0 !important;
+                                      color: #ff073a !important;
+                                      
+                                      /* 2. ZAJIŠTĚNÍ CENTROVÁNÍ */
+                                      /* Flexbox zarovná obsah tlačítka přesně na střed */
+                                      display: flex !important;
+                                      justify-content: center !important;
+                                      align-items: center !important;
+                                      
+                                      /* 3. Výška a šířka */
+                                      width: 100% !important;
+                                      height: auto !important;
+                                      min-height: 40px !important; /* Aby se na to dobře klikalo */
+                                      transition: all 0.2s ease !important;
+                                  }
+
+                                  /* 3. Hover efekt - jemné podsvícení */
+                                  button:hover {
+                                      color: #ff5f1f !important;
+                                      background-color: rgba(255, 7, 58, 0.1) !important;
+                                      border-radius: 8px !important;
+                                      transform: scale(1.1); /* Jemné zvětšení při najetí */
+                                  }
+
+                                  /* 4. POJISTKA: Vycentrování vnitřního DIVu Streamlitu */
+                                  button > div {
+                                      display: flex !important;
+                                      justify-content: center !important;
+                                      align-items: center !important;
+                                      width: 100% !important;
+                                  }
                               """):
-                                  if c6.button("🗑️", key=f"del_{unique_key}_{i}"):
+                                  # use_container_width=True roztáhne tlačítko přes celou buňku
+                                  # CSS se pak postará o to, aby ikonka uvnitř plavala uprostřed
+                                  if c6.button("🗑️", key=f"del_{unique_key}_{i}", use_container_width=True):
                                       st.session_state[delete_key_state] = row['jméno']
                                       st.rerun()
                                  
