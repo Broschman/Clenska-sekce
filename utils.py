@@ -769,32 +769,33 @@ def vykreslit_detail_akce(akce, unique_key):
                             white-space: nowrap !important;
                             border-radius: 6px !important;
                         }}
+                        button:hover {{
+                            border-radius: 6px !important;
+                        }}
                      """):
                          if c4.button(btn_label, key=f"btn_row_d_{unique_key}_{i}", use_container_width=True):
                              show_doprava_dialog(akce_id_str, akce.get('název', ''), akce['datum'].strftime('%d.%m.'), row['jméno'], None, None)
 
                      c5.write(row.get('ubytování', ''))
 
-                     # === TLAČÍTKO KOŠE (OPRAVA ZAROVNÁNÍ) ===
+                     # === TLAČÍTKO KOŠE (FINÁLNÍ FIX CENTROVÁNÍ) ===
                      if not je_po_deadlinu:
                          with stylable_container(key=f"del_btn_container_{unique_key}_{i}", css_styles="""
                              button {
-                                 /* Vyresetujeme pozadí a okraje */
+                                 /* Reset stylu */
                                  background-color: rgba(255, 255, 255, 0.05) !important;
-                                 border: 1px solid rgba(255, 255, 255, 0.2) !important;
-                                 border-radius: 6px !important;
+                                 border: 1px solid rgba(255, 255, 255, 0.1) !important;
                                  color: #ff073a !important;
+                                 border-radius: 6px !important;
                                  padding: 0 !important;
                                  
-                                 /* KLÍČOVÉ: Roztáhneme na 100% a centrujeme obsah */
+                                 /* Roztáhnout a vycentrovat kontejner */
                                  width: 100% !important;
                                  height: auto !important;
-                                 min-height: 40px !important;
-                                 
+                                 min-height: 35px !important;
                                  display: flex !important;
                                  justify-content: center !important;
                                  align-items: center !important;
-                                 margin: 0 !important; /* Žádné auto marginy! */
                              }
                              
                              /* Hover efekt */
@@ -802,18 +803,28 @@ def vykreslit_detail_akce(akce, unique_key):
                                  color: #ff5f1f !important;
                                  background-color: rgba(255, 7, 58, 0.2) !important;
                                  border-color: #ff073a !important;
+                                 border-radius: 6px !important;
                                  transform: scale(1.05);
                              }
+
+                             /* !!! TOTO JE KLÍČ PRO CENTROVÁNÍ EMOJI !!! */
+                             button p {
+                                 width: 100% !important;
+                                 text-align: center !important;
+                                 margin: 0 !important;
+                                 padding: 0 !important;
+                                 display: block !important;
+                                 line-height: 1 !important;
+                             }
                              
-                             /* Pojistka pro vnitřní element */
+                             /* Pojistka pro vnitřní div */
                              button > div {
+                                 width: 100% !important;
                                  display: flex !important;
                                  justify-content: center !important;
-                                 align-items: center !important;
-                                 margin: 0 !important;
                              }
                          """):
-                             # use_container_width=True je nutné, aby CSS width: 100% fungovalo správně
+                             # use_container_width=True je nutné!
                              if c6.button("🗑️", key=f"del_{unique_key}_{i}", use_container_width=True):
                                  st.session_state[delete_key_state] = row['jméno']
                                  st.rerun()
