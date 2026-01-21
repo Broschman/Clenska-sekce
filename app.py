@@ -195,13 +195,17 @@ def vykreslit_detail_akce(akce, unique_key):
                      # ... (Logika mazání stejná jako minule - zkráceno pro přehlednost) ...
                      with stylable_container(key=f"btn_yes_c_{i}", css_styles="button {background-color: #DC2626 !important; color: white !important; border: none;}"):
                          if col_yes.button("ANO", key=f"yes_{unique_key}_{i}"):
-                            df_curr = conn.read(worksheet="prihlasky", ttl=0)
-                            df_curr['id_akce'] = df_curr['id_akce'].astype(str).str.replace(r'\.0$', '', regex=True)
-                            conn.update(worksheet="prihlasky", data=df_curr[~((df_curr['id_akce'] == akce_id_str) & (df_curr['jméno'] == row['jméno']))])
-                            try:
-                                df_auta = data_manager.load_auta()
-                                conn.update(worksheet="auta", data=df_auta[~((df_auta['id_akce'] == akce_id_str) & (df_auta['ridic'] == row['jméno']))])
-                            except: pass
+                            # 1. POKUS O SMAZÁNÍ AUTA A ÚKLID PASAŽÉRŮ (Nová logika)
+                            # Pokud je uživatel řidič, handle_driver_removal to vyřeší.
+                            # Pokud ne, nic se nestane.
+                            utils.handle_driver_removal(conn, akce_id_str, row['jméno'])
+                            
+                            # 2. SMAZÁNÍ Z PŘIHLÁŠEK (Standardní)
+                            # Musíme znovu načíst (refresh), protože handle_driver_removal mohla sáhnout do DB
+                            df_curr = data_manager.load_prihlasky() # Použijeme data_manager pro čerstvost
+                            df_curr = df_curr[~((df_curr['id_akce'] == akce_id_str) & (df_curr['jméno'] == row['jméno']))]
+                            conn.update(worksheet="prihlasky", data=df_curr)
+                            
                             del st.session_state[delete_key_state]
                             st.rerun()
                      if col_no.button("ZPĚT", key=f"no_{unique_key}_{i}"):
