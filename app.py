@@ -82,7 +82,6 @@ if not future_deadlines.empty:
                 button {{
                     background-color: {bg_c} !important;
                     border: none !important;
-                    /* === PERMANENTNÍ GLOW === */
                     box-shadow: inset 0 0 0 1px {glow_c}, 0 0 10px {glow_c}44 !important;
                     color: #fff !important;
                     border-radius: 12px !important;
@@ -98,15 +97,14 @@ if not future_deadlines.empty:
                     font-family: 'Exo 2', sans-serif !important;
                     transition: transform 0.2s ease, box-shadow 0.2s ease !important;
                 }}
-                /* === NAJETÍ MYŠÍ (ZESÍLENÍ) === */
+                /* ZDE JE FIX PRO DASHBOARD */
                 button:hover {{
-                    /* Tlustší rámeček (2px) a silnější záře (25px) */
                     box-shadow: inset 0 0 0 2px {glow_c}, 0 0 25px {glow_c} !important;
                     background-color: {glow_c}22 !important;
                     transform: scale(1.05) !important;
                     z-index: 100 !important;
                     color: #fff !important;
-                    border-radius: 12px !important; /* FIX TVARU */
+                    border-radius: 12px !important; /* !!! */
                 }}
                 button p {{ font-family: 'Exo 2', sans-serif !important; letter-spacing: 1px; font-weight: 700; }}
                 """
