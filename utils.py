@@ -771,44 +771,49 @@ def vykreslit_detail_akce(akce, unique_key):
 
                      c5.write(row.get('ubytování', ''))
                      if not je_po_deadlinu:
-                              # === CENTROVÁNÍ KOŠE - ABSOLUTNÍ FIX ===
-                              with stylable_container(key=f"delc_{unique_key}_{i}_fix", css_styles="""
+                              # === CENTROVÁNÍ KOŠE - ÚROVEŇ PARENT ELEMENT ===
+                              with stylable_container(key=f"delc_{unique_key}_{i}_final", css_styles="""
+                                /* 1. Donutíme obal tlačítka (ten neviditelný box okolo), aby se vycentroval ve sloupci */
+                                div[data-testid="stButton"] {
+                                    display: flex !important;
+                                    justify-content: center !important;
+                                    align-items: center !important;
+                                    margin: 0 auto !important;
+                                    width: 100% !important;
+                                }
+
+                                /* 2. Samotné tlačítko uděláme malé a vycentrované */
                                 button {
                                     border: none !important; 
                                     background: transparent !important; 
                                     box-shadow: none !important;
                                     padding: 0 !important;
                                     
-                                    /* Roztáhneme tlačítko na celou šířku buňky */
-                                    width: 100% !important;
-                                    height: 100% !important;
-                                    min-height: 35px !important;
+                                    /* Fixní čtverec */
+                                    width: 35px !important;
+                                    height: 35px !important;
                                     
-                                    /* Flexbox pro samotné tlačítko */
                                     display: flex !important; 
                                     justify-content: center !important; 
                                     align-items: center !important;
-                                    
                                     color: #ff073a !important;
                                 }
                                 
-                                /* !!! TOTO JE TA OPRAVA !!! */
-                                /* Cílíme na vnitřní kontejner tlačítka, který drží ikonku */
-                                button > div {
-                                    display: flex !important;
-                                    justify-content: center !important;
-                                    align-items: center !important;
-                                    width: 100% !important;
-                                    margin: 0 !important;
-                                }
-                                
+                                /* Hover efekt */
                                 button:hover {
                                     color: #ff5f1f !important;
                                     background: rgba(255, 7, 58, 0.1) !important;
                                     border-radius: 6px !important;
                                 }
+                                
+                                /* Pojistka pro obsah tlačítka (ikonku) */
+                                button > div, button > span {
+                                    display: flex !important;
+                                    justify-content: center !important;
+                                    align-items: center !important;
+                                    margin: 0 !important;
+                                }
                               """):
-                                  # Tlačítko samotné
                                   if c6.button("🗑️", key=f"del_{unique_key}_{i}"):
                                       st.session_state[delete_key_state] = row['jméno']
                                       st.rerun()
