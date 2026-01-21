@@ -385,20 +385,21 @@ def show_doprava_dialog(akce_id, nazev_akce, datum_akce, pre_jmeno, in_poznamka=
             c1, c2 = st.columns(2)
             moje_auto = auta_akce[auta_akce['ridic'] == vybrane_jmeno]
             
-            # === ZMĚNA: DEFAULTY (5 míst, prázdný čas) ===
+            # === DEFAULTS (5 míst, prázdný čas, prázdné místo) ===
             def_kap = 5
             def_cas = "" 
-            def_misto = "Loděnice"
+            def_misto = ""
             
+            # Pokud už auto existuje, načteme uložené hodnoty
             if not moje_auto.empty:
                 def_kap = int(moje_auto.iloc[0]['kapacita'])
                 def_cas = str(moje_auto.iloc[0]['cas'])
                 def_misto = str(moje_auto.iloc[0]['misto'])
 
             novy_kap = c1.number_input("Kapacita", 1, 9, def_kap)
-            # Placeholder napoví, ale nic tam nepředepíše
+            # Placeholdery napovídají, ale nepředepisují
             novy_cas = c2.text_input("Čas", value=def_cas, placeholder="např. 17:00")
-            novy_misto = st.text_input("Místo", value=def_misto)
+            novy_misto = st.text_input("Místo", value=def_misto, placeholder="např. Loděnice")
             
             if st.button("💾 Uložit nastavení", type="primary", use_container_width=True):
                 # Auto
@@ -447,7 +448,6 @@ def show_doprava_dialog(akce_id, nazev_akce, datum_akce, pre_jmeno, in_poznamka=
                 # Úklid, pokud byl předtím řidič
                 if stav_dopravy == "driver":
                     handle_driver_removal(conn, akce_id, vybrane_jmeno)
-                    # Refresh dat po úklidu
                     df_lidi = data_manager.load_prihlasky()
 
                 df_clean_lidi = df_lidi[~((df_lidi['id_akce'] == akce_id) & (df_lidi['jméno'] == vybrane_jmeno))]
