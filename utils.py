@@ -733,7 +733,8 @@ def vykreslit_detail_akce(akce, unique_key):
                          st.rerun()
                  else:
                      # Definice sloupců
-                     c1, c2, c3, c4, c5, c6 = st.columns([0.4, 2.0, 1.5, 1.2, 0.6, 0.5], vertical_alignment="center")
+                     # Změna: c6 dáme o kousek víc místa (0.6), aby se marginy měly o co opřít
+                     c1, c2, c3, c4, c5, c6 = st.columns([0.4, 2.0, 1.5, 1.2, 0.6, 0.6], vertical_alignment="center")
                      
                      c1.write(f"{i+1}.")
                      c2.markdown(f"**{row['jméno']}**")
@@ -778,21 +779,28 @@ def vykreslit_detail_akce(akce, unique_key):
 
                      c5.write(row.get('ubytování', ''))
 
-                     # === TLAČÍTKO KOŠE (FINÁLNÍ FIX CENTROVÁNÍ) ===
+                     # === TLAČÍTKO KOŠE (HARD FIX - MARGIN AUTO) ===
                      if not je_po_deadlinu:
                          with stylable_container(key=f"del_btn_container_{unique_key}_{i}", css_styles="""
                              button {
-                                 /* Reset stylu */
+                                 /* 1. Vizuální reset */
                                  background-color: rgba(255, 255, 255, 0.05) !important;
                                  border: 1px solid rgba(255, 255, 255, 0.1) !important;
                                  color: #ff073a !important;
                                  border-radius: 6px !important;
                                  padding: 0 !important;
                                  
-                                 /* Roztáhnout a vycentrovat kontejner */
-                                 width: 100% !important;
-                                 height: auto !important;
-                                 min-height: 35px !important;
+                                 /* 2. FIXNÍ VELIKOST (Čtverec) */
+                                 width: 40px !important;
+                                 height: 40px !important;
+                                 min-height: 40px !important;
+                                 
+                                 /* 3. CENTROVÁNÍ V RÁMCI SLOUPCE (Tady je to kouzlo) */
+                                 display: block !important;
+                                 margin-left: auto !important;
+                                 margin-right: auto !important;
+                                 
+                                 /* 4. Centrování obsahu uvnitř tlačítka */
                                  display: flex !important;
                                  justify-content: center !important;
                                  align-items: center !important;
@@ -805,27 +813,21 @@ def vykreslit_detail_akce(akce, unique_key):
                                  border-color: #ff073a !important;
                                  border-radius: 6px !important;
                                  transform: scale(1.05);
-                             }
-
-                             /* !!! TOTO JE KLÍČ PRO CENTROVÁNÍ EMOJI !!! */
-                             button p {
-                                 width: 100% !important;
-                                 text-align: center !important;
-                                 margin: 0 !important;
-                                 padding: 0 !important;
-                                 display: block !important;
-                                 line-height: 1 !important;
+                                 /* Pojistka pozice při hoveru */
+                                 margin-left: auto !important;
+                                 margin-right: auto !important;
                              }
                              
-                             /* Pojistka pro vnitřní div */
-                             button > div {
-                                 width: 100% !important;
-                                 display: flex !important;
-                                 justify-content: center !important;
+                             /* Pojistka pro vnitřní divy (aby neposouvaly ikonku) */
+                             button p, button div {
+                                 margin: 0 !important;
+                                 padding: 0 !important;
+                                 width: auto !important;
+                                 line-height: 1 !important;
                              }
                          """):
-                             # use_container_width=True je nutné!
-                             if c6.button("🗑️", key=f"del_{unique_key}_{i}", use_container_width=True):
+                             # use_container_width=True dáváme pryč, protože chceme fixní čtverec
+                             if c6.button("🗑️", key=f"del_{unique_key}_{i}"):
                                  st.session_state[delete_key_state] = row['jméno']
                                  st.rerun()
                                  
