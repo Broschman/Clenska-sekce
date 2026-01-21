@@ -8,18 +8,18 @@ NEON_RED = "#ff073a"
 NEON_ORANGE = "#ff5f1f"
 DARK_BG = "#0e1117"
 
-# --- DEFINICE BAREV PRO AKCE (Používáme 'glow' pro hover) ---
+# --- DEFINICE BAREV PRO AKCE ---
 BARVY_AKCI = {
-    "mcr": {"bg": "rgba(255, 7, 58, 0.1)", "glow": "#ff073a"},      # Červená
-    "za": {"bg": "rgba(255, 7, 58, 0.1)", "glow": "#ef4444"},       # Světlejší červená
-    "zb": {"bg": "rgba(249, 115, 22, 0.1)", "glow": "#f97316"},     # Oranžová
-    "soustredeni": {"bg": "rgba(234, 179, 8, 0.1)", "glow": "#eab308"}, # Zlatá
-    "oblastni": {"bg": "rgba(59, 130, 246, 0.1)", "glow": "#3b82f6"},   # Modrá
-    "zimni_liga": {"bg": "rgba(107, 114, 128, 0.1)", "glow": "#9ca3af"}, # Šedá
-    "stafety": {"bg": "rgba(168, 85, 247, 0.1)", "glow": "#a855f7"},    # Fialová
-    "trenink": {"bg": "rgba(34, 197, 94, 0.1)", "glow": "#22c55e"},     # Zelená
-    "zavod": {"bg": "rgba(20, 184, 166, 0.1)", "glow": "#14b8a6"},      # Tyrkysová
-    "default": {"bg": "rgba(255, 255, 255, 0.05)", "glow": "#ffffff"}   # Bílá
+    "mcr": {"bg": "rgba(255, 7, 58, 0.1)", "glow": "#ff073a"},
+    "za": {"bg": "rgba(255, 7, 58, 0.1)", "glow": "#ef4444"},
+    "zb": {"bg": "rgba(249, 115, 22, 0.1)", "glow": "#f97316"},
+    "soustredeni": {"bg": "rgba(234, 179, 8, 0.1)", "glow": "#eab308"},
+    "oblastni": {"bg": "rgba(59, 130, 246, 0.1)", "glow": "#3b82f6"},
+    "zimni_liga": {"bg": "rgba(107, 114, 128, 0.1)", "glow": "#9ca3af"},
+    "stafety": {"bg": "rgba(168, 85, 247, 0.1)", "glow": "#a855f7"},
+    "trenink": {"bg": "rgba(34, 197, 94, 0.1)", "glow": "#22c55e"},
+    "zavod": {"bg": "rgba(20, 184, 166, 0.1)", "glow": "#14b8a6"},
+    "default": {"bg": "rgba(255, 255, 255, 0.05)", "glow": "#ffffff"}
 }
 
 def load_css():
@@ -27,18 +27,12 @@ def load_css():
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;600;800&family=Orbitron:wght@400;700;900&display=swap&subset=latin,latin-ext');
 
-        /* === GLOBÁLNÍ RESET FONTŮ === */
-        /* ZDE BYLA CHYBA: Odstranil jsem 'button' z tohoto seznamu, aby se nerozbily ikony */
-        body, p, h1, h2, h3, h4, h5, h6, li, a, label, input, textarea {{
+        /* === GLOBÁLNÍ RESET === */
+        body, p, h1, h2, h3, h4, h5, h6, li, a, label, input, textarea, button {{
             font-family: 'Exo 2', sans-serif !important;
             color: #e0e0e0;
         }}
         
-        /* Fonty pro specifické komponenty (ale ne pro ikony) */
-        .stMarkdown, .stTextInput, .stTextArea, .stSelectbox {{
-            font-family: 'Exo 2', sans-serif !important;
-        }}
-
         h1, h2, h3 {{
             font-family: 'Orbitron', 'Exo 2', sans-serif !important;
             letter-spacing: 1px;
@@ -74,52 +68,27 @@ def load_css():
             background-attachment: fixed;
         }}
 
-        /* Kalendář - Oprava mřížky */
-        hr {{ border-top: 1px solid rgba(255,255,255,0.1) !important; }}
-        
-        .today-box {{
-            background: rgba(255, 7, 58, 0.2); 
-            color: {NEON_RED}; 
-            border: 1px solid {NEON_RED};
-            
-            /* === FIX CENTROVÁNÍ === */
-            display: inline-flex;       /* Flexbox pro vnitřní centrování */
-            align-items: center;        /* Vertikální střed */
-            justify-content: center;    /* Horizontální střed */
-            
-            width: 30px;                /* Fixní šířka (aby to byl kroužek/čtverec) */
-            height: 30px;               /* Fixní výška */
-            border-radius: 8px;         /* ROG styl (zaoblený čtverec) */
-            
-            font-weight: 800;
-            box-shadow: 0 0 15px rgba(255, 7, 58, 0.4);
-            margin: 0 auto 8px auto;    /* 'auto' na stranách zajistí vycentrování v rodiči */
-        }}
-        
-        .day-number {{ color: #888; font-weight: 600; display: block; text-align: center; margin-bottom: 8px; }}
-
-        /* === TLAČÍTKA (ZÁKLAD - GLASS) === */
-        /* Aplikujeme font a styl JEN na tlačítka uvnitř .stButton, ne na ikony */
+        /* === TLAČÍTKA (ZÁKLAD - BEZ VYNUCENÉ VELIKOSTI) === */
         .stButton > button {{
             background: rgba(255, 255, 255, 0.05) !important;
             backdrop-filter: blur(5px);
             color: {NEON_BLUE} !important;
-            border: none !important; /* Vypínáme border, aby do toho Streamlit nehrabal */
-            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2); /* Falešný border */
+            border: none !important;
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
             border-radius: 6px !important;
             font-weight: 600 !important;
-            font-family: 'Exo 2', sans-serif !important; /* Zde explicitně dáváme font */
+            font-family: 'Exo 2', sans-serif !important;
             transition: all 0.3s ease !important;
+            /* ZDE JSEM ODEBRAL PADDING A HEIGHT, ABYCHOM TO MOHLI ŘÍDIT V UTILS */
         }}
         
-        /* Default hover */
         .stButton > button:hover {{
             box-shadow: inset 0 0 0 1px {NEON_BLUE}, 0 0 10px {NEON_BLUE} !important;
             background-color: rgba(0, 243, 255, 0.1) !important;
             transform: translateY(-2px);
         }}
 
-        /* Primary tlačítko (Zapsat se) - ZELENÉ */
+        /* Primary tlačítko */
         .stButton > button[kind="primary"] {{
             background: rgba(57, 255, 20, 0.1) !important;
             color: {NEON_GREEN} !important;
@@ -141,7 +110,39 @@ def load_css():
             box-shadow: 0 0 10px rgba(0, 243, 255, 0.2) !important;
         }}
 
-        /* Patička */
+        hr {{ border-top: 1px solid rgba(255,255,255,0.1) !important; }}
+        
+        /* Kalendář box */
+        .today-box {{
+            background: rgba(255, 7, 58, 0.2); 
+            color: {NEON_RED}; 
+            border: 1px solid {NEON_RED};
+            display: inline-flex;       
+            align-items: center;        
+            justify-content: center;    
+            width: 30px; height: 30px;  
+            border-radius: 8px;         
+            font-weight: 800;
+            box-shadow: 0 0 15px rgba(255, 7, 58, 0.4);
+            margin: 0 auto 8px auto;    
+        }}
+        .day-number {{ color: #888; font-weight: 600; display: block; text-align: center; margin-bottom: 8px; }}
+
+        /* Popover */
+        div[data-testid="stPopoverBody"] {{
+            background-color: rgba(14, 17, 23, 0.95) !important;
+            border: 1px solid rgba(255, 255, 255, 0.15) !important;
+            backdrop-filter: blur(20px);
+            border-radius: 12px !important;
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.8) !important;
+        }}
+
+        .floating-container button {{
+            background: linear-gradient(135deg, {NEON_BLUE}, #0056b3) !important;
+            box-shadow: 0 0 20px {NEON_BLUE} !important;
+            border-radius: 50% !important;
+        }}
+
         .footer-glow img {{
             filter: drop-shadow(0 0 5px rgba(255,255,255,0.5));
             transition: transform 0.3s;
