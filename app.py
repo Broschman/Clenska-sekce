@@ -22,6 +22,7 @@ import data_manager
 
 print("--- ZAČÁTEK RERUNU ---")
 
+# Načtení stylů
 styles.load_css()
 styles.inject_mobile_warning()
 
@@ -67,23 +68,28 @@ if not future_deadlines.empty:
         
         # Logika barev
         if days_left == 0:
-            glow_c, bg_c, icon, time_msg = styles.NEON_RED, "rgba(255, 7, 58, 0.1)", "🚨", "DNES!"
+            border_c, bg_c, icon, time_msg = styles.NEON_RED, "rgba(255, 7, 58, 0.1)", "🚨", "DNES!"
         elif days_left <= 3:
-            glow_c, bg_c, icon, time_msg = styles.NEON_ORANGE, "rgba(255, 95, 31, 0.1)", "⚠️", f"Za {days_left} dny"
+            border_c, bg_c, icon, time_msg = styles.NEON_ORANGE, "rgba(255, 95, 31, 0.1)", "⚠️", f"Za {days_left} dny"
         else:
-            glow_c, bg_c, icon, time_msg = styles.NEON_GREEN, "rgba(57, 255, 20, 0.1)", "📅", row['deadline'].strftime('%d.%m.')
+            border_c, bg_c, icon, time_msg = styles.NEON_GREEN, "rgba(57, 255, 20, 0.1)", "📅", row['deadline'].strftime('%d.%m.')
 
         unique_key_dash = f"dash_{row['id']}"
+        glow_color = border_c 
 
         with cols_d[i]:
             with stylable_container(
                 key=f"dash_card_{i}",
                 css_styles=f"""
+                /* === TRIK: PŘEPÍŠEME SYSTÉMOVOU PROMĚNNOU PRO TENTO KONTEJNER === */
+                div[data-testid="stButton"] {{
+                    --primary-color: {glow_color};
+                }}
+                
                 button {{
                     background-color: {bg_c} !important;
-                    border: none !important; /* VYPÍNÁME BORDER */
-                    /* Používáme stín jako rámeček */
-                    box-shadow: inset 0 0 0 1px {glow_c}, 0 0 10px {glow_c}44 !important;
+                    border: 1px solid {border_c} !important;
+                    box-shadow: 0 0 10px {border_c}44 !important;
                     color: #fff !important;
                     border-radius: 12px !important;
                     width: 100% !important;
@@ -96,17 +102,20 @@ if not future_deadlines.empty:
                     align-items: center !important;
                     padding: 10px !important;
                     font-family: 'Exo 2', sans-serif !important;
-                    transition: transform 0.2s ease !important;
+                    transition: all 0.3s ease !important;
                 }}
-                /* === HACK: FALEŠNÝ RÁMEČEK (BOX-SHADOW) MÍSTO BORDER === */
+                
                 button:hover {{
-                    /* Inset stín = rámeček, vnější stín = záře */
-                    box-shadow: inset 0 0 0 2px {glow_c}, 0 0 25px {glow_c} !important;
-                    background-color: {glow_c}22 !important;
+                    border-color: {glow_color} !important;
+                    box-shadow: 0 0 25px {glow_color} !important;
+                    background-color: {glow_color}11 !important;
+                    transform: scale(1.03) !important;
                     color: #fff !important;
-                    transform: scale(1.05) !important;
-                    z-index: 100 !important;
                 }}
+                
+                /* Pojistka pro text uvnitř */
+                button:hover p {{ color: #fff !important; }}
+                
                 button p {{ font-family: 'Exo 2', sans-serif !important; letter-spacing: 1px; font-weight: 700; }}
                 """
             ):
@@ -181,7 +190,6 @@ def show_calendar_section():
                     typ = str(akce.get('typ', '')).lower()
                     druh = str(akce.get('druh', '')).lower()
                     
-                    # Logika stylu
                     zavodni_slova = ["závod", "mčr", "žebříček", "liga", "mistrovství", "štafety", "ža", "žb"]
                     je_zavod_obecne = any(s in typ for s in zavodni_slova)
                     style_key = "default"
@@ -196,8 +204,7 @@ def show_calendar_section():
                     elif je_zavod_obecne: style_key = "zavod"
                     
                     styly = styles.BARVY_AKCI.get(style_key, styles.BARVY_AKCI["default"])
-                    glow_color = styly.get("glow", "#00f3ff")
-                    bg_color = styly.get("bg", "rgba(255,255,255,0.05)")
+                    glow_color = styly.get("glow", "#39ff14")
 
                     ikony = { "les": "🌲", "sprint": "🏙️", "nočák": "🌗" }
                     emoji = ikony.get(druh, "🏃")
@@ -207,24 +214,29 @@ def show_calendar_section():
                     with stylable_container(
                         key=f"btn_c_{unique_key}",
                         css_styles=f"""
+                        /* === PŘEPSÁNÍ PROMĚNNÉ STREAMLITU PRO TENTO BUTTON === */
+                        div[data-testid="stButton"] {{
+                            --primary-color: {glow_color};
+                        }}
+
                         button {{
-                            background: {bg_color} !important; 
-                            border: none !important; /* VYPÍNÁME BORDER */
-                            /* Simulace borderu stínem */
-                            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.15) !important;
-                            color: #e0e0e0 !important;
+                            background: {styly['bg']} !important; 
+                            color: {styly['color']} !important; 
+                            border: {styly['border']} !important; 
                             width: 100%; border-radius: 8px; padding: 8px 10px !important; text-align: left; font-size: 0.85rem; font-weight: 600; 
+                            box-shadow: {styly.get('shadow', 'none')}; 
                             margin-bottom: 6px; white-space: normal !important; height: auto !important; min-height: 40px; 
                             font-family: 'Exo 2', sans-serif !important;
                             transition: all 0.2s ease !important;
                         }} 
-                        /* === GLOW EFEKT PŘES BOX-SHADOW (OBCHÁZÍ STREAMLIT) === */
+                        
                         button:hover {{
-                            /* Inset = vnitřní rámeček, Vnější = záře */
-                            box-shadow: inset 0 0 0 1px {glow_color}, 0 0 15px {glow_color} !important;
+                            filter: brightness(1.2); 
+                            transform: translateY(-2px); 
+                            z-index: 5;
+                            border-color: {glow_color} !important;
+                            box-shadow: 0 0 15px {glow_color} !important;
                             color: #fff !important;
-                            z-index: 99 !important;
-                            transform: translateY(-2px) !important;
                         }}
                         """
                     ):
@@ -288,7 +300,6 @@ if search_text or len(search_date_value) > 0:
 
             styly = styles.BARVY_AKCI.get(style_key, styles.BARVY_AKCI["default"])
             glow_color = styly.get("glow", "#39ff14")
-            bg_color = styly.get("bg", "rgba(255,255,255,0.05)")
 
             ikony_mapa = { "les": "🌲", "krátká trať": "🌲", "sprint": "🏙️", "nočák": "🌗" }
             emoji = ikony_mapa.get(str(akce.get('druh', '')).lower(), "🏃")
@@ -298,20 +309,22 @@ if search_text or len(search_date_value) > 0:
             with stylable_container(
                 key=f"btn_search_{unique_key}",
                 css_styles=f"""
+                    div[data-testid="stButton"] {{
+                        --primary-color: {glow_color};
+                    }}
+                    
                     button {{
-                        background: {bg_color} !important;
-                        color: #e0e0e0 !important;
-                        border: none !important;
-                        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.15) !important;
+                        background: {styly['bg']} !important;
+                        color: {styly['color']} !important;
+                        border: {styly['border']} !important;
                         width: 100%; border-radius: 8px; padding: 12px 15px !important; text-align: left; font-weight: 600;
-                        margin-bottom: 8px;
+                        box-shadow: {styly.get('shadow', 'none')}; margin-bottom: 8px;
                         font-family: 'Exo 2', sans-serif !important;
-                        transition: all 0.3s ease !important;
                     }}
                     button:hover {{
                         filter: brightness(1.2); transform: translateY(-2px);
-                        box-shadow: inset 0 0 0 1px {glow_color}, 0 0 15px {glow_color} !important;
-                        color: #fff !important;
+                        box-shadow: 0 0 15px {glow_color} !important;
+                        border-color: {glow_color} !important;
                     }}
                 """
             ):
