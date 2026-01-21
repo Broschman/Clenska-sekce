@@ -474,3 +474,39 @@ def show_doprava_dialog(akce_id, nazev_akce, datum_akce, pre_jmeno, in_poznamka=
                     conn.update(worksheet="auta", data=df_auta[~((df_auta['id_akce'] == akce_id) & (df_auta['ridic'] == vybrane_jmeno))])
                 conn.update(worksheet="prihlasky", data=pd.concat([df_clean_lidi, novy_clovek], ignore_index=True))
                 st.rerun()
+
+def handle_driver_removal(conn, akce_id, driver_name):
+    """
+    Když se ruší řidič (smazání nebo změna role), tato funkce:
+    1. Smaže jeho auto z listu 'auta'.
+    2. Najde všechny jeho pasažéry v 'prihlasky' a hodí je na 'waiting list'.
+    """
+    try:
+        # 1. SMAZÁNÍ AUTA
+        df_auta = data_manager.load_auta()
+        if not df_auta.empty:
+            # Filtr: Necháme všechna auta KROMĚ toho, co patří tomuto řidiči na této akci
+            maska_auto = ~((df_auta['id_akce'] == akce_id) & (df_auta['ridic'] == driver_name))
+            df_new_auta = df_auta[maska_auto]
+            
+            # Pokud došlo ke změně (řádek existoval), uložíme
+            if len(df_new_auta) < len(df_auta):
+                conn.update(worksheet="auta", data=df_new_auta)
+
+        # 2. PŘESUN PASAŽÉRŮ NA ČEKAČKU
+        df_lidi = data_manager.load_prihlasky()
+        if not df_lidi.empty and 'id_auto' in df_lidi.columns:
+            # Najdeme lidi, co mají ve sloupci id_auto jméno tohoto řidiče
+            maska_pasazeri = (df_lidi['id_akce'] == akce_id) & (df_lidi['id_auto'] == driver_name)
+            
+            if maska_pasazeri.any():
+                # Resetujeme jejich status
+                df_lidi.loc[maska_pasazeri, 'id_auto'] = ""
+                # Přepíšeme text dopravy, aby věděli, že se něco stalo
+                df_lidi.loc[maska_pasazeri, 'doprava'] = "Chci odvoz 🙋‍♂️ (Zrušeno auto)"
+                
+                conn.update(worksheet="prihlasky", data=df_lidi)
+                return True # Signál, že jsme někoho updatovali
+    except Exception as e:
+        print(f"Chyba při mazání řidiče: {e}")
+    return False
