@@ -322,9 +322,7 @@ def export_admin_section(lidi, nazev_akce, unique_key):
 def show_doprava_dialog(akce_id, nazev_akce, datum_akce, pre_jmeno, in_poznamka=None, in_ubytovani=None):
     """
     Modální okno pro řešení dopravy.
-    - Seřazená auta podle volných míst.
-    - Čekací listina dole.
-    - Plná auta se nezobrazují (pokud v nich už nesedíš).
+    Inteligentní výběr defaultního auta (nejlepší volné, pokud člověk ještě nikde není).
     """
     conn = data_manager.get_connection()
     
@@ -413,34 +411,24 @@ def show_doprava_dialog(akce_id, nazev_akce, datum_akce, pre_jmeno, in_poznamka=
                 conn.update(worksheet="prihlasky", data=pd.concat([df_clean_lidi, novy_clovek], ignore_index=True))
                 st.rerun()
 
-        # --- B) PASAŽÉR (S INTELIGENTNÍM ŘAZENÍM) ---
+        # --- B) PASAŽÉR (Update: Default na nejlepší auto) ---
         elif "Hledám" in role:
-            # 1. Nasbíráme dostupná auta do listu
             dostupna_auta_list = []
             
             for i, (_, row_auto) in enumerate(auta_akce.iterrows()):
                 ridic = str(row_auto['ridic'])
-                if ridic == vybrane_jmeno: continue # Sám sebe nevidím
-                
+                if ridic == vybrane_jmeno: continue 
                 kap = int(row_auto['kapacita'])
                 obs = obsazenost.get(ridic, 0)
                 volno = kap - 1 - obs 
                 
-                # Zobrazíme auto jen pokud má volno NEBO pokud v něm už uživatel sedí (aby se mu neztratilo)
                 if volno > 0 or ridic == id_auto_curr:
                     label = f"🚙 {ridic} ({volno} volných) - {row_auto['cas']}"
-                    if volno <= 0: label = f"⚠️ {ridic} (PLNO - Jsi tu)" # Jen pro info, kdyby tam už byl
-                    
-                    dostupna_auta_list.append({
-                        "label": label,
-                        "ridic_id": ridic,
-                        "volno": volno
-                    })
+                    if volno <= 0: label = f"⚠️ {ridic} (PLNO - Jsi tu)"
+                    dostupna_auta_list.append({ "label": label, "ridic_id": ridic, "volno": volno })
             
-            # 2. Seřadíme podle volných míst sestupně (nejvíc volná nahoře)
             dostupna_auta_list.sort(key=lambda x: x['volno'], reverse=True)
             
-            # 3. Vytvoříme finální seznam options (Auta + Čekací listina nakonec)
             options_auta = [item['label'] for item in dostupna_auta_list]
             mapa_aut = {item['label']: item['ridic_id'] for item in dostupna_auta_list}
             
@@ -448,11 +436,16 @@ def show_doprava_dialog(akce_id, nazev_akce, datum_akce, pre_jmeno, in_poznamka=
             options_auta.append(wait_label)
             mapa_aut[wait_label] = ""
 
-            # 4. Určení default indexu
-            idx_select = len(options_auta) - 1 # Defaultně poslední = Čekací listina
+            # === INTELIGENTNÍ INDEX ===
+            # 1. Default: První položka (Nejvíce volné auto), nebo Čekačka (pokud nejsou auta)
+            idx_select = 0
             
-            # Pokud už u někoho jsem, najdeme ho v seznamu
-            if id_auto_curr:
+            # 2. Pokud je uživatel explicitně "waiting", vybereme poslední položku (Čekačku)
+            if stav_dopravy == "waiting":
+                idx_select = len(options_auta) - 1
+            
+            # 3. Pokud je uživatel "passenger" a má auto, najdeme ho
+            elif stav_dopravy == "passenger" and id_auto_curr:
                 for idx, item_label in enumerate(options_auta):
                     if mapa_aut.get(item_label) == id_auto_curr:
                         idx_select = idx
@@ -497,7 +490,8 @@ def show_doprava_dialog(akce_id, nazev_akce, datum_akce, pre_jmeno, in_poznamka=
                     "id_auto": ""
                 }])
                 conn.update(worksheet="prihlasky", data=pd.concat([df_clean_lidi, novy_clovek], ignore_index=True))
-                st.rerun()                
+                st.rerun()
+                
 def handle_driver_removal(conn, akce_id, driver_name):
     """
     Když se ruší řidič (smazání nebo změna role), tato funkce:
