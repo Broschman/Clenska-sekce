@@ -751,15 +751,37 @@ def vykreslit_detail_akce(akce, unique_key):
                          btn_color, btn_bg, btn_border = "#ff073a", "rgba(255, 7, 58, 0.1)", "1px solid #ff073a"
                          btn_label = "🙋‍♂️ Chci"
 
-                     # === FIX VELIKOSTI PÍSMA DOPRAVY (0.7rem a menší padding) ===
-                     with stylable_container(key=f"cont_btn_d_{unique_key}_{i}", css_styles=f"button {{background-color: {btn_bg} !important; color: {btn_color} !important; border: {btn_border} !important; padding: 2px 4px !important; font-size: 0.5rem !important; height: auto !important; min-height: 28px !important;}}"):
+                     # === FIX VELIKOSTI TLAČÍTKA DOPRAVY (Agresivní) ===
+                     with stylable_container(key=f"cont_btn_d_{unique_key}_{i}_fix", css_styles=f"""
+                        button {{
+                            background-color: {btn_bg} !important; 
+                            color: {btn_color} !important; 
+                            border: {btn_border} !important; 
+                            padding: 0px 4px !important; /* Minimální padding */
+                            font-size: 11px !important; /* Explicitní pixely pro jistotu */
+                            line-height: 1.2 !important;
+                            height: auto !important; 
+                            min-height: 24px !important;
+                            width: 100% !important;
+                            white-space: nowrap !important;
+                        }}
+                     """):
                          if c4.button(btn_label, key=f"btn_row_d_{unique_key}_{i}"):
                              show_doprava_dialog(akce_id_str, akce.get('název', ''), akce['datum'].strftime('%d.%m.'), row['jméno'], None, None)
 
                      c5.write(row.get('ubytování', ''))
                      if not je_po_deadlinu:
-                         # === FIX CENTROVÁNÍ IKONKY KOŠE (Flexbox) ===
-                         with stylable_container(key=f"delc_{unique_key}_{i}", css_styles="button {margin: 0 auto !important; padding: 0 !important; height: 30px !important; width: 30px !important; border: none; background: transparent; color: #ff073a; display: flex !important; justify-content: center !important; align-items: center !important;}"):
+                         # === FIX CENTROVÁNÍ KOŠE (Flexbox na střed) ===
+                         with stylable_container(key=f"delc_{unique_key}_{i}_fix", css_styles="""
+                            button {
+                                border: none !important; background: transparent !important; padding: 0 !important;
+                                margin: 0 auto !important; 
+                                display: flex !important; justify-content: center !important; align-items: center !important;
+                                width: 100% !important; height: 30px !important;
+                                color: #ff073a !important;
+                            }
+                            button > div { display: flex !important; justify-content: center !important; }
+                         """):
                              if c6.button("🗑️", key=f"del_{unique_key}_{i}"):
                                  st.session_state[delete_key_state] = row['jméno']
                                  st.rerun()
