@@ -22,6 +22,7 @@ import data_manager
 
 print("--- ZAČÁTEK RERUNU ---")
 
+# Načtení stylů
 styles.load_css()
 styles.inject_mobile_warning()
 
@@ -74,18 +75,23 @@ if not future_deadlines.empty:
             border_c, bg_c, icon, time_msg = styles.NEON_GREEN, "rgba(57, 255, 20, 0.1)", "📅", row['deadline'].strftime('%d.%m.')
 
         unique_key_dash = f"dash_{row['id']}"
-        glow_color = border_c # Pro dashboard je glow stejný jako border
+        glow_color = border_c 
 
         with cols_d[i]:
             with stylable_container(
                 key=f"dash_card_{i}",
                 css_styles=f"""
+                /* === TRIK: PŘEPÍŠEME SYSTÉMOVOU PROMĚNNOU PRO TENTO KONTEJNER === */
+                div[data-testid="stButton"] {{
+                    --primary-color: {glow_color};
+                }}
+                
                 button {{
                     background-color: {bg_c} !important;
                     border: 1px solid {border_c} !important;
                     box-shadow: 0 0 10px {border_c}44 !important;
-                    border-radius: 12px !important;
                     color: #fff !important;
+                    border-radius: 12px !important;
                     width: 100% !important;
                     height: auto !important;
                     min-height: 110px !important;
@@ -98,15 +104,18 @@ if not future_deadlines.empty:
                     font-family: 'Exo 2', sans-serif !important;
                     transition: all 0.3s ease !important;
                 }}
-                /* === JEDNODUCHÝ A ÚČINNÝ HOVER === */
+                
                 button:hover {{
                     border-color: {glow_color} !important;
-                    color: {glow_color} !important;
                     box-shadow: 0 0 25px {glow_color} !important;
                     background-color: {glow_color}11 !important;
-                    transform: scale(1.05) !important;
-                    z-index: 999 !important;
+                    transform: scale(1.03) !important;
+                    color: #fff !important;
                 }}
+                
+                /* Pojistka pro text uvnitř */
+                button:hover p {{ color: #fff !important; }}
+                
                 button p {{ font-family: 'Exo 2', sans-serif !important; letter-spacing: 1px; font-weight: 700; }}
                 """
             ):
@@ -205,6 +214,11 @@ def show_calendar_section():
                     with stylable_container(
                         key=f"btn_c_{unique_key}",
                         css_styles=f"""
+                        /* === PŘEPSÁNÍ PROMĚNNÉ STREAMLITU PRO TENTO BUTTON === */
+                        div[data-testid="stButton"] {{
+                            --primary-color: {glow_color};
+                        }}
+
                         button {{
                             background: {styly['bg']} !important; 
                             color: {styly['color']} !important; 
@@ -213,9 +227,9 @@ def show_calendar_section():
                             box-shadow: {styly.get('shadow', 'none')}; 
                             margin-bottom: 6px; white-space: normal !important; height: auto !important; min-height: 40px; 
                             font-family: 'Exo 2', sans-serif !important;
-                            transition: all 0.3s ease !important;
+                            transition: all 0.2s ease !important;
                         }} 
-                        /* === GLOW EFEKT (Jednoduchý selektor) === */
+                        
                         button:hover {{
                             filter: brightness(1.2); 
                             transform: translateY(-2px); 
@@ -295,6 +309,10 @@ if search_text or len(search_date_value) > 0:
             with stylable_container(
                 key=f"btn_search_{unique_key}",
                 css_styles=f"""
+                    div[data-testid="stButton"] {{
+                        --primary-color: {glow_color};
+                    }}
+                    
                     button {{
                         background: {styly['bg']} !important;
                         color: {styly['color']} !important;
@@ -302,13 +320,11 @@ if search_text or len(search_date_value) > 0:
                         width: 100%; border-radius: 8px; padding: 12px 15px !important; text-align: left; font-weight: 600;
                         box-shadow: {styly.get('shadow', 'none')}; margin-bottom: 8px;
                         font-family: 'Exo 2', sans-serif !important;
-                        transition: all 0.3s ease !important;
                     }}
                     button:hover {{
                         filter: brightness(1.2); transform: translateY(-2px);
                         box-shadow: 0 0 15px {glow_color} !important;
                         border-color: {glow_color} !important;
-                        color: #fff !important;
                     }}
                 """
             ):
@@ -319,7 +335,7 @@ else:
     show_calendar_section()
 st.markdown("<div style='margin-bottom: 50px'></div>", unsafe_allow_html=True)
 
-# --- PLOVOUCÍ TLAČÍTKO ---
+# --- 5. PLOVOUCÍ TLAČÍTKO ---
 st.markdown('<div class="floating-container">', unsafe_allow_html=True)
 with st.popover("💡 Nápad?"):
     st.markdown("### 🛠️ Máš návrh?")
