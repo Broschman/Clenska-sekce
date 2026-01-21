@@ -8,7 +8,7 @@ NEON_RED = "#ff073a"
 NEON_ORANGE = "#ff5f1f"
 DARK_BG = "#0e1117"
 
-# --- DEFINICE BAREV ---
+# --- DEFINICE BAREV PRO AKCE ---
 BARVY_AKCI = {
     "mcr": {"bg": "rgba(255, 7, 58, 0.1)", "glow": "#ff073a"},
     "za": {"bg": "rgba(255, 7, 58, 0.1)", "glow": "#ef4444"},
@@ -68,7 +68,7 @@ def load_css():
             background-attachment: fixed;
         }}
 
-        /* === TLAČÍTKA (GLOBÁLNÍ NASTAVENÍ - VELKÁ) === */
+        /* === TLAČÍTKA (GLOBÁLNÍ DEFINICE - "Zapsat se" bude vypadat takto) === */
         .stButton > button {{
             background: rgba(255, 255, 255, 0.05) !important;
             backdrop-filter: blur(5px);
@@ -80,11 +80,11 @@ def load_css():
             font-family: 'Exo 2', sans-serif !important;
             transition: all 0.3s ease !important;
             
-            /* === VRACÍME VELIKOST ZPĚT === */
-            font-size: 1rem !important; /* Normální velikost */
+            /* == VRACÍME NORMÁLNÍ VELIKOST == */
+            font-size: 1rem !important; 
             padding: 0.5rem 1rem !important;
             min-height: 2.5rem !important;
-            line-height: 1.5 !important;
+            line-height: 1.6 !important;
         }}
         
         .stButton > button:hover {{
@@ -93,7 +93,7 @@ def load_css():
             transform: translateY(-2px);
         }}
 
-        /* Primary tlačítko */
+        /* Primary tlačítko (Zapsat se) */
         .stButton > button[kind="primary"] {{
             background: rgba(57, 255, 20, 0.1) !important;
             color: {NEON_GREEN} !important;
@@ -117,6 +117,7 @@ def load_css():
 
         hr {{ border-top: 1px solid rgba(255,255,255,0.1) !important; }}
         
+        /* Kalendář box */
         .today-box {{
             background: rgba(255, 7, 58, 0.2); 
             color: {NEON_RED}; 
