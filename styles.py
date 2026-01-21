@@ -1,3 +1,4 @@
+
 import streamlit as st
 import requests
 
@@ -8,45 +9,82 @@ NEON_RED = "#ff073a"
 NEON_ORANGE = "#ff5f1f"
 DARK_BG = "#0e1117"
 
-# --- DEFINICE BAREV (Složka 'bg' je průhledná, 'glow' je plná barva) ---
+# --- DEFINICE BAREV PRO AKCE ---
 BARVY_AKCI = {
-    "mcr": {"bg": "rgba(255, 7, 58, 0.1)", "glow": "#ff073a"},      # Červená
-    "za": {"bg": "rgba(255, 7, 58, 0.1)", "glow": "#ef4444"},       # Světlejší červená
-    "zb": {"bg": "rgba(249, 115, 22, 0.1)", "glow": "#f97316"},     # Oranžová
-    "soustredeni": {"bg": "rgba(234, 179, 8, 0.1)", "glow": "#eab308"}, # Zlatá
-    "oblastni": {"bg": "rgba(59, 130, 246, 0.1)", "glow": "#3b82f6"},   # Modrá
-    "zimni_liga": {"bg": "rgba(107, 114, 128, 0.1)", "glow": "#9ca3af"}, # Šedá
-    "stafety": {"bg": "rgba(168, 85, 247, 0.1)", "glow": "#a855f7"},    # Fialová
-    "trenink": {"bg": "rgba(34, 197, 94, 0.1)", "glow": "#22c55e"},     # Zelená
-    "zavod": {"bg": "rgba(20, 184, 166, 0.1)", "glow": "#14b8a6"},      # Tyrkysová
-    "default": {"bg": "rgba(255, 255, 255, 0.05)", "glow": "#ffffff"}   # Bílá
+    "mcr": {
+        "bg": "linear-gradient(135deg, rgba(255, 7, 58, 0.4), rgba(0, 243, 255, 0.4))", 
+        "color": "#fff", "border": "1px solid #ff073a", "shadow": "0 0 10px rgba(255, 7, 58, 0.6)",
+        "glow": "#ff073a"
+    },
+    "za": {
+        "bg": "rgba(220, 38, 38, 0.3)", "color": "#fecaca", "border": "1px solid #ef4444", "shadow": "0 0 5px rgba(239, 68, 68, 0.4)",
+        "glow": "#ef4444"
+    },
+    "zb": {
+        "bg": "rgba(194, 65, 12, 0.3)", "color": "#fed7aa", "border": "1px solid #f97316", "shadow": "0 0 5px rgba(249, 115, 22, 0.4)",
+        "glow": "#f97316"
+    },
+    "soustredeni": {
+        "bg": "rgba(161, 98, 7, 0.3)", "color": "#fef08a", "border": "1px solid #eab308", "shadow": "0 0 5px rgba(234, 179, 8, 0.4)",
+        "glow": "#eab308"
+    },
+    "oblastni": {
+        "bg": "rgba(29, 78, 216, 0.3)", "color": "#bfdbfe", "border": "1px solid #3b82f6", "shadow": "0 0 5px rgba(59, 130, 246, 0.4)",
+        "glow": "#3b82f6"
+    },
+    "zimni_liga": {
+        "bg": "rgba(55, 65, 81, 0.4)", "color": "#e5e7eb", "border": "1px solid #6b7280", "shadow": "none",
+        "glow": "#9ca3af"
+    },
+    "stafety": {
+        "bg": "rgba(126, 34, 206, 0.3)", "color": "#e9d5ff", "border": "1px solid #a855f7", "shadow": "0 0 5px rgba(168, 85, 247, 0.4)",
+        "glow": "#a855f7"
+    },
+    "trenink": {
+        "bg": "rgba(21, 128, 61, 0.3)", "color": "#bbf7d0", "border": "1px solid #22c55e", "shadow": "none",
+        "glow": "#22c55e"
+    },
+    "zavod": {
+        "bg": "rgba(15, 118, 110, 0.3)", "color": "#99f6e4", "border": "1px solid #14b8a6", "shadow": "none",
+        "glow": "#14b8a6"
+    },
+    "default": {
+        "bg": "rgba(255, 255, 255, 0.05)", "color": "#e0e0e0", "border": "1px solid rgba(255,255,255,0.1)", "shadow": "none",
+        "glow": "#ffffff"
+    }
 }
 
+# --- 2. CSS STYLY ---
 def load_css():
     st.markdown(f"""
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;600;800&family=Orbitron:wght@400;700;900&display=swap&subset=latin,latin-ext');
+        @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;600;800&display=swap&subset=latin,latin-ext');
 
         /* === GLOBÁLNÍ RESET === */
-        body, p, h1, h2, h3, h4, h5, h6, span, div, label, input, button, textarea {{
+        body, p, h1, h2, h3, h4, h5, h6, li, a, label, input, textarea, button {{
             font-family: 'Exo 2', sans-serif !important;
             color: #e0e0e0;
         }}
         
+        /* Fonty pro komponenty */
+        .stMarkdown, .stButton, .stTextInput, .stTextArea, .stSelectbox {{
+            font-family: 'Exo 2', sans-serif !important;
+        }}
+
         h1, h2, h3 {{
-            font-family: 'Orbitron', 'Exo 2', sans-serif !important;
-            letter-spacing: 1px;
             text-transform: uppercase;
+            letter-spacing: 1px;
             font-weight: 800 !important;
         }}
 
-        /* === LOGO FIX === */
+        /* === OPRAVA LOGA === */
         img.header-logo {{
             height: 60px !important;
+            max-height: 60px !important;
             width: auto !important;
             object-fit: contain !important;
             margin-top: 5px;
-            filter: drop-shadow(0 0 8px {NEON_BLUE});
+            filter: drop-shadow(0 0 8px {NEON_GREEN});
             transition: transform 0.3s;
         }}
         img.header-logo:hover {{ transform: scale(1.1) rotate(5deg); }}
@@ -56,9 +94,10 @@ def load_css():
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             font-weight: 800;
+            text-shadow: 0 0 20px rgba(57, 255, 20, 0.3);
         }}
 
-        /* === POZADÍ === */
+        /* === ROG POZADÍ === */
         .stApp {{
             background-color: {DARK_BG};
             background-image: 
@@ -67,38 +106,79 @@ def load_css():
                 repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.02) 0px, rgba(255, 255, 255, 0.02) 1px, transparent 1px, transparent 40px);
             background-attachment: fixed;
         }}
+        
+        body::before, body::after {{
+            content: ""; position: fixed; top: 0; bottom: 0; width: 2px; z-index: 9999; pointer-events: none; opacity: 0.5;
+            box-shadow: 0 0 8px {NEON_BLUE};
+        }}
+        body::before {{ left: 10px; background: linear-gradient(to bottom, transparent, {NEON_BLUE}, {NEON_GREEN}, transparent); }}
+        body::after {{ right: 10px; background: linear-gradient(to bottom, transparent, {NEON_GREEN}, {NEON_BLUE}, transparent); }}
 
         /* === TLAČÍTKA (ZÁKLAD) === */
-        /* Vypínáme border úplně, aby do toho Streamlit nehrabal */
+        /* Zde definujeme jen tvar. BARVU PRO HOVER TU ZÁMĚRNĚ NEDÁVÁME! */
         .stButton > button {{
             background: rgba(255, 255, 255, 0.05) !important;
             backdrop-filter: blur(5px);
-            color: {NEON_BLUE} !important;
-            border: none !important; /* DŮLEŽITÉ: Žádný border = Streamlit nemá co přebarvit */
-            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2); /* Falešný border */
+            -webkit-backdrop-filter: blur(5px);
+            color: {NEON_BLUE}; /* Default text */
+            border: 1px solid rgba(0, 243, 255, 0.3);
             border-radius: 6px !important;
+            text-transform: uppercase;
             font-weight: 600 !important;
-            transition: all 0.2s ease !important;
+            transition: all 0.3s ease !important;
         }}
         
-        /* Default hover */
+        /* Jen jemný pohyb, BARVU a GLOW řeší app.py */
         .stButton > button:hover {{
-            box-shadow: inset 0 0 0 1px {NEON_BLUE}, 0 0 10px {NEON_BLUE} !important;
             transform: translateY(-2px);
         }}
+        
+        /* Výjimka: Primary tlačítko (Zelené) může mít barvu natvrdo */
+        .stButton > button[kind="primary"] {{
+            background: linear-gradient(135deg, rgba(57, 255, 20, 0.15), rgba(57, 255, 20, 0.05)) !important;
+            color: {NEON_GREEN} !important;
+            border: 1px solid {NEON_GREEN} !important;
+        }}
+        .stButton > button[kind="primary"]:hover {{
+            box-shadow: 0 0 20px rgba(57, 255, 20, 0.6) !important;
+            border-color: {NEON_GREEN} !important;
+        }}
 
-        /* Inputy */
+        /* === INPUTY A DALŠÍ === */
         .stTextInput input, .stSelectbox div[data-baseweb="select"], .stNumberInput input, .stTextArea textarea {{
             background-color: rgba(255, 255, 255, 0.05) !important;
             color: white !important;
             border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            border-radius: 6px !important;
         }}
         .stTextInput input:focus, .stSelectbox div[data-baseweb="select"]:focus-within {{
             border-color: {NEON_BLUE} !important;
             box-shadow: 0 0 10px rgba(0, 243, 255, 0.2) !important;
         }}
 
-        /* Patička */
+        hr {{ border-top: 1px solid rgba(255,255,255,0.1) !important; }}
+        
+        .today-box {{
+            background: rgba(255, 7, 58, 0.2); color: {NEON_RED}; border: 1px solid {NEON_RED};
+            padding: 4px 12px; border-radius: 20px; font-weight: 700;
+            box-shadow: 0 0 15px rgba(255, 7, 58, 0.4); display: inline-block; margin-bottom: 8px;
+        }}
+        .day-number {{ color: #888; font-weight: 600; display: block; text-align: center; margin-bottom: 8px; }}
+
+        div[data-testid="stPopoverBody"] {{
+            background-color: rgba(14, 17, 23, 0.95) !important;
+            border: 1px solid rgba(255, 255, 255, 0.15) !important;
+            backdrop-filter: blur(20px);
+            border-radius: 12px !important;
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.8) !important;
+        }}
+
+        .floating-container button {{
+            background: linear-gradient(135deg, {NEON_BLUE}, #0056b3) !important;
+            box-shadow: 0 0 20px {NEON_BLUE} !important;
+            border-radius: 50% !important;
+        }}
+
         .footer-glow img {{
             filter: drop-shadow(0 0 5px rgba(255,255,255,0.5));
             transition: transform 0.3s;
