@@ -103,25 +103,33 @@ seznam_jmen = data_manager.load_jmena()
 if 'vybrany_datum' not in st.session_state:
     st.session_state.vybrany_datum = date.today()
 
-# --- DASHBOARD NEJBLIŽŠÍCH DEADLINŮ ---
+# --- DASHBOARD NEJBLIŽŠÍCH DEADLINŮ (CYBER-ROG EDITION) ---
 dnes = date.today()
 future_deadlines = df_akce[df_akce['deadline'] >= dnes].sort_values('deadline').head(3)
 
 if not future_deadlines.empty:
     st.markdown("### 🔥 Pozor, hoří termíny!")
-    
     cols_d = st.columns(len(future_deadlines))
     
     for i, (_, row) in enumerate(future_deadlines.iterrows()):
         days_left = (row['deadline'] - dnes).days
         
-        # Logika barev
+        # Logika NEONOVÝCH barev a záře
         if days_left == 0:
-            bg_color, border_color, text_color, icon, time_msg = "#FEF2F2", "#EF4444", "#B91C1C", "🚨", "DNES!"
+            border_color = styles.NEON_RED
+            bg_color = "rgba(255, 7, 58, 0.1)"
+            shadow = f"0 0 20px {styles.NEON_RED}"
+            icon, time_msg = "🚨", "DNES!"
         elif days_left <= 3:
-            bg_color, border_color, text_color, icon, time_msg = "#FFFBEB", "#F59E0B", "#B45309", "⚠️", f"Za {days_left} dny"
+            border_color = styles.NEON_ORANGE
+            bg_color = "rgba(255, 95, 31, 0.1)"
+            shadow = f"0 0 15px {styles.NEON_ORANGE}"
+            icon, time_msg = "⚠️", f"Za {days_left} dny"
         else:
-            bg_color, border_color, text_color, icon, time_msg = "#ECFDF5", "#10B981", "#047857", "📅", row['deadline'].strftime('%d.%m.')
+            border_color = styles.NEON_GREEN
+            bg_color = "rgba(57, 255, 20, 0.1)"
+            shadow = f"0 0 10px {styles.NEON_GREEN}"
+            icon, time_msg = "📅", row['deadline'].strftime('%d.%m.')
 
         unique_key_dash = f"dash_{row['id']}"
 
@@ -131,9 +139,10 @@ if not future_deadlines.empty:
                 css_styles=f"""
                 button {{
                     background-color: {bg_color} !important;
-                    border: 2px solid {border_color} !important;
+                    border: 1px solid {border_color} !important;
+                    box-shadow: {shadow} !important; /* Záře */
                     border-radius: 12px !important;
-                    color: #1f2937 !important;
+                    color: #fff !important; /* Bílý text */
                     width: 100% !important;
                     height: auto !important;
                     min-height: 110px !important;
@@ -142,25 +151,24 @@ if not future_deadlines.empty:
                     flex-direction: column !important;
                     justify-content: center !important;
                     align-items: center !important;
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important;
                     padding: 10px !important;
-                    transition: transform 0.2s !important;
+                    transition: all 0.3s !important;
                 }}
                 button:hover {{
-                    transform: scale(1.02) !important;
-                    border-color: {text_color} !important;
+                    transform: scale(1.05) !important;
+                    box-shadow: 0 0 30px {border_color} !important; /* Silnější záře při najetí */
+                    background-color: {border_color}22 !important; /* Trochu jasnější pozadí */
                 }}
                 button p {{
-                    font-family: 'Inter', sans-serif !important;
+                    font-family: 'Orbitron', sans-serif !important; /* Futuristický font */
+                    letter-spacing: 1px;
                 }}
                 """
             ):
                 label_text = f"{icon}\n{row['název']}\n{time_msg}"
                 with st.popover(label_text, use_container_width=True):
                     utils.vykreslit_detail_akce(row, unique_key_dash)
-
-    st.markdown("<div style='margin-bottom: 25px'></div>", unsafe_allow_html=True)
-
+                    
 @st.fragment  # ✅ Fragment je zpět!
 def show_calendar_section():
     # --- 1. NAVIGACE MĚSÍCŮ ---
@@ -464,6 +472,8 @@ st.markdown('</div>', unsafe_allow_html=True)
 
 # --- PATIČKA ---
 st.markdown("---")
+# Zabalíme loga do divu s třídou footer-glow pro bílou záři
+st.markdown('<div class="footer-glow">', unsafe_allow_html=True)
 with stylable_container(key="footer_logos", css_styles="img {height: 50px !important; width: auto !important; object-fit: contain;} div[data-testid=\"column\"] {display: flex; align-items: center; justify-content: center;}"):
     col_left, col_center, col_right = st.columns([1.5, 2, 1.5], gap="medium", vertical_alignment="center")
     
@@ -479,5 +489,6 @@ with stylable_container(key="footer_logos", css_styles="img {height: 50px !impor
         r1, r2 = st.columns(2)
         r1.image("logo3.jpg", width="stretch")
         r2.image("logo4.jpg", width="stretch")
+st.markdown('</div>', unsafe_allow_html=True) # Ukončení divu footer-glow
 
 st.markdown("<div style='margin-bottom: 20px'></div>", unsafe_allow_html=True)
