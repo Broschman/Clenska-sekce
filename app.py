@@ -31,12 +31,12 @@ st.set_page_config(page_title="Kalendář RBK", page_icon="🌲", layout="wide")
 
 def vykreslit_detail_akce(akce, unique_key):
     """
-    Vykreslí kompletní obsah popoveru.
+    Vykreslí kompletní obsah popoveru (verze 2.0 s Carpoolingem).
     """
-    # --- 1. PŘÍPRAVA DAT (SOUŘADNICE) ---
+    # --- 1. PŘÍPRAVA ZÁKLADNÍCH DAT (SOUŘADNICE, POČASÍ...) ---
     mapa_raw = str(akce['mapa']).strip() if 'mapa' in df_akce.columns and pd.notna(akce['mapa']) else ""
     
-    # Použití nové utils funkce pro parsování
+    # Použití utils funkce pro parsování mapy
     body_k_vykresleni = utils.parse_map_coordinates(mapa_raw, akce['název']) 
     main_lat, main_lon = None, None
     
@@ -49,7 +49,7 @@ def vykreslit_detail_akce(akce, unique_key):
         if found_lat and found_lon:
             main_lat, main_lon = found_lat, found_lon
 
-    # --- ZBYTEK PROMĚNNÝCH ---
+    # Proměnné pro logiku
     akce_id_str = str(akce['id']) if 'id' in df_akce.columns else ""
     typ_udalosti = str(akce['typ']).lower().strip() if 'typ' in df_akce.columns and pd.notna(akce['typ']) else ""
     druh_akce = str(akce['druh']).lower().strip() if 'druh' in df_akce.columns and pd.notna(akce['druh']) else "ostatní"
@@ -62,14 +62,35 @@ def vykreslit_detail_akce(akce, unique_key):
     deadline_str = akce['deadline'].strftime('%d.%m.%Y')
     nazev_full = akce['název']
 
+    # --- 2. NAČTENÍ DAT (PŘIHLÁŠKY A AUTA) ---
     if akce_id_str:
         # Živé načítání přihlášek
         df_full = data_manager.load_prihlasky()
         lidi = df_full[df_full['id_akce'] == akce_id_str].copy()
+        
+        # Ošetření chybějících sloupců (pokud by v Sheetu ještě nebyly)
+        if 'id_auto' not in lidi.columns: lidi['id_auto'] = ""
         lidi = lidi.fillna("") 
+        
+        # Načtení aut (pokud funkce existuje, jinak prázdný DF)
+        try:
+            df_auta_all = data_manager.load_auta()
+            auta_akce = df_auta_all[df_auta_all['id_akce'] == akce_id_str].copy()
+        except:
+            auta_akce = pd.DataFrame(columns=["id_akce", "ridic", "kapacita", "cas", "misto", "poznamka"])
+            
     else: 
         lidi = pd.DataFrame()
+        auta_akce = pd.DataFrame()
 
+    # --- 3. VÝPOČET OBSAZENOSTI AUT ---
+    # Dictionary: { 'Jméno Řidiče': počet_pasažérů }
+    obsazenost = {}
+    if not lidi.empty:
+        # Spočítáme, kolikrát se které jméno řidiče vyskytuje ve sloupci 'id_auto'
+        obsazenost = lidi[lidi['id_auto'] != ""].groupby('id_auto').size().to_dict()
+
+    # Label pro badge
     typ_label_short = "AKCE"
     if "mčr" in typ_udalosti: typ_label_short = "MČR"
     elif "ža" in typ_udalosti: typ_label_short = "ŽA"
@@ -83,15 +104,14 @@ def vykreslit_detail_akce(akce, unique_key):
     # --- LAYOUT START ---
     col_info, col_form = st.columns([1.2, 1], gap="large")
     
+    # === LEVÝ SLOUPEC (INFO) ===
     with col_info:
-        # Nadpis + Export
         c_head, c_cal = st.columns([0.85, 0.15], gap="small", vertical_alignment="center")
         with c_head:
             st.markdown(f"<h3 style='margin:0; padding:0;'>{nazev_full}</h3>", unsafe_allow_html=True)
         with c_cal:
             ics_data = utils.generate_ics(akce)
             b64 = base64.b64encode(ics_data.encode('utf-8')).decode()
-            # Volání styles pro tlačítko
             st.markdown(styles.get_ics_button_html(b64, akce["název"]), unsafe_allow_html=True)
                 
         st.markdown(
@@ -100,7 +120,6 @@ def vykreslit_detail_akce(akce, unique_key):
             unsafe_allow_html=True
         )
         
-        # Info blok
         st.markdown("<div style='margin-top: 20px; font-size: 0.95rem; color: #444;'>", unsafe_allow_html=True)
         st.write(f"📍 **Místo:** {akce['místo']}")
         
@@ -113,11 +132,9 @@ def vykreslit_detail_akce(akce, unique_key):
             st.write(f"🎯 **Kategorie:** {kategorie_txt}")
         st.markdown("</div>", unsafe_allow_html=True)
 
-        # 1. Popis (Info bublina)
         if pd.notna(akce['popis']): 
             st.info(f"{akce['popis']}", icon="ℹ️")
         
-        # 2. Deadline (Barevný box)
         if je_po_deadlinu:
             st.error(f"⛔ **DEADLINE BYL:** {deadline_str}")
         elif je_dnes_deadline:
@@ -125,46 +142,29 @@ def vykreslit_detail_akce(akce, unique_key):
         else:
             st.success(f"📅 **Deadline:** {deadline_str}")
 
-        # 3. 🌦️ POČASÍ + 🌑 ZÁPAD SLUNCE
         if main_lat and main_lon:
             forecast = utils.get_forecast(main_lat, main_lon, akce['datum'])
-            
             if forecast:
                 w_icon, w_text = utils.get_weather_emoji(forecast['code'])
                 temp = round(forecast['temp_max'])
                 rain = forecast['precip']
                 wind = forecast['wind']
-                
-                # Zjištění času západu slunce
                 sunset_raw = forecast.get('sunset')
                 html_zapad = "" 
-                
                 if "nočák" in druh_akce and sunset_raw:
                     try:
                         sunset_time = sunset_raw.split('T')[1]
                         html_zapad = f"""<div style="text-align: right; border-left: 1px solid #d1d5db; padding-left: 15px; margin-left: 15px;"><div style="font-size: 1.5rem; line-height: 1;">🌑</div><div style="font-size: 0.7rem; font-weight: bold; color: #1f2937; text-transform: uppercase;">Západ</div><div style="font-size: 0.9rem; color: #4b5563;">{sunset_time}</div></div>"""
                     except: pass
-
-                # Volání styles pro počasí
-                st.markdown(
-                    styles.get_weather_card_html(w_icon, w_text, temp, rain, wind, html_zapad), 
-                    unsafe_allow_html=True
-                )
+                st.markdown(styles.get_weather_card_html(w_icon, w_text, temp, rain, wind, html_zapad), unsafe_allow_html=True)
                 
-        # 4. ORIS Link
         if je_zavod_obecne:
             st.caption("Přihlášky probíhají v systému ORIS.")
             link_target = str(akce['odkaz']).strip() if 'odkaz' in df_akce.columns and pd.notna(akce['odkaz']) else "https://oris.orientacnisporty.cz/"
             if je_stafeta: st.warning("⚠️ **ŠTAFETY:** Přihlaš se i ZDE (vpravo) kvůli soupiskám!")
-            
-            st.markdown(f"""
-            <a href="{link_target}" target="_blank" style="text-decoration:none;">
-                <div style="background-color: #2563EB; color: white; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold;">
-                    👉 Otevřít ORIS
-                </div>
-            </a>
-            """, unsafe_allow_html=True)
+            st.markdown(f"""<a href="{link_target}" target="_blank" style="text-decoration:none;"><div style="background-color: #2563EB; color: white; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold;">👉 Otevřít ORIS</div></a>""", unsafe_allow_html=True)
 
+    # === PRAVÝ SLOUPEC (FORMULÁŘ) ===
     with col_form:
         delete_key_state = f"confirm_delete_{unique_key}"
         with stylable_container(
@@ -172,9 +172,11 @@ def vykreslit_detail_akce(akce, unique_key):
             css_styles="{border: 1px solid #E5E7EB; border-radius: 12px; padding: 20px; background-color: #F9FAFB; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);}"
         ):
             if not je_po_deadlinu and delete_key_state not in st.session_state:
-                st.markdown("<h4 style='margin-top:0;'>✍️ Interní tabulka</h4>", unsafe_allow_html=True)
+                st.markdown("<h4 style='margin-top:0;'>✍️ Přihláška & Doprava</h4>", unsafe_allow_html=True)
+                
+                # Upozornění pro závody
                 if je_zavod_obecne and not je_stafeta:
-                    st.markdown("""<div style="background-color: #FEF2F2; border: 1px solid #FCA5A5; color: #B91C1C; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-weight: bold; font-size: 0.9em; display: flex; align-items: center;"><span style="font-size: 1.2em; margin-right: 8px;">⚠️</span>Je nutné se přihlásit i v ORISu!</div>""", unsafe_allow_html=True)
+                    st.markdown("""<div style="background-color: #FEF2F2; border: 1px solid #FCA5A5; color: #B91C1C; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-size: 0.85em;">⚠️ Je nutné se přihlásit i v ORISu!</div>""", unsafe_allow_html=True)
 
                 form_key = f"form_{unique_key}"
                 with st.form(key=form_key, clear_on_submit=True):
@@ -182,73 +184,158 @@ def vykreslit_detail_akce(akce, unique_key):
                     vybrane_jmeno = st.selectbox("Jméno", options=seznam_jmen, index=None, placeholder="Vyber ze seznamu...")
                     nove_jmeno = st.text_input("Nebo nové jméno")
                     poznamka_input = st.text_input("Poznámka")
-                    c_check1, c_check2 = st.columns(2)
-                    doprava_input = c_check1.checkbox("🚗 Sháním odvoz")
+                    
+                    # === 🚗 NOVÁ LOGIKA DOPRAVY ===
+                    st.markdown("---")
+                    resim_dopravu = st.checkbox("🚗 Řeším dopravu (společná)", key=f"ch_doprava_{unique_key}")
+                    
+                    # Inicializace proměnných pro dopravu
+                    role_auto = None
+                    ridic_kapacita = 4
+                    ridic_cas = "17:00"
+                    ridic_misto = "Loděnice"
+                    pasazer_vyber_auta = None
+                    
+                    if resim_dopravu:
+                        typ_dopravy = st.radio(
+                            "Jak pojedeš?", 
+                            ["🚙 Beru auto (Nabízím místa)", "🙋‍♂️ Sháním odvoz (Hledám)"], 
+                            horizontal=True,
+                            label_visibility="collapsed"
+                        )
+                        
+                        if "Beru auto" in typ_dopravy:
+                            role_auto = "ridic"
+                            st.markdown("###### 🚙 Informace o autě")
+                            col_a1, col_a2 = st.columns(2)
+                            ridic_kapacita = col_a1.number_input("Kapacita (vč. tebe)", 1, 9, 4)
+                            ridic_cas = col_a2.text_input("Čas odjezdu", "17:00")
+                            ridic_misto = st.text_input("Místo odjezdu", "Loděnice")
+                            st.caption("ℹ️ Po odeslání se auto nabídne ostatním.")
+                            
+                        else:
+                            role_auto = "pasazer"
+                            st.markdown("###### 🙋‍♂️ Ke komu si sedneš?")
+                            
+                            options_auta = ["⏳ Čekací listina (zatím nemám auto)"]
+                            mapa_id_aut = {"⏳ Čekací listina (zatím nemám auto)": ""}
+                            
+                            # Procházení dostupných aut
+                            if not auta_akce.empty:
+                                for _, auto_row in auta_akce.iterrows():
+                                    jmeno_ridice = str(auto_row['ridic'])
+                                    kapacita = int(auto_row['kapacita']) if str(auto_row['kapacita']).isdigit() else 4
+                                    
+                                    # Výpočet volných míst: Kapacita - Řidič(1) - Pasažéři
+                                    pocet_pasazeru = obsazenost.get(jmeno_ridice, 0)
+                                    volno = kapacita - 1 - pocet_pasazeru
+                                    
+                                    # Formátování labelu
+                                    label_auta = f"🚙 {jmeno_ridice} ({volno} volných) - {auto_row['cas']}"
+                                    if volno <= 0:
+                                        label_auta = f"❌ {jmeno_ridice} (PLNO)"
+                                    
+                                    options_auta.append(label_auta)
+                                    mapa_id_aut[label_auta] = jmeno_ridice
+                            
+                            vyber_auta_label = st.selectbox("Vyber auto", options=options_auta, label_visibility="collapsed")
+                            pasazer_vyber_auta = mapa_id_aut.get(vyber_auta_label, "")
+                            
+                            if pasazer_vyber_auta == "":
+                                st.info("Zapiš se na čekačku. Do poznámky napiš, odkud jsi.")
+
                     ubytovani_input = False
-                    if "trénink" not in typ_udalosti: ubytovani_input = c_check2.checkbox("🛏️ Společné ubytko")
+                    if "trénink" not in typ_udalosti: 
+                        st.markdown("---")
+                        ubytovani_input = st.checkbox("🛏️ Společné ubytko")
+                    
                     st.markdown("<br>", unsafe_allow_html=True)
                     
-                    with stylable_container(key=f"submit_btn_{unique_key}", css_styles="button {background-color: #16A34A !important; color: white !important; border: none !important; transform: translateY(-10px) !important;}"):
-                        odeslat_btn = st.form_submit_button("Zapsat se")
+                    with stylable_container(key=f"submit_btn_{unique_key}", css_styles="button {background-color: #16A34A !important; color: white !important; border: none !important; transform: translateY(-10px) !important; width: 100%;}"):
+                        odeslat_btn = st.form_submit_button("Zapsat se / Aktualizovat")
                     
                     if odeslat_btn:
                         finalni_jmeno = nove_jmeno.strip() if nove_jmeno else vybrane_jmeno
                         
                         if finalni_jmeno:
                             try:
-                                # 1. Kontrola duplicity
+                                # 1. Načtení čerstvých dat (Concurrency check)
                                 full_df = data_manager.load_prihlasky()
-                                duplicita = not full_df[(full_df['id_akce'] == akce_id_str) & (full_df['jméno'] == finalni_jmeno)].empty
                                 
-                                if duplicita:
-                                    st.warning(f"⚠️ {finalni_jmeno}, na této akci už jsi!")
-                                else:
-                                    hodnota_dopravy = "Ano 🚗" if doprava_input else ""
-                                    hodnota_ubytovani = "Ano 🛏️" if ubytovani_input else ""
-                                    cas_zapisu = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                                    
-                                    # 2. Příprava řádku s přihláškou
-                                    novy_zaznam = pd.DataFrame([{
-                                        "id_akce": akce_id_str, 
-                                        "název": akce['název'], 
-                                        "jméno": finalni_jmeno, 
-                                        "poznámka": poznamka_input, 
-                                        "doprava": hodnota_dopravy, 
-                                        "ubytování": hodnota_ubytovani, 
-                                        "čas zápisu": cas_zapisu
-                                    }])
-                                    
-                                    # 3. Zápis přihlášky do Google Sheets
-                                    aktualni_data = data_manager.load_prihlasky()
-                                    update_data = pd.concat([aktualni_data, novy_zaznam], ignore_index=True)
-                                    conn.update(worksheet="prihlasky", data=update_data)
-                                    
-                                    # 4. ULOŽENÍ NOVÉHO JMÉNA (Bez čištění cache)
-                                    if finalni_jmeno not in seznam_jmen:
-                                        try:
-                                            jmena_df = conn.read(worksheet="jmena")
-                                            nove_jmeno_df = pd.DataFrame([{"jméno": finalni_jmeno}])
-                                            jmena_update = pd.concat([jmena_df, nove_jmeno_df], ignore_index=True)
-                                            conn.update(worksheet="jmena", data=jmena_update)
-                                        except Exception as e:
-                                            print(f"Chyba při ukládání jména: {e}")        
-                                    
-                                    # 5. Animace úspěchu
-                                    with st_lottie_spinner(styles.lottie_success, key=f"anim_{unique_key}"): 
-                                        time.sleep(1)
-                                    
-                                    st.toast(f"✅ {finalni_jmeno} zapsán(a)!")
-                                    
-                                    # 6. Okamžitá aktualizace lokální tabulky
-                                    lidi = pd.concat([lidi, novy_zaznam], ignore_index=True)
+                                # Smazání starého záznamu uživatele pro tuto akci (pokud existuje)
+                                full_df = full_df[~((full_df['id_akce'] == akce_id_str) & (full_df['jméno'] == finalni_jmeno))]
+                                
+                                # Příprava proměnných pro zápis
+                                final_doprava_text = ""
+                                final_id_auto = ""
+                                
+                                # 2. LOGIKA AUTA - ZÁPIS DO DATABÁZE AUT
+                                if resim_dopravu:
+                                    if role_auto == "ridic":
+                                        final_doprava_text = "Řidič 🚙"
+                                        # Aktualizace listu 'auta'
+                                        df_curr_auta = data_manager.load_auta()
+                                        # Smazat staré auto tohoto řidiče pro tuto akci
+                                        df_curr_auta = df_curr_auta[~((df_curr_auta['id_akce'] == akce_id_str) & (df_curr_auta['ridic'] == finalni_jmeno))]
+                                        
+                                        nove_auto = pd.DataFrame([{
+                                            "id_akce": akce_id_str,
+                                            "ridic": finalni_jmeno,
+                                            "kapacita": ridic_kapacita,
+                                            "cas": ridic_cas,
+                                            "misto": ridic_misto,
+                                            "poznamka": ""
+                                        }])
+                                        conn.update(worksheet="auta", data=pd.concat([df_curr_auta, nove_auto], ignore_index=True))
+                                        st.toast("🚙 Auto bylo založeno!")
+                                        
+                                    elif role_auto == "pasazer":
+                                        if pasazer_vyber_auta:
+                                            final_doprava_text = f"Jedu s: {pasazer_vyber_auta}"
+                                            final_id_auto = pasazer_vyber_auta
+                                        else:
+                                            final_doprava_text = "Chci odvoz 🙋‍♂️"
+                                            final_id_auto = ""
+                                
+                                # 3. ZÁPIS DO PŘIHLÁŠEK
+                                hodnota_ubytovani = "Ano 🛏️" if ubytovani_input else ""
+                                cas_zapisu = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                                
+                                novy_zaznam = pd.DataFrame([{
+                                    "id_akce": akce_id_str, 
+                                    "název": akce['název'], 
+                                    "jméno": finalni_jmeno, 
+                                    "poznámka": poznamka_input, 
+                                    "doprava": final_doprava_text, 
+                                    "ubytování": hodnota_ubytovani, 
+                                    "čas zápisu": cas_zapisu,
+                                    "id_auto": final_id_auto # Nový sloupec
+                                }])
+                                
+                                update_data = pd.concat([full_df, novy_zaznam], ignore_index=True)
+                                conn.update(worksheet="prihlasky", data=update_data)
+                                
+                                # 4. Uložení jména (Jmena Cache)
+                                if finalni_jmeno not in seznam_jmen:
+                                    try:
+                                        jmena_df = conn.read(worksheet="jmena")
+                                        conn.update(worksheet="jmena", data=pd.concat([jmena_df, pd.DataFrame([{"jméno": finalni_jmeno}])], ignore_index=True))
+                                    except: pass        
+                                
+                                with st_lottie_spinner(styles.lottie_success, key=f"anim_{unique_key}"): 
+                                    time.sleep(1)
+                                
+                                st.toast(f"✅ {finalni_jmeno} zapsán(a)!")
+                                st.rerun() # Nutný reload pro aktualizaci seznamu aut
 
                             except Exception as e: 
                                 st.error(f"Chyba zápisu: {e}")
                         else: 
                             st.warning("Musíš vyplnit jméno!")
+                            
             elif je_po_deadlinu: st.info("🔒 Tabulka uzavřena. Kontaktuj trenéra.")
 
-    # --- MAPA (DOLE) ---
+    # --- MAPA ---
     st.markdown("<hr style='margin: 30px 0;'>", unsafe_allow_html=True)
     if body_k_vykresleni:
         st.markdown("<div style='margin-bottom: 10px; font-weight: bold; font-size: 1.1em;'>🗺️ Místo srazu / Parkování:</div>", unsafe_allow_html=True)
@@ -277,24 +364,23 @@ def vykreslit_detail_akce(akce, unique_key):
         link_mapy_cz = mapa_raw if "http" in mapa_raw and ("mapy.cz" in mapa_raw or "mapy.com" in mapa_raw) else f"https://mapy.cz/turisticka?q={start_lat},{start_lon}"
         link_google = f"https://www.google.com/maps/search/?api=1&query={start_lat},{start_lon}"
         link_waze = f"https://waze.com/ul?ll={start_lat},{start_lon}&navigate=yes"
-
-        # Volání styles pro tlačítka map
         st.markdown(styles.get_map_buttons_html(link_mapy_cz, link_google, link_waze), unsafe_allow_html=True)
-
     elif mapa_raw: st.warning("⚠️ Mapa se nenačetla.")
 
-    # --- SEZNAM ---
+    # --- SEZNAM ZAPSANÝCH ---
     st.markdown("<hr style='margin: 10px 0;'>", unsafe_allow_html=True)
-    
     st.markdown(f"#### 👥 Zapsaní ({len(lidi)})")
     
     if not lidi.empty:
+        # Hlavička
         h1, h2, h3, h4, h5, h6 = st.columns([0.4, 2.0, 1.5, 0.6, 0.6, 0.5]) 
-        h1.markdown("<b style='color:#9CA3AF'>#</b>", unsafe_allow_html=True); h2.markdown("<b>Jméno</b>", unsafe_allow_html=True); h3.markdown("<b>Poznámka</b>", unsafe_allow_html=True); h4.markdown("🚗", unsafe_allow_html=True); h5.markdown("🛏️", unsafe_allow_html=True)
+        h1.markdown("<b style='color:#9CA3AF'>#</b>", unsafe_allow_html=True)
+        h2.markdown("<b>Jméno</b>", unsafe_allow_html=True)
+        h3.markdown("<b>Poznámka</b>", unsafe_allow_html=True)
+        h4.markdown("🚗", unsafe_allow_html=True)
+        h5.markdown("🛏️", unsafe_allow_html=True)
         st.markdown("<hr style='margin: 5px 0 10px 0; border-top: 1px solid #E5E7EB;'>", unsafe_allow_html=True)
         
-        # DŮLEŽITÉ: 'i' je pořadí (0, 1, 2...), 'idx' je index z DataFrame (může být divoký)
-        # Pro klíče tlačítek budeme používat 'i', protože je stabilní.
         for i, (idx, row) in enumerate(lidi.iterrows()):
             bg = "#F3F4F6" if i % 2 == 0 else "white"
             pad = "10px 5px 25px 5px !important" if i % 2 == 0 else "0px 5px 10px 5px !important"
@@ -305,16 +391,22 @@ def vykreslit_detail_akce(akce, unique_key):
                 je_k_smazani = (delete_key_state in st.session_state) and (st.session_state[delete_key_state] == row['jméno'])
                 
                 if je_k_smazani:
-                    # Mód potvrzení
                     col_warn, col_yes, col_no = st.columns([3, 1, 1], vertical_alignment="center")
                     col_warn.warning(f"Opravdu smazat: **{row['jméno']}**?", icon="⚠️")
                     
                     with stylable_container(key=f"btn_yes_c_{i}", css_styles="button {background-color: #DC2626 !important; color: white !important; border: none;}"):
-                        # Klíč tlačítka používá 'i'
                         if col_yes.button("✅ ANO", key=f"yes_{unique_key}_{i}"):
+                            # Smazat z přihlášek
                             df_curr = conn.read(worksheet="prihlasky", ttl=0)
                             df_curr['id_akce'] = df_curr['id_akce'].astype(str).str.replace(r'\.0$', '', regex=True)
                             conn.update(worksheet="prihlasky", data=df_curr[~((df_curr['id_akce'] == akce_id_str) & (df_curr['jméno'] == row['jméno']))])
+                            
+                            # Pokud byl řidič, měli bychom smazat i auto (pokud existuje)
+                            try:
+                                df_curr_auta = data_manager.load_auta()
+                                conn.update(worksheet="auta", data=df_curr_auta[~((df_curr_auta['id_akce'] == akce_id_str) & (df_curr_auta['ridic'] == row['jméno']))])
+                            except: pass
+
                             del st.session_state[delete_key_state]
                             st.toast("🗑️ Smazáno.")
                             time.sleep(1)
@@ -325,25 +417,35 @@ def vykreslit_detail_akce(akce, unique_key):
                         st.rerun()
                 
                 else:
-                    # Normální řádek
                     c1, c2, c3, c4, c5, c6 = st.columns([0.4, 2.0, 1.5, 0.6, 0.6, 0.5], vertical_alignment="center")
                     c1.write(f"{i+1}.")
                     c2.markdown(f"**{row['jméno']}**")
                     c3.caption(row.get('poznámka', ''))
-                    c4.write(row.get('doprava', ''))
+                    
+                    # Zvýraznění dopravy
+                    doprava_val = str(row.get('doprava', ''))
+                    if "Řidič" in doprava_val:
+                        c4.markdown(f"<b style='color:#16A34A'>🚙 Řidič</b>", unsafe_allow_html=True)
+                    elif "Chci" in doprava_val:
+                        c4.markdown(f"<b style='color:#DC2626'>🙋‍♂️ Chce</b>", unsafe_allow_html=True)
+                    elif "Jedu s" in doprava_val or "Spolujízda" in doprava_val:
+                         # Zkusíme vytáhnout jen jméno řidiče
+                         ridic_name = doprava_val.replace("Jedu s: ", "").replace("Spolujízda: ", "")
+                         c4.markdown(f"<span style='color:#2563EB; font-size:0.8em'>🚙 {ridic_name}</span>", unsafe_allow_html=True)
+                    else:
+                        c4.write(doprava_val)
+                        
                     c5.write(row.get('ubytování', ''))
                     
                     if not je_po_deadlinu:
                          with stylable_container(key=f"delc_{unique_key}_{i}", css_styles="button {margin:0 !important; padding:0 !important; height:auto !important; border:none; background:transparent; color: #EF4444;}"):
-                            # TADY BYLA ZMĚNA: key používá 'i' místo 'idx'
                             if c6.button("🗑️", key=f"d_{unique_key}_{i}"): 
                                 st.session_state[delete_key_state] = row['jméno']
                                 st.rerun()
     else: st.caption("Zatím nikdo. Buď první!")
     
-    # === 🆕 VOLÁNÍ IZOLOVANÉ SEKCE Z UTILS ===
-    utils.export_admin_section(lidi, akce['název'], unique_key)
-    
+    # Exportní sekce
+    utils.export_admin_section(lidi, akce['název'], unique_key)    
     # --- HLAVIČKA S LOGEM ---
 col_dummy, col_title, col_help = st.columns([1, 10, 1], vertical_alignment="center")
 
