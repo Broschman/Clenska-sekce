@@ -28,12 +28,8 @@ styles.inject_mobile_warning()
 
 # --- 1. NASTAVENÍ STRÁNKY ---
 st.set_page_config(page_title="Kalendář RBK", page_icon="🌲", layout="wide")
-
-# Příklad volání:
-with st.popover(label, use_container_width=True):
-    utils.vykreslit_detail_akce(akce, unique_key)
     
-    # --- HLAVIČKA S LOGEM ---
+# --- HLAVIČKA S LOGEM ---
 col_dummy, col_title, col_help = st.columns([1, 10, 1], vertical_alignment="center")
 
 with col_title:
