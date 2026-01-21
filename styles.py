@@ -8,16 +8,16 @@ NEON_RED = "#ff073a"
 NEON_ORANGE = "#ff5f1f"
 DARK_BG = "#0e1117"
 
-# --- DEFINICE BAREV PRO AKCE (S explicitní GLOW barvou) ---
+# --- DEFINICE BAREV PRO AKCE ---
 BARVY_AKCI = {
     "mcr": {
         "bg": "linear-gradient(135deg, rgba(255, 7, 58, 0.4), rgba(0, 243, 255, 0.4))", 
         "color": "#fff", "border": "1px solid #ff073a", "shadow": "0 0 10px rgba(255, 7, 58, 0.6)",
-        "glow": "#ff073a" # Červená
+        "glow": "#ff073a"
     },
     "za": {
         "bg": "rgba(220, 38, 38, 0.3)", "color": "#fecaca", "border": "1px solid #ef4444", "shadow": "0 0 5px rgba(239, 68, 68, 0.4)",
-        "glow": "#ef4444" 
+        "glow": "#ef4444"
     },
     "zb": {
         "bg": "rgba(194, 65, 12, 0.3)", "color": "#fed7aa", "border": "1px solid #f97316", "shadow": "0 0 5px rgba(249, 115, 22, 0.4)",
@@ -57,29 +57,26 @@ BARVY_AKCI = {
 def load_css():
     st.markdown(f"""
     <style>
-        /* === 1. FONTY (Exo 2 pro vše) === */
         @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;600;800&display=swap&subset=latin,latin-ext');
 
-        /* === 2. BEZPEČNÁ APLIKACE FONTŮ === */
-        /* NEPOUŽÍVÁME 'div' ani 'span' globálně - to ničí ikony! */
+        /* === GLOBÁLNÍ RESET === */
         body, p, h1, h2, h3, h4, h5, h6, li, a, label, input, textarea, button {{
             font-family: 'Exo 2', sans-serif !important;
             color: #e0e0e0;
         }}
         
-        /* Specifické cílení pro Streamlit komponenty, kde je text */
+        /* Fonty pro komponenty */
         .stMarkdown, .stButton, .stTextInput, .stTextArea, .stSelectbox {{
             font-family: 'Exo 2', sans-serif !important;
         }}
 
-        /* Nadpisy - Bold */
         h1, h2, h3 {{
             text-transform: uppercase;
             letter-spacing: 1px;
             font-weight: 800 !important;
         }}
 
-        /* === 3. OPRAVA LOGA === */
+        /* === OPRAVA LOGA === */
         img.header-logo {{
             height: 60px !important;
             max-height: 60px !important;
@@ -99,7 +96,7 @@ def load_css():
             text-shadow: 0 0 20px rgba(57, 255, 20, 0.3);
         }}
 
-        /* === 4. ROG POZADÍ === */
+        /* === ROG POZADÍ === */
         .stApp {{
             background-color: {DARK_BG};
             background-image: 
@@ -116,23 +113,26 @@ def load_css():
         body::before {{ left: 10px; background: linear-gradient(to bottom, transparent, {NEON_BLUE}, {NEON_GREEN}, transparent); }}
         body::after {{ right: 10px; background: linear-gradient(to bottom, transparent, {NEON_GREEN}, {NEON_BLUE}, transparent); }}
 
-        /* === 5. TLAČÍTKA (Glass) === */
+        /* === TLAČÍTKA (ZÁKLAD) === */
+        /* Zde definujeme jen tvar. BARVU PRO HOVER TU ZÁMĚRNĚ NEDÁVÁME! */
         .stButton > button {{
             background: rgba(255, 255, 255, 0.05) !important;
             backdrop-filter: blur(5px);
             -webkit-backdrop-filter: blur(5px);
-            color: {NEON_BLUE} !important;
-            border: 1px solid rgba(0, 243, 255, 0.3) !important;
+            color: {NEON_BLUE}; /* Default text */
+            border: 1px solid rgba(0, 243, 255, 0.3);
             border-radius: 6px !important;
             text-transform: uppercase;
             font-weight: 600 !important;
             transition: all 0.3s ease !important;
         }}
-        /* Hover efekt definujeme dynamicky v app.py, zde jen default transformace */
+        
+        /* Jen jemný pohyb, BARVU a GLOW řeší app.py */
         .stButton > button:hover {{
             transform: translateY(-2px);
         }}
         
+        /* Výjimka: Primary tlačítko (Zelené) může mít barvu natvrdo */
         .stButton > button[kind="primary"] {{
             background: linear-gradient(135deg, rgba(57, 255, 20, 0.15), rgba(57, 255, 20, 0.05)) !important;
             color: {NEON_GREEN} !important;
@@ -140,9 +140,10 @@ def load_css():
         }}
         .stButton > button[kind="primary"]:hover {{
             box-shadow: 0 0 20px rgba(57, 255, 20, 0.6) !important;
+            border-color: {NEON_GREEN} !important;
         }}
 
-        /* === 6. INPUTY A KALENDÁŘ === */
+        /* === INPUTY A DALŠÍ === */
         .stTextInput input, .stSelectbox div[data-baseweb="select"], .stNumberInput input, .stTextArea textarea {{
             background-color: rgba(255, 255, 255, 0.05) !important;
             color: white !important;
@@ -177,7 +178,6 @@ def load_css():
             border-radius: 50% !important;
         }}
 
-        /* Glow pro loga v patičce */
         .footer-glow img {{
             filter: drop-shadow(0 0 5px rgba(255,255,255,0.5));
             transition: transform 0.3s;
