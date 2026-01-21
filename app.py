@@ -1,3 +1,4 @@
+
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 from streamlit_extras.stylable_container import stylable_container
@@ -65,15 +66,16 @@ if not future_deadlines.empty:
     for i, (_, row) in enumerate(future_deadlines.iterrows()):
         days_left = (row['deadline'] - dnes).days
         
-        # --- ZMĚNA: Používám MODROU pro bezpečné termíny, ať to není všechno zelené ---
+        # Logika barev
         if days_left == 0:
-            glow_c, bg_c, icon, time_msg = styles.NEON_RED, "rgba(255, 7, 58, 0.1)", "🚨", "DNES!"
+            border_c, bg_c, icon, time_msg = styles.NEON_RED, "rgba(255, 7, 58, 0.1)", "🚨", "DNES!"
         elif days_left <= 3:
-            glow_c, bg_c, icon, time_msg = styles.NEON_ORANGE, "rgba(255, 95, 31, 0.1)", "⚠️", f"Za {days_left} dny"
+            border_c, bg_c, icon, time_msg = styles.NEON_ORANGE, "rgba(255, 95, 31, 0.1)", "⚠️", f"Za {days_left} dny"
         else:
-            glow_c, bg_c, icon, time_msg = styles.NEON_BLUE, "rgba(0, 243, 255, 0.1)", "📅", row['deadline'].strftime('%d.%m.')
+            border_c, bg_c, icon, time_msg = styles.NEON_GREEN, "rgba(57, 255, 20, 0.1)", "📅", row['deadline'].strftime('%d.%m.')
 
         unique_key_dash = f"dash_{row['id']}"
+        glow_color = border_c # Pro dashboard je glow stejný jako border
 
         with cols_d[i]:
             with stylable_container(
@@ -81,10 +83,10 @@ if not future_deadlines.empty:
                 css_styles=f"""
                 button {{
                     background-color: {bg_c} !important;
-                    border: 1px solid {glow_c} !important;
-                    box-shadow: 0 0 10px {glow_c}44 !important;
-                    color: #fff !important;
+                    border: 1px solid {border_c} !important;
+                    box-shadow: 0 0 10px {border_c}44 !important;
                     border-radius: 12px !important;
+                    color: #fff !important;
                     width: 100% !important;
                     height: auto !important;
                     min-height: 110px !important;
@@ -97,13 +99,14 @@ if not future_deadlines.empty:
                     font-family: 'Exo 2', sans-serif !important;
                     transition: all 0.3s ease !important;
                 }}
-                /* === BARVA PŘI NAJETÍ (HOVER) === */
+                /* === JEDNODUCHÝ A ÚČINNÝ HOVER === */
                 button:hover {{
-                    border-color: {glow_c} !important;
-                    box-shadow: 0 0 25px {glow_c} !important;
-                    background-color: {glow_c}22 !important;
+                    border-color: {glow_color} !important;
+                    color: {glow_color} !important;
+                    box-shadow: 0 0 25px {glow_color} !important;
+                    background-color: {glow_color}11 !important;
                     transform: scale(1.05) !important;
-                    z-index: 100 !important;
+                    z-index: 999 !important;
                 }}
                 button p {{ font-family: 'Exo 2', sans-serif !important; letter-spacing: 1px; font-weight: 700; }}
                 """
@@ -192,10 +195,8 @@ def show_calendar_section():
                     elif "trénink" in typ: style_key = "trenink"
                     elif je_zavod_obecne: style_key = "zavod"
                     
-                    # === ZÍSKÁNÍ BAREV Z DICTIONARY ===
                     styly = styles.BARVY_AKCI.get(style_key, styles.BARVY_AKCI["default"])
-                    glow_color = styly.get("glow", "#00f3ff")
-                    bg_color = styly.get("bg", "rgba(255,255,255,0.05)")
+                    glow_color = styly.get("glow", "#39ff14")
 
                     ikony = { "les": "🌲", "sprint": "🏙️", "nočák": "🌗" }
                     emoji = ikony.get(druh, "🏃")
@@ -206,22 +207,23 @@ def show_calendar_section():
                         key=f"btn_c_{unique_key}",
                         css_styles=f"""
                         button {{
-                            background: {bg_color} !important; 
-                            border: 1px solid rgba(255,255,255,0.1) !important;
-                            color: #e0e0e0 !important;
+                            background: {styly['bg']} !important; 
+                            color: {styly['color']} !important; 
+                            border: {styly['border']} !important; 
                             width: 100%; border-radius: 8px; padding: 8px 10px !important; text-align: left; font-size: 0.85rem; font-weight: 600; 
-                            box-shadow: none;
+                            box-shadow: {styly.get('shadow', 'none')}; 
                             margin-bottom: 6px; white-space: normal !important; height: auto !important; min-height: 40px; 
                             font-family: 'Exo 2', sans-serif !important;
-                            transition: all 0.2s ease !important;
+                            transition: all 0.3s ease !important;
                         }} 
-                        /* === DYNAMICKÝ HOVER (ZDE SE MĚNÍ BARVA) === */
+                        /* === GLOW EFEKT (Jednoduchý selektor) === */
                         button:hover {{
+                            filter: brightness(1.2); 
+                            transform: translateY(-2px); 
+                            z-index: 5;
                             border-color: {glow_color} !important;
                             box-shadow: 0 0 15px {glow_color} !important;
                             color: #fff !important;
-                            z-index: 99 !important;
-                            transform: translateY(-2px) !important;
                         }}
                         """
                     ):
@@ -284,8 +286,7 @@ if search_text or len(search_date_value) > 0:
             elif any(s in typ_udalosti for s in ["závod", "liga"]): style_key = "zavod"
 
             styly = styles.BARVY_AKCI.get(style_key, styles.BARVY_AKCI["default"])
-            glow_color = styly.get("glow", "#00f3ff")
-            bg_color = styly.get("bg", "rgba(255,255,255,0.05)")
+            glow_color = styly.get("glow", "#39ff14")
 
             ikony_mapa = { "les": "🌲", "krátká trať": "🌲", "sprint": "🏙️", "nočák": "🌗" }
             emoji = ikony_mapa.get(str(akce.get('druh', '')).lower(), "🏃")
@@ -296,11 +297,11 @@ if search_text or len(search_date_value) > 0:
                 key=f"btn_search_{unique_key}",
                 css_styles=f"""
                     button {{
-                        background: {bg_color} !important;
-                        color: #e0e0e0 !important;
-                        border: 1px solid rgba(255,255,255,0.1) !important;
+                        background: {styly['bg']} !important;
+                        color: {styly['color']} !important;
+                        border: {styly['border']} !important;
                         width: 100%; border-radius: 8px; padding: 12px 15px !important; text-align: left; font-weight: 600;
-                        box-shadow: none; margin-bottom: 8px;
+                        box-shadow: {styly.get('shadow', 'none')}; margin-bottom: 8px;
                         font-family: 'Exo 2', sans-serif !important;
                         transition: all 0.3s ease !important;
                     }}
@@ -319,7 +320,7 @@ else:
     show_calendar_section()
 st.markdown("<div style='margin-bottom: 50px'></div>", unsafe_allow_html=True)
 
-# --- 5. PLOVOUCÍ TLAČÍTKO ---
+# --- PLOVOUCÍ TLAČÍTKO ---
 st.markdown('<div class="floating-container">', unsafe_allow_html=True)
 with st.popover("💡 Nápad?"):
     st.markdown("### 🛠️ Máš návrh?")
