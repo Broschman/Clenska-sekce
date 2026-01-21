@@ -710,7 +710,6 @@ def vykreslit_detail_akce(akce, unique_key):
         st.markdown("<hr style='margin: 5px 0 10px 0; border-top: 1px solid rgba(255,255,255,0.1);'>", unsafe_allow_html=True)
         
         for i, (_, row) in enumerate(lidi.iterrows()):
-             # ZMĚNA BAREV PRO ŘÁDKY (Zebra - průhledná vs. jemná šedá)
              bg = "rgba(255, 255, 255, 0.05)" if i % 2 == 0 else "transparent"
              pad = "10px 5px 25px 5px !important" if i % 2 == 0 else "0px 5px 10px 5px !important"
              
@@ -741,7 +740,6 @@ def vykreslit_detail_akce(akce, unique_key):
                      dopr = str(row.get('doprava', ''))
                      btn_label = dopr if dopr else "➕"
                      
-                     # NEONOVÁ TLAČÍTKA V TABULCE
                      btn_color, btn_bg, btn_border = "#ccc", "rgba(255,255,255,0.05)", "1px solid rgba(255,255,255,0.2)"
                      
                      if "Řidič" in dopr: 
@@ -753,13 +751,15 @@ def vykreslit_detail_akce(akce, unique_key):
                          btn_color, btn_bg, btn_border = "#ff073a", "rgba(255, 7, 58, 0.1)", "1px solid #ff073a"
                          btn_label = "🙋‍♂️ Chci"
 
-                     with stylable_container(key=f"cont_btn_d_{unique_key}_{i}", css_styles=f"button {{background-color: {btn_bg} !important; color: {btn_color} !important; border: {btn_border} !important; padding: 2px 8px; font-size: 0.8rem; height: auto !important; min-height: 0px !important;}}"):
+                     # === FIX VELIKOSTI PÍSMA DOPRAVY (0.7rem a menší padding) ===
+                     with stylable_container(key=f"cont_btn_d_{unique_key}_{i}", css_styles=f"button {{background-color: {btn_bg} !important; color: {btn_color} !important; border: {btn_border} !important; padding: 2px 4px !important; font-size: 0.7rem !important; height: auto !important; min-height: 28px !important;}}"):
                          if c4.button(btn_label, key=f"btn_row_d_{unique_key}_{i}"):
                              show_doprava_dialog(akce_id_str, akce.get('název', ''), akce['datum'].strftime('%d.%m.'), row['jméno'], None, None)
 
                      c5.write(row.get('ubytování', ''))
                      if not je_po_deadlinu:
-                         with stylable_container(key=f"delc_{unique_key}_{i}", css_styles="button {margin:0 !important; padding:0 !important; height:auto !important; border:none; background:transparent; color: #ff073a;}"):
+                         # === FIX CENTROVÁNÍ IKONKY KOŠE (Flexbox) ===
+                         with stylable_container(key=f"delc_{unique_key}_{i}", css_styles="button {margin: 0 auto !important; padding: 0 !important; height: 30px !important; width: 30px !important; border: none; background: transparent; color: #ff073a; display: flex !important; justify-content: center !important; align-items: center !important;}"):
                              if c6.button("🗑️", key=f"del_{unique_key}_{i}"):
                                  st.session_state[delete_key_state] = row['jméno']
                                  st.rerun()
