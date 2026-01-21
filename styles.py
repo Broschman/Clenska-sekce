@@ -25,27 +25,25 @@ BARVY_AKCI = {
 def load_css():
     st.markdown(f"""
     <style>
-        /* FONT FIX: Orbitron -> Rajdhani (pro češtinu v nadpisech) */
-        @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;600;800&family=Rajdhani:wght@500;600;700&display=swap&subset=latin,latin-ext');
+        @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;600;800&family=Orbitron:wght@400;700;900&display=swap&subset=latin,latin-ext');
 
-        /* === GLOBÁLNÍ RESET === */
+        /* === GLOBÁLNÍ RESET (BEZ DIV a SPAN - OPRAVA EXPAND_MORE) === */
         body, p, h1, h2, h3, h4, h5, h6, li, a, label, input, textarea, button {{
             font-family: 'Exo 2', sans-serif !important;
             color: #e0e0e0;
         }}
         
+        /* Specifické cílení pro Streamlit, aby texty vypadaly dobře */
         .stMarkdown, .stTextInput, .stTextArea, .stSelectbox, .stNumberInput {{
             font-family: 'Exo 2', sans-serif !important;
         }}
 
-        /* === NADPISY (Rajdhani) === */
         h1, h2, h3 {{
-            font-family: 'Rajdhani', 'Exo 2', sans-serif !important;
+            font-family: 'Orbitron', 'Exo 2', sans-serif !important;
             letter-spacing: 1px;
             text-transform: uppercase;
-            font-weight: 700 !important;
+            font-weight: 800 !important;
         }}
-        h1 {{ font-size: 2.5rem !important; }}
 
         /* === LOGO === */
         img.header-logo {{
@@ -75,18 +73,19 @@ def load_css():
             background-attachment: fixed;
         }}
 
-        /* === TLAČÍTKA (OPRAVA TVARU) === */
+        /* === TLAČÍTKA (GLOBÁLNÍ NASTAVENÍ) === */
         .stButton > button {{
             background: rgba(255, 255, 255, 0.05) !important;
             backdrop-filter: blur(5px);
             color: {NEON_BLUE} !important;
             border: none !important;
             box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
-            border-radius: 6px !important; /* Výchozí obdélník */
+            border-radius: 6px !important;
             font-weight: 600 !important;
             font-family: 'Exo 2', sans-serif !important;
             transition: all 0.3s ease !important;
             
+            /* Výchozí velká velikost pro hlavní tlačítka */
             font-size: 1rem !important; 
             padding: 0.5rem 1rem !important;
             min-height: 2.5rem !important;
@@ -97,8 +96,6 @@ def load_css():
             box-shadow: inset 0 0 0 1px {NEON_BLUE}, 0 0 10px {NEON_BLUE} !important;
             background-color: rgba(0, 243, 255, 0.1) !important;
             transform: translateY(-2px);
-            /* ZDE JE FIX: Vynucujeme hranatý tvar i při hoveru */
-            border-radius: 6px !important; 
         }}
 
         /* Primary tlačítko (Zapsat se) */
@@ -110,7 +107,6 @@ def load_css():
         .stButton > button[kind="primary"]:hover {{
             box-shadow: inset 0 0 0 1px {NEON_GREEN}, 0 0 20px {NEON_GREEN} !important;
             background-color: rgba(57, 255, 20, 0.2) !important;
-            border-radius: 6px !important; /* I tady fix tvaru */
         }}
 
         /* Inputy */
@@ -131,11 +127,11 @@ def load_css():
             background: rgba(255, 7, 58, 0.2); 
             color: {NEON_RED}; 
             border: 1px solid {NEON_RED};
-            display: inline-flex;        
-            align-items: center;         
+            display: inline-flex;       
+            align-items: center;        
             justify-content: center;    
             width: 30px; height: 30px;  
-            border-radius: 8px;          
+            border-radius: 8px;         
             font-weight: 800;
             box-shadow: 0 0 15px rgba(255, 7, 58, 0.4);
             margin: 0 auto 8px auto;    
@@ -171,7 +167,7 @@ def load_css():
     </style>
     """, unsafe_allow_html=True)
 
-# --- OSTATNÍ FUNKCE (beze změny) ---
+# --- OSTATNÍ FUNKCE ---
 def inject_mobile_warning(): st.markdown("""<style>@media only screen and (orientation: portrait) and (max-width: 900px) {#rotate-warning {display:flex !important;} .stApp {overflow:hidden;}}</style>""", unsafe_allow_html=True)
 def get_ics_button_html(b64_data, filename): return f"""<a href="data:text/calendar;base64,{b64_data}" download="{filename}.ics" style="text-decoration:none;"><div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 6px 0; text-align: center; cursor: pointer; color: #fff; transition: 0.3s;" onmouseover="this.style.borderColor='#00f3ff'; this.style.color='#00f3ff'; this.style.boxShadow='0 0 10px #00f3ff';" onmouseout="this.style.borderColor='rgba(255, 255, 255, 0.2)'; this.style.color='#fff'; this.style.boxShadow='none';">📅</div></a>"""
 def get_weather_card_html(w_icon, w_text, temp, rain, wind, sunset_html=""):
