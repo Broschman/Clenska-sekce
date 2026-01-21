@@ -771,24 +771,23 @@ def vykreslit_detail_akce(akce, unique_key):
 
                      c5.write(row.get('ubytování', ''))
                      if not je_po_deadlinu:
-                              # === BEZPEČNÉ CENTROVÁNÍ KOŠE ===
-                              # Odstraněn nebezpečný selektor div[data-testid="stButton"]
-                              with stylable_container(key=f"delc_{unique_key}_{i}_safe", css_styles="""
+                              # === CENTROVÁNÍ KOŠE: MARGIN AUTO TRIK ===
+                              with stylable_container(key=f"delc_{unique_key}_{i}_margin", css_styles="""
                                 button {
                                     border: none !important; 
                                     background: transparent !important; 
                                     box-shadow: none !important;
                                     padding: 0 !important;
                                     
-                                    /* Roztáhneme tlačítko na šířku sloupce, aby centr fungoval */
-                                    width: 100% !important; 
-                                    height: auto !important;
-                                    min-height: 35px !important;
+                                    /* 1. Nastavíme fixní malou šířku */
+                                    width: 30px !important; 
                                     
-                                    /* Zarovnání obsahu (ikonky) na střed */
-                                    display: flex !important; 
-                                    justify-content: center !important; 
-                                    align-items: center !important;
+                                    /* 2. Uděláme z něj blok, aby fungovaly marginy */
+                                    display: block !important; 
+                                    
+                                    /* 3. Magie: Auto marginy zleva i zprava ho vycentrují */
+                                    margin-left: auto !important;
+                                    margin-right: auto !important;
                                     
                                     color: #ff073a !important;
                                 }
@@ -797,14 +796,14 @@ def vykreslit_detail_akce(akce, unique_key):
                                     color: #ff5f1f !important;
                                     background: rgba(255, 7, 58, 0.1) !important;
                                     border-radius: 6px !important;
-                                    box-shadow: none !important; /* Žádný stín, jen barva */
+                                    /* Ujistíme se, že se při hoveru nezmění pozice */
+                                    margin-left: auto !important;
+                                    margin-right: auto !important;
                                 }
                                 
-                                /* Pojistka: Ikonka uvnitř tlačítka se nesmí hýbat */
+                                /* Centr ikony uvnitř */
                                 button > div {
-                                    display: flex !important;
                                     justify-content: center !important;
-                                    align-items: center !important;
                                 }
                               """):
                                   if c6.button("🗑️", key=f"del_{unique_key}_{i}"):
