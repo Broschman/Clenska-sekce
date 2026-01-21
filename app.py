@@ -82,13 +82,13 @@ if not future_deadlines.empty:
                 button {{
                     background-color: {bg_c} !important;
                     border: none !important;
-                    /* Pevný stín */
                     box-shadow: inset 0 0 0 1px {glow_c}, 0 0 10px {glow_c}44 !important;
                     color: #fff !important;
                     
-                    /* PEVNÝ TVAR - BEZ TRANSFROMACE */
+                    /* !!! ABSOLUTNÍ FIX TVARU !!! */
                     border-radius: 12px !important;
-                    transform: none !important; 
+                    transform: none !important; /* Zákaz jakéhokoliv pohybu */
+                    margin: 0 !important;
                     
                     width: 100% !important;
                     height: auto !important;
@@ -100,17 +100,19 @@ if not future_deadlines.empty:
                     align-items: center !important;
                     padding: 10px !important;
                     font-family: 'Exo 2', sans-serif !important;
-                    transition: box-shadow 0.2s ease !important; /* Animujeme jen stín */
+                    
+                    /* Animujeme POUZE barvy, ne tvar ani pozici */
+                    transition: box-shadow 0.2s ease, background-color 0.2s ease !important;
                 }}
                 
                 button:hover {{
-                    /* Pouze zintenzivnění záře, ŽÁDNÝ SCALE (zvětšení), aby se nerozbily rohy */
+                    /* Pouze rozsvítíme, nehýbeme s tím */
                     box-shadow: inset 0 0 0 2px {glow_c}, 0 0 25px {glow_c} !important;
                     background-color: {glow_c}22 !important;
                     color: #fff !important;
                     z-index: 100 !important;
                     
-                    /* Znovu vynucení tvaru pro jistotu */
+                    /* Znovu vynucení tvaru a zákazu pohybu */
                     border-radius: 12px !important;
                     transform: none !important;
                 }}
