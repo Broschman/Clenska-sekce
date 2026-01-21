@@ -65,13 +65,13 @@ if not future_deadlines.empty:
     for i, (_, row) in enumerate(future_deadlines.iterrows()):
         days_left = (row['deadline'] - dnes).days
         
-        # --- ZMĚNA: Používám MODROU pro bezpečné termíny, ať to není všechno zelené ---
+        # Logika barev
         if days_left == 0:
             glow_c, bg_c, icon, time_msg = styles.NEON_RED, "rgba(255, 7, 58, 0.1)", "🚨", "DNES!"
         elif days_left <= 3:
             glow_c, bg_c, icon, time_msg = styles.NEON_ORANGE, "rgba(255, 95, 31, 0.1)", "⚠️", f"Za {days_left} dny"
         else:
-            glow_c, bg_c, icon, time_msg = styles.NEON_BLUE, "rgba(0, 243, 255, 0.1)", "📅", row['deadline'].strftime('%d.%m.')
+            glow_c, bg_c, icon, time_msg = styles.NEON_GREEN, "rgba(57, 255, 20, 0.1)", "📅", row['deadline'].strftime('%d.%m.')
 
         unique_key_dash = f"dash_{row['id']}"
 
@@ -81,8 +81,9 @@ if not future_deadlines.empty:
                 css_styles=f"""
                 button {{
                     background-color: {bg_c} !important;
-                    border: 1px solid {glow_c} !important;
-                    box-shadow: 0 0 10px {glow_c}44 !important;
+                    border: none !important; /* VYPÍNÁME BORDER */
+                    /* Používáme stín jako rámeček */
+                    box-shadow: inset 0 0 0 1px {glow_c}, 0 0 10px {glow_c}44 !important;
                     color: #fff !important;
                     border-radius: 12px !important;
                     width: 100% !important;
@@ -95,13 +96,14 @@ if not future_deadlines.empty:
                     align-items: center !important;
                     padding: 10px !important;
                     font-family: 'Exo 2', sans-serif !important;
-                    transition: all 0.3s ease !important;
+                    transition: transform 0.2s ease !important;
                 }}
-                /* === BARVA PŘI NAJETÍ (HOVER) === */
+                /* === HACK: FALEŠNÝ RÁMEČEK (BOX-SHADOW) MÍSTO BORDER === */
                 button:hover {{
-                    border-color: {glow_c} !important;
-                    box-shadow: 0 0 25px {glow_c} !important;
+                    /* Inset stín = rámeček, vnější stín = záře */
+                    box-shadow: inset 0 0 0 2px {glow_c}, 0 0 25px {glow_c} !important;
                     background-color: {glow_c}22 !important;
+                    color: #fff !important;
                     transform: scale(1.05) !important;
                     z-index: 100 !important;
                 }}
@@ -179,6 +181,7 @@ def show_calendar_section():
                     typ = str(akce.get('typ', '')).lower()
                     druh = str(akce.get('druh', '')).lower()
                     
+                    # Logika stylu
                     zavodni_slova = ["závod", "mčr", "žebříček", "liga", "mistrovství", "štafety", "ža", "žb"]
                     je_zavod_obecne = any(s in typ for s in zavodni_slova)
                     style_key = "default"
@@ -192,7 +195,6 @@ def show_calendar_section():
                     elif "trénink" in typ: style_key = "trenink"
                     elif je_zavod_obecne: style_key = "zavod"
                     
-                    # === ZÍSKÁNÍ BAREV Z DICTIONARY ===
                     styly = styles.BARVY_AKCI.get(style_key, styles.BARVY_AKCI["default"])
                     glow_color = styly.get("glow", "#00f3ff")
                     bg_color = styly.get("bg", "rgba(255,255,255,0.05)")
@@ -207,18 +209,19 @@ def show_calendar_section():
                         css_styles=f"""
                         button {{
                             background: {bg_color} !important; 
-                            border: 1px solid rgba(255,255,255,0.1) !important;
+                            border: none !important; /* VYPÍNÁME BORDER */
+                            /* Simulace borderu stínem */
+                            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.15) !important;
                             color: #e0e0e0 !important;
                             width: 100%; border-radius: 8px; padding: 8px 10px !important; text-align: left; font-size: 0.85rem; font-weight: 600; 
-                            box-shadow: none;
                             margin-bottom: 6px; white-space: normal !important; height: auto !important; min-height: 40px; 
                             font-family: 'Exo 2', sans-serif !important;
                             transition: all 0.2s ease !important;
                         }} 
-                        /* === DYNAMICKÝ HOVER (ZDE SE MĚNÍ BARVA) === */
+                        /* === GLOW EFEKT PŘES BOX-SHADOW (OBCHÁZÍ STREAMLIT) === */
                         button:hover {{
-                            border-color: {glow_color} !important;
-                            box-shadow: 0 0 15px {glow_color} !important;
+                            /* Inset = vnitřní rámeček, Vnější = záře */
+                            box-shadow: inset 0 0 0 1px {glow_color}, 0 0 15px {glow_color} !important;
                             color: #fff !important;
                             z-index: 99 !important;
                             transform: translateY(-2px) !important;
@@ -284,7 +287,7 @@ if search_text or len(search_date_value) > 0:
             elif any(s in typ_udalosti for s in ["závod", "liga"]): style_key = "zavod"
 
             styly = styles.BARVY_AKCI.get(style_key, styles.BARVY_AKCI["default"])
-            glow_color = styly.get("glow", "#00f3ff")
+            glow_color = styly.get("glow", "#39ff14")
             bg_color = styly.get("bg", "rgba(255,255,255,0.05)")
 
             ikony_mapa = { "les": "🌲", "krátká trať": "🌲", "sprint": "🏙️", "nočák": "🌗" }
@@ -298,16 +301,16 @@ if search_text or len(search_date_value) > 0:
                     button {{
                         background: {bg_color} !important;
                         color: #e0e0e0 !important;
-                        border: 1px solid rgba(255,255,255,0.1) !important;
+                        border: none !important;
+                        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.15) !important;
                         width: 100%; border-radius: 8px; padding: 12px 15px !important; text-align: left; font-weight: 600;
-                        box-shadow: none; margin-bottom: 8px;
+                        margin-bottom: 8px;
                         font-family: 'Exo 2', sans-serif !important;
                         transition: all 0.3s ease !important;
                     }}
                     button:hover {{
                         filter: brightness(1.2); transform: translateY(-2px);
-                        box-shadow: 0 0 15px {glow_color} !important;
-                        border-color: {glow_color} !important;
+                        box-shadow: inset 0 0 0 1px {glow_color}, 0 0 15px {glow_color} !important;
                         color: #fff !important;
                     }}
                 """
