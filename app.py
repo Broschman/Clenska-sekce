@@ -22,7 +22,6 @@ import data_manager
 
 print("--- ZAČÁTEK RERUNU ---")
 
-# Načtení stylů
 styles.load_css()
 styles.inject_mobile_warning()
 
@@ -66,7 +65,7 @@ if not future_deadlines.empty:
     for i, (_, row) in enumerate(future_deadlines.iterrows()):
         days_left = (row['deadline'] - dnes).days
         
-        # Logika barev (dashboard má své vlastní barvy v styles.py proměnných, ale použijeme glow logiku)
+        # Logika barev
         if days_left == 0:
             border_c, bg_c, icon, time_msg = styles.NEON_RED, "rgba(255, 7, 58, 0.1)", "🚨", "DNES!"
         elif days_left <= 3:
@@ -75,9 +74,7 @@ if not future_deadlines.empty:
             border_c, bg_c, icon, time_msg = styles.NEON_GREEN, "rgba(57, 255, 20, 0.1)", "📅", row['deadline'].strftime('%d.%m.')
 
         unique_key_dash = f"dash_{row['id']}"
-
-        # Použijeme border_c jako glow barvu
-        glow_color = border_c
+        glow_color = border_c # Pro dashboard je glow stejný jako border
 
         with cols_d[i]:
             with stylable_container(
@@ -87,8 +84,8 @@ if not future_deadlines.empty:
                     background-color: {bg_c} !important;
                     border: 1px solid {border_c} !important;
                     box-shadow: 0 0 10px {border_c}44 !important;
-                    color: #fff !important;
                     border-radius: 12px !important;
+                    color: #fff !important;
                     width: 100% !important;
                     height: auto !important;
                     min-height: 110px !important;
@@ -99,20 +96,16 @@ if not future_deadlines.empty:
                     align-items: center !important;
                     padding: 10px !important;
                     font-family: 'Exo 2', sans-serif !important;
+                    transition: all 0.3s ease !important;
                 }}
-                /* === ATOMOVÁ BOMBA PROTI STREAMLITU === */
-                div[data-testid="stButton"] > button:hover {{
+                /* === JEDNODUCHÝ A ÚČINNÝ HOVER === */
+                button:hover {{
                     border-color: {glow_color} !important;
                     color: {glow_color} !important;
-                    box-shadow: 0 0 20px {glow_color} !important;
-                    background-color: {glow_color}11 !important; /* Velmi jemné pozadí */
-                    transform: scale(1.02) !important;
-                }}
-                /* Pojistka pro focus (kliknutí) */
-                div[data-testid="stButton"] > button:focus:hover {{
-                    border-color: {glow_color} !important;
-                    color: {glow_color} !important;
-                    box-shadow: 0 0 20px {glow_color} !important;
+                    box-shadow: 0 0 25px {glow_color} !important;
+                    background-color: {glow_color}11 !important;
+                    transform: scale(1.05) !important;
+                    z-index: 999 !important;
                 }}
                 button p {{ font-family: 'Exo 2', sans-serif !important; letter-spacing: 1px; font-weight: 700; }}
                 """
@@ -202,8 +195,6 @@ def show_calendar_section():
                     elif je_zavod_obecne: style_key = "zavod"
                     
                     styly = styles.BARVY_AKCI.get(style_key, styles.BARVY_AKCI["default"])
-                    
-                    # === ZDE ZÍSKÁVÁME GLOW ===
                     glow_color = styly.get("glow", "#39ff14")
 
                     ikony = { "les": "🌲", "sprint": "🏙️", "nočák": "🌗" }
@@ -222,21 +213,16 @@ def show_calendar_section():
                             box-shadow: {styly.get('shadow', 'none')}; 
                             margin-bottom: 6px; white-space: normal !important; height: auto !important; min-height: 40px; 
                             font-family: 'Exo 2', sans-serif !important;
+                            transition: all 0.3s ease !important;
                         }} 
-                        /* === ATOMOVÁ BOMBA PROTI STREAMLITU === */
-                        div[data-testid="stButton"] > button:hover {{
+                        /* === GLOW EFEKT (Jednoduchý selektor) === */
+                        button:hover {{
+                            filter: brightness(1.2); 
+                            transform: translateY(-2px); 
+                            z-index: 5;
                             border-color: {glow_color} !important;
-                            color: {glow_color} !important;
-                            box-shadow: 0 0 20px {glow_color} !important;
-                            background-color: {glow_color}11 !important;
-                            transform: translateY(-2px) scale(1.02) !important;
-                            z-index: 99 !important;
-                        }}
-                        /* Pojistka pro focus */
-                        div[data-testid="stButton"] > button:focus:hover {{
-                            border-color: {glow_color} !important;
-                            color: {glow_color} !important;
-                            box-shadow: 0 0 20px {glow_color} !important;
+                            box-shadow: 0 0 15px {glow_color} !important;
+                            color: #fff !important;
                         }}
                         """
                     ):
@@ -316,13 +302,13 @@ if search_text or len(search_date_value) > 0:
                         width: 100%; border-radius: 8px; padding: 12px 15px !important; text-align: left; font-weight: 600;
                         box-shadow: {styly.get('shadow', 'none')}; margin-bottom: 8px;
                         font-family: 'Exo 2', sans-serif !important;
+                        transition: all 0.3s ease !important;
                     }}
-                    /* === ATOMOVÁ BOMBA PROTI STREAMLITU === */
-                    div[data-testid="stButton"] > button:hover {{
-                        border-color: {glow_color} !important;
-                        color: {glow_color} !important;
+                    button:hover {{
+                        filter: brightness(1.2); transform: translateY(-2px);
                         box-shadow: 0 0 15px {glow_color} !important;
-                        background-color: {glow_color}11 !important;
+                        border-color: {glow_color} !important;
+                        color: #fff !important;
                     }}
                 """
             ):
@@ -333,7 +319,7 @@ else:
     show_calendar_section()
 st.markdown("<div style='margin-bottom: 50px'></div>", unsafe_allow_html=True)
 
-# --- 5. PLOVOUCÍ TLAČÍTKO ---
+# --- PLOVOUCÍ TLAČÍTKO ---
 st.markdown('<div class="floating-container">', unsafe_allow_html=True)
 with st.popover("💡 Nápad?"):
     st.markdown("### 🛠️ Máš návrh?")
