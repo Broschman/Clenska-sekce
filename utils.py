@@ -765,6 +765,11 @@ def vykreslit_detail_akce(akce, unique_key):
                             width: 100% !important;
                             white-space: nowrap !important;
                         }}
+                        button p {{
+                            font-size: 11px !important;
+                            margin: 0 !important;
+                            padding: 0 !important;
+                        }}
                      """):
                          if c4.button(btn_label, key=f"btn_row_d_{unique_key}_{i}"):
                              show_doprava_dialog(akce_id_str, akce.get('název', ''), akce['datum'].strftime('%d.%m.'), row['jméno'], None, None)
@@ -780,10 +785,13 @@ def vykreslit_detail_akce(akce, unique_key):
                                 width: 100% !important; height: 30px !important;
                                 color: #ff073a !important;
                             }
-                            button > div { display: flex !important; justify-content: center !important; }
+                            button p {
+                                font-size: 16px !important;
+                                margin: 0 !important; padding: 0 !important;
+                                line-height: 1 !important;
+                            }
                          """):
                              if c6.button("🗑️", key=f"del_{unique_key}_{i}"):
                                  st.session_state[delete_key_state] = row['jméno']
                                  st.rerun()
-
     export_admin_section(lidi, akce.get('název', ''), unique_key)
