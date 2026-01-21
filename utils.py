@@ -732,11 +732,14 @@ def vykreslit_detail_akce(akce, unique_key):
                          del st.session_state[delete_key_state]
                          st.rerun()
                  else:
+                     # Definice sloupců
                      c1, c2, c3, c4, c5, c6 = st.columns([0.4, 2.0, 1.5, 1.2, 0.6, 0.5], vertical_alignment="center")
+                     
                      c1.write(f"{i+1}.")
                      c2.markdown(f"**{row['jméno']}**")
                      c3.caption(row.get('poznámka', ''))
                      
+                     # Logika dopravy (tlačítka)
                      dopr = str(row.get('doprava', ''))
                      btn_label = dopr if dopr else "➕"
                      
@@ -751,14 +754,14 @@ def vykreslit_detail_akce(akce, unique_key):
                          btn_color, btn_bg, btn_border = "#ff073a", "rgba(255, 7, 58, 0.1)", "1px solid #ff073a"
                          btn_label = "🙋‍♂️ Chci"
 
-                     # === LOKÁLNÍ NASTAVENÍ TLAČÍTKA DOPRAVY (Exo 2, 0.9rem, menší padding) ===
+                     # Vykreslení tlačítka dopravy
                      with stylable_container(key=f"cont_btn_d_{unique_key}_{i}_fix", css_styles=f"""
                         button {{
                             background-color: {btn_bg} !important; 
                             color: {btn_color} !important; 
                             border: {btn_border} !important; 
-                            padding: 4px 8px !important; /* Menší okraje než standard */
-                            font-size: 0.9rem !important; /* Stejná velikost jako jméno */
+                            padding: 4px 8px !important;
+                            font-size: 0.9rem !important;
                             font-family: 'Exo 2', sans-serif !important;
                             height: auto !important; 
                             min-height: 30px !important;
@@ -770,52 +773,41 @@ def vykreslit_detail_akce(akce, unique_key):
                              show_doprava_dialog(akce_id_str, akce.get('název', ''), akce['datum'].strftime('%d.%m.'), row['jméno'], None, None)
 
                      c5.write(row.get('ubytování', ''))
-                          
-                          # === NOVÁ LOGIKA TLAČÍTKA KOŠE (CLEAN REWRITE) ===
-                          if not je_po_deadlinu:
-                              # Použijeme unikátní klíč kontejneru, aby se styl nemíchal s ničím jiným
-                              with stylable_container(key=f"del_btn_container_{unique_key}_{i}", css_styles="""
-                                  /* 1. Resetujeme styl tlačítka na průhledné */
-                                  button {
-                                      background-color: transparent !important;
-                                      border: none !important;
-                                      box-shadow: none !important;
-                                      padding: 0 !important;
-                                      color: #ff073a !important;
-                                      
-                                      /* 2. ZAJIŠTĚNÍ CENTROVÁNÍ */
-                                      /* Flexbox zarovná obsah tlačítka přesně na střed */
-                                      display: flex !important;
-                                      justify-content: center !important;
-                                      align-items: center !important;
-                                      
-                                      /* 3. Výška a šířka */
-                                      width: 100% !important;
-                                      height: auto !important;
-                                      min-height: 40px !important; /* Aby se na to dobře klikalo */
-                                      transition: all 0.2s ease !important;
-                                  }
 
-                                  /* 3. Hover efekt - jemné podsvícení */
-                                  button:hover {
-                                      color: #ff5f1f !important;
-                                      background-color: rgba(255, 7, 58, 0.1) !important;
-                                      border-radius: 8px !important;
-                                      transform: scale(1.1); /* Jemné zvětšení při najetí */
-                                  }
-
-                                  /* 4. POJISTKA: Vycentrování vnitřního DIVu Streamlitu */
-                                  button > div {
-                                      display: flex !important;
-                                      justify-content: center !important;
-                                      align-items: center !important;
-                                      width: 100% !important;
-                                  }
-                              """):
-                                  # use_container_width=True roztáhne tlačítko přes celou buňku
-                                  # CSS se pak postará o to, aby ikonka uvnitř plavala uprostřed
-                                  if c6.button("🗑️", key=f"del_{unique_key}_{i}", use_container_width=True):
-                                      st.session_state[delete_key_state] = row['jméno']
-                                      st.rerun()
+                     # === TLAČÍTKO KOŠE (NOVÁ VERZE - UPRAVENÉ ODSAZENÍ) ===
+                     if not je_po_deadlinu:
+                         with stylable_container(key=f"del_btn_container_{unique_key}_{i}", css_styles="""
+                             button {
+                                 background-color: transparent !important;
+                                 border: none !important;
+                                 box-shadow: none !important;
+                                 padding: 0 !important;
+                                 color: #ff073a !important;
+                                 
+                                 display: flex !important;
+                                 justify-content: center !important;
+                                 align-items: center !important;
+                                 
+                                 width: 100% !important;
+                                 height: auto !important;
+                                 min-height: 40px !important;
+                                 transition: all 0.2s ease !important;
+                             }
+                             button:hover {
+                                 color: #ff5f1f !important;
+                                 background-color: rgba(255, 7, 58, 0.1) !important;
+                                 border-radius: 8px !important;
+                                 transform: scale(1.1);
+                             }
+                             button > div {
+                                 display: flex !important;
+                                 justify-content: center !important;
+                                 align-items: center !important;
+                                 width: 100% !important;
+                             }
+                         """):
+                             if c6.button("🗑️", key=f"del_{unique_key}_{i}", use_container_width=True):
+                                 st.session_state[delete_key_state] = row['jméno']
+                                 st.rerun()
                                  
     export_admin_section(lidi, akce.get('název', ''), unique_key)
