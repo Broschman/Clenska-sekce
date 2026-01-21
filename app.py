@@ -192,6 +192,7 @@ def vykreslit_detail_akce(akce, unique_key):
                  if je_k_smazani:
                      col_warn, col_yes, col_no = st.columns([3, 1, 1], vertical_alignment="center")
                      col_warn.warning(f"Smazat: **{row['jméno']}**?", icon="⚠️")
+                     # ... (Logika mazání stejná jako minule - zkráceno pro přehlednost) ...
                      with stylable_container(key=f"btn_yes_c_{i}", css_styles="button {background-color: #DC2626 !important; color: white !important; border: none;}"):
                          if col_yes.button("ANO", key=f"yes_{unique_key}_{i}"):
                             df_curr = conn.read(worksheet="prihlasky", ttl=0)
@@ -206,25 +207,45 @@ def vykreslit_detail_akce(akce, unique_key):
                      if col_no.button("ZPĚT", key=f"no_{unique_key}_{i}"):
                          del st.session_state[delete_key_state]
                          st.rerun()
+
                  else:
                      c1, c2, c3, c4, c5, c6 = st.columns([0.4, 2.0, 1.5, 1.2, 0.6, 0.5], vertical_alignment="center")
                      c1.write(f"{i+1}.")
                      c2.markdown(f"**{row['jméno']}**")
                      c3.caption(row.get('poznámka', ''))
+                     
+                     # === ZMĚNA: KLIKACÍ TLAČÍTKO PRO DOPRAVU ===
                      dopr = str(row.get('doprava', ''))
-                     if "Řidič" in dopr: c4.markdown(f"<span style='color:#16A34A;font-weight:bold'>{dopr}</span>", unsafe_allow_html=True)
-                     elif "Spolujízda" in dopr: 
-                         ridic_name = dopr.replace("Spolujízda: ", "").replace("Jedu s: ", "")
-                         c4.markdown(f"<span style='color:#2563EB'>🚙 {ridic_name}</span>", unsafe_allow_html=True)
-                     elif "Chci" in dopr: c4.markdown(f"<span style='color:#DC2626;font-weight:bold'>🙋‍♂️ Chce</span>", unsafe_allow_html=True)
-                     else: c4.write(dopr)
+                     btn_label = dopr if dopr else "➕"
+                     
+                     # Stylování tlačítka podle statusu
+                     btn_color = "#374151" # Default šedá
+                     btn_bg = "#E5E7EB"
+                     if "Řidič" in dopr: 
+                         btn_color = "white"; btn_bg = "#16A34A"
+                     elif "Spolujízda" in dopr or "Jedu s" in dopr:
+                         btn_color = "white"; btn_bg = "#2563EB"
+                         # Zkrácení labelu, aby nebyl moc dlouhý
+                         btn_label = dopr.replace("Spolujízda: ", "🚙 ").replace("Jedu s: ", "🚙 ")
+                     elif "Chci" in dopr:
+                         btn_color = "white"; btn_bg = "#DC2626"
+                         btn_label = "🙋‍♂️ Chci"
+
+                     with stylable_container(
+                         key=f"cont_btn_d_{unique_key}_{i}", 
+                         css_styles=f"button {{background-color: {btn_bg} !important; color: {btn_color} !important; border: none; padding: 2px 8px; font-size: 0.8rem; height: auto !important; min-height: 0px !important;}}"
+                     ):
+                         # Kliknutí otevře dialog s předvyplněným jménem a NULL inputy (načte se z DB)
+                         if c4.button(btn_label, key=f"btn_row_d_{unique_key}_{i}"):
+                             utils.show_doprava_dialog(akce_id_str, akce['název'], akce['datum'].strftime('%d.%m.'), row['jméno'], None, None)
+
                      c5.write(row.get('ubytování', ''))
+                     
                      if not je_po_deadlinu:
                          with stylable_container(key=f"delc_{unique_key}_{i}", css_styles="button {margin:0 !important; padding:0 !important; height:auto !important; border:none; background:transparent; color: #EF4444;}"):
                              if c6.button("🗑️", key=f"del_{unique_key}_{i}"):
                                  st.session_state[delete_key_state] = row['jméno']
                                  st.rerun()
-
     utils.export_admin_section(lidi, akce['název'], unique_key)
     
     # --- HLAVIČKA S LOGEM ---
