@@ -751,24 +751,21 @@ def vykreslit_detail_akce(akce, unique_key):
                          btn_color, btn_bg, btn_border = "#ff073a", "rgba(255, 7, 58, 0.1)", "1px solid #ff073a"
                          btn_label = "🙋‍♂️ Chci"
 
-                     # === FIX VELIKOSTI TLAČÍTKA DOPRAVY (Agresivní) ===
+                     # === TLAČÍTKO DOPRAVA (Deep Fix) ===
                      with stylable_container(key=f"cont_btn_d_{unique_key}_{i}_fix", css_styles=f"""
                         button {{
                             background-color: {btn_bg} !important; 
                             color: {btn_color} !important; 
                             border: {btn_border} !important; 
-                            padding: 0px 4px !important; /* Minimální padding */
-                            font-size: 11px !important; /* Explicitní pixely pro jistotu */
-                            line-height: 1.2 !important;
+                            padding: 2px 5px !important;
                             height: auto !important; 
                             min-height: 24px !important;
-                            width: 100% !important;
-                            white-space: nowrap !important;
                         }}
+                        /* Tady je kouzlo: cílíme na text uvnitř tlačítka */
                         button p {{
-                            font-size: 11px !important;
-                            margin: 0 !important;
+                            font-size: 12px !important;
                             padding: 0 !important;
+                            margin: 0 !important;
                         }}
                      """):
                          if c4.button(btn_label, key=f"btn_row_d_{unique_key}_{i}"):
@@ -776,18 +773,24 @@ def vykreslit_detail_akce(akce, unique_key):
 
                      c5.write(row.get('ubytování', ''))
                      if not je_po_deadlinu:
-                         # === FIX CENTROVÁNÍ KOŠE (Flexbox na střed) ===
+                         # === TLAČÍTKO KOŠE (Deep Fix) ===
                          with stylable_container(key=f"delc_{unique_key}_{i}_fix", css_styles="""
                             button {
-                                border: none !important; background: transparent !important; padding: 0 !important;
+                                border: none !important; 
+                                background: transparent !important; 
+                                padding: 0 !important;
                                 margin: 0 auto !important; 
+                                width: 30px !important; height: 30px !important; min-height: 30px !important;
                                 display: flex !important; justify-content: center !important; align-items: center !important;
-                                width: 100% !important; height: 30px !important;
                                 color: #ff073a !important;
                             }
-                            button p {
-                                font-size: 16px !important;
-                                margin: 0 !important; padding: 0 !important;
+                            /* Dvojitý úder: cílíme na div i p uvnitř, aby se nic neroztahovalo */
+                            button > div, button > div > p {
+                                display: flex !important;
+                                justify-content: center !important;
+                                align-items: center !important;
+                                margin: 0 !important;
+                                padding: 0 !important;
                                 line-height: 1 !important;
                             }
                          """):
