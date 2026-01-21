@@ -83,7 +83,6 @@ if not future_deadlines.empty:
                     background-color: {bg_c} !important;
                     border: none !important;
                     /* === PERMANENTNÍ GLOW === */
-                    /* Inset 1px = tenký rámeček, 10px = jemná záře */
                     box-shadow: inset 0 0 0 1px {glow_c}, 0 0 10px {glow_c}44 !important;
                     color: #fff !important;
                     border-radius: 12px !important;
@@ -107,6 +106,8 @@ if not future_deadlines.empty:
                     transform: scale(1.05) !important;
                     z-index: 100 !important;
                     color: #fff !important;
+                    /* FIX: ZACHOVAT HRANATÝ TVAR */
+                    border-radius: 12px !important;
                 }}
                 button p {{ font-family: 'Exo 2', sans-serif !important; letter-spacing: 1px; font-weight: 700; }}
                 """
@@ -114,7 +115,7 @@ if not future_deadlines.empty:
                 label_text = f"{icon}\n{row['název']}\n{time_msg}"
                 with st.popover(label_text, use_container_width=True):
                     utils.vykreslit_detail_akce(row, unique_key_dash)
-
+                    
     st.markdown("<div style='margin-bottom: 25px'></div>", unsafe_allow_html=True)
 
 @st.fragment
