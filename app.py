@@ -67,14 +67,13 @@ if not future_deadlines.empty:
         
         # Logika barev
         if days_left == 0:
-            border_c, bg_c, icon, time_msg = styles.NEON_RED, "rgba(255, 7, 58, 0.1)", "🚨", "DNES!"
+            glow_c, bg_c, icon, time_msg = styles.NEON_RED, "rgba(255, 7, 58, 0.1)", "🚨", "DNES!"
         elif days_left <= 3:
-            border_c, bg_c, icon, time_msg = styles.NEON_ORANGE, "rgba(255, 95, 31, 0.1)", "⚠️", f"Za {days_left} dny"
+            glow_c, bg_c, icon, time_msg = styles.NEON_ORANGE, "rgba(255, 95, 31, 0.1)", "⚠️", f"Za {days_left} dny"
         else:
-            border_c, bg_c, icon, time_msg = styles.NEON_GREEN, "rgba(57, 255, 20, 0.1)", "📅", row['deadline'].strftime('%d.%m.')
+            glow_c, bg_c, icon, time_msg = styles.NEON_GREEN, "rgba(57, 255, 20, 0.1)", "📅", row['deadline'].strftime('%d.%m.')
 
         unique_key_dash = f"dash_{row['id']}"
-        glow_color = border_c # Pro dashboard je glow stejný jako border
 
         with cols_d[i]:
             with stylable_container(
@@ -82,10 +81,11 @@ if not future_deadlines.empty:
                 css_styles=f"""
                 button {{
                     background-color: {bg_c} !important;
-                    border: 1px solid {border_c} !important;
-                    box-shadow: 0 0 10px {border_c}44 !important;
-                    border-radius: 12px !important;
+                    border: none !important;
+                    /* Falešný border přes inset stín */
+                    box-shadow: inset 0 0 0 1px {glow_c}, 0 0 10px {glow_c}44 !important;
                     color: #fff !important;
+                    border-radius: 12px !important;
                     width: 100% !important;
                     height: auto !important;
                     min-height: 110px !important;
@@ -96,16 +96,15 @@ if not future_deadlines.empty:
                     align-items: center !important;
                     padding: 10px !important;
                     font-family: 'Exo 2', sans-serif !important;
-                    transition: all 0.3s ease !important;
+                    transition: transform 0.2s ease !important;
                 }}
-                /* === JEDNODUCHÝ A ÚČINNÝ HOVER === */
+                /* ZDE JE TRIK: Místo borderu měníme stín. To Streamlit nehlídá. */
                 button:hover {{
-                    border-color: {glow_color} !important;
-                    color: {glow_color} !important;
-                    box-shadow: 0 0 25px {glow_color} !important;
-                    background-color: {glow_color}11 !important;
+                    box-shadow: inset 0 0 0 1px {glow_c}, 0 0 25px {glow_c} !important;
+                    background-color: {glow_c}22 !important;
                     transform: scale(1.05) !important;
-                    z-index: 999 !important;
+                    z-index: 100 !important;
+                    color: #fff !important;
                 }}
                 button p {{ font-family: 'Exo 2', sans-serif !important; letter-spacing: 1px; font-weight: 700; }}
                 """
@@ -196,6 +195,7 @@ def show_calendar_section():
                     
                     styly = styles.BARVY_AKCI.get(style_key, styles.BARVY_AKCI["default"])
                     glow_color = styly.get("glow", "#39ff14")
+                    bg_color = styly.get("bg", "rgba(255,255,255,0.05)")
 
                     ikony = { "les": "🌲", "sprint": "🏙️", "nočák": "🌗" }
                     emoji = ikony.get(druh, "🏃")
@@ -206,23 +206,22 @@ def show_calendar_section():
                         key=f"btn_c_{unique_key}",
                         css_styles=f"""
                         button {{
-                            background: {styly['bg']} !important; 
-                            color: {styly['color']} !important; 
-                            border: {styly['border']} !important; 
+                            background: {bg_color} !important; 
+                            border: none !important;
+                            /* Simulace borderu */
+                            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.15) !important;
+                            color: #e0e0e0 !important;
                             width: 100%; border-radius: 8px; padding: 8px 10px !important; text-align: left; font-size: 0.85rem; font-weight: 600; 
-                            box-shadow: {styly.get('shadow', 'none')}; 
                             margin-bottom: 6px; white-space: normal !important; height: auto !important; min-height: 40px; 
                             font-family: 'Exo 2', sans-serif !important;
-                            transition: all 0.3s ease !important;
+                            transition: all 0.2s ease !important;
                         }} 
-                        /* === GLOW EFEKT (Jednoduchý selektor) === */
+                        /* Glow přes box-shadow */
                         button:hover {{
-                            filter: brightness(1.2); 
-                            transform: translateY(-2px); 
-                            z-index: 5;
-                            border-color: {glow_color} !important;
-                            box-shadow: 0 0 15px {glow_color} !important;
+                            box-shadow: inset 0 0 0 1px {glow_color}, 0 0 15px {glow_color} !important;
                             color: #fff !important;
+                            z-index: 99 !important;
+                            transform: translateY(-2px) !important;
                         }}
                         """
                     ):
@@ -286,6 +285,7 @@ if search_text or len(search_date_value) > 0:
 
             styly = styles.BARVY_AKCI.get(style_key, styles.BARVY_AKCI["default"])
             glow_color = styly.get("glow", "#39ff14")
+            bg_color = styly.get("bg", "rgba(255,255,255,0.05)")
 
             ikony_mapa = { "les": "🌲", "krátká trať": "🌲", "sprint": "🏙️", "nočák": "🌗" }
             emoji = ikony_mapa.get(str(akce.get('druh', '')).lower(), "🏃")
@@ -296,18 +296,18 @@ if search_text or len(search_date_value) > 0:
                 key=f"btn_search_{unique_key}",
                 css_styles=f"""
                     button {{
-                        background: {styly['bg']} !important;
-                        color: {styly['color']} !important;
-                        border: {styly['border']} !important;
+                        background: {bg_color} !important;
+                        color: #e0e0e0 !important;
+                        border: none !important;
+                        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.15) !important;
                         width: 100%; border-radius: 8px; padding: 12px 15px !important; text-align: left; font-weight: 600;
-                        box-shadow: {styly.get('shadow', 'none')}; margin-bottom: 8px;
+                        margin-bottom: 8px;
                         font-family: 'Exo 2', sans-serif !important;
                         transition: all 0.3s ease !important;
                     }}
                     button:hover {{
                         filter: brightness(1.2); transform: translateY(-2px);
-                        box-shadow: 0 0 15px {glow_color} !important;
-                        border-color: {glow_color} !important;
+                        box-shadow: inset 0 0 0 1px {glow_color}, 0 0 15px {glow_color} !important;
                         color: #fff !important;
                     }}
                 """
@@ -319,7 +319,7 @@ else:
     show_calendar_section()
 st.markdown("<div style='margin-bottom: 50px'></div>", unsafe_allow_html=True)
 
-# --- PLOVOUCÍ TLAČÍTKO ---
+# --- 5. PLOVOUCÍ TLAČÍTKO ---
 st.markdown('<div class="floating-container">', unsafe_allow_html=True)
 with st.popover("💡 Nápad?"):
     st.markdown("### 🛠️ Máš návrh?")
