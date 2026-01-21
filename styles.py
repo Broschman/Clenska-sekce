@@ -157,22 +157,20 @@ def load_css():
             box-shadow: 0 0 40px rgba(0, 0, 0, 0.8) !important;
         }}
 
-        /* === PLOVOUCÍ TLAČÍTKO - OPRAVA TVARU === */
-        .floating-container button {
+        /* === PLOVOUCÍ TLAČÍTKO - OPRAVA TVARU A ZDVOJENÉ ZÁVORKY === */
+        .floating-container button {{
             background: linear-gradient(135deg, {NEON_BLUE}, #0056b3) !important;
             box-shadow: 0 0 20px {NEON_BLUE} !important;
-            /* ZMĚNA Z 50% NA 8px = HRANATÉ */
             border-radius: 8px !important;
             padding: 10px 20px !important;
             height: auto !important;
             width: auto !important;
-        }
-        .floating-container button:hover {
+        }}
+        .floating-container button:hover {{
             transform: scale(1.05);
-            /* ZAJIŠTĚNÍ HRANATÉHO TVARU PŘI HOVERU */
             border-radius: 8px !important;
             box-shadow: 0 0 30px {NEON_BLUE} !important;
-        }
+        }}
 
         .footer-glow img {{
             filter: drop-shadow(0 0 5px rgba(255,255,255,0.5));
