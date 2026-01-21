@@ -246,7 +246,7 @@ def get_map_buttons_html(link_mapy_cz, link_google, link_waze):
     """
 
 def get_footer_html():
-    return f"<div style='text-align: center; color: #555; font-size: 0.8em; font-family: \"Orbitron\", sans-serif; margin-top: 20px;'>SYSTEM: <span style='color:{NEON_GREEN}'>ONLINE</span> • RBK_NET v2.0 • 2026</div>"
+    return f"<div style='text-align: center; color: #555; font-size: 0.8em; font-family: \"Orbitron\", sans-serif; margin-top: 20px;'>SYSTEM: <span style='color:{NEON_GREEN}'>Členská sekce RBK</span> • Designed by Broschman v3.0 • All rights reserved 2026</div>"
 
 # --- LOTTIE A OSTATNÍ ---
 @st.cache_data(ttl=3600*24)
