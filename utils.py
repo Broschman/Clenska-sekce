@@ -546,13 +546,12 @@ def handle_driver_removal(conn, akce_id, driver_name):
 
 def vykreslit_detail_akce(akce, unique_key):
     """
-    Vykreslí detail akce. Nyní plně izolovaná v utils.py.
+    Vykreslí detail akce (Futuristický Dark Mode Design).
     """
     conn = data_manager.get_connection()
     seznam_jmen = data_manager.load_jmena()
 
     # --- 1. PŘÍPRAVA DAT ---
-    # Bezpečné získání hodnot pomocí .get() místo kontroly df_akce.columns
     mapa_raw = str(akce.get('mapa', '')).strip() if pd.notna(akce.get('mapa')) else ""
     body_k_vykresleni = parse_map_coordinates(mapa_raw, akce.get('název', 'Akce'))
     
@@ -567,14 +566,11 @@ def vykreslit_detail_akce(akce, unique_key):
     akce_id_str = str(akce.get('id', '')).replace('.0', '')
     typ_udalosti = str(akce.get('typ', '')).lower().strip()
     druh_akce = str(akce.get('druh', '')).lower().strip()
-    kategorie_txt = str(akce.get('kategorie', '')).strip()
     
-    je_stafeta = "štafety" in typ_udalosti
     zavodni_slova = ["závod", "mčr", "žebříček", "liga", "mistrovství", "štafety", "ža", "žb"]
     je_zavod_obecne = any(s in typ_udalosti for s in zavodni_slova)
     
     dnes = date.today()
-    # Deadline ošetříme, kdyby náhodou chyběl
     deadline_val = akce.get('deadline')
     if isinstance(deadline_val, pd.Timestamp): deadline_val = deadline_val.date()
     
@@ -584,7 +580,6 @@ def vykreslit_detail_akce(akce, unique_key):
         je_po_deadlinu = dnes > deadline_val
         deadline_str = deadline_val.strftime('%d.%m.%Y')
 
-    # Načtení lidi 
     lidi = pd.DataFrame()
     if akce_id_str:
         df_full = data_manager.load_prihlasky()
@@ -602,10 +597,11 @@ def vykreslit_detail_akce(akce, unique_key):
             b64 = base64.b64encode(ics_data.encode('utf-8')).decode()
             st.markdown(styles.get_ics_button_html(b64, akce.get("název", "")), unsafe_allow_html=True)
         
-        st.markdown(styles.badge(typ_udalosti.upper(), bg="#F3F4F6", color="#333"), unsafe_allow_html=True)
+        # Badge používá nový styl z styles.py automaticky
+        st.markdown(styles.badge(typ_udalosti.upper()), unsafe_allow_html=True)
         
         datum_txt = akce['datum'].strftime('%d.%m.%Y')
-        st.markdown(f"<div style='margin-top:20px; color:#444'>📍 <b>Místo:</b> {misto}<br>🗓️ <b>Datum:</b> {datum_txt}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='margin-top:20px; color:#aaa'>📍 <b>Místo:</b> {misto}<br>🗓️ <b>Datum:</b> {datum_txt}</div>", unsafe_allow_html=True)
         
         popis = akce.get('popis')
         if pd.notna(popis): st.info(popis, icon="ℹ️")
@@ -622,20 +618,20 @@ def vykreslit_detail_akce(akce, unique_key):
         if je_zavod_obecne:
             odkaz = str(akce.get('odkaz', 'https://oris.orientacnisporty.cz/'))
             if not odkaz or odkaz == "nan": odkaz = "https://oris.orientacnisporty.cz/"
-            st.markdown(f"""<a href="{odkaz}" target="_blank"><div style="background-color: #2563EB; color: white; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold;">👉 Otevřít ORIS</div></a>""", unsafe_allow_html=True)
+            st.markdown(f"""<a href="{odkaz}" target="_blank"><div style="background: rgba(0, 243, 255, 0.1); border: 1px solid #00f3ff; color: #ccfcff; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold; text-shadow: 0 0 5px #00f3ff;">👉 Otevřít ORIS</div></a>""", unsafe_allow_html=True)
 
     # === PRAVÝ SLOUPEC (PŘIHLÁŠKA) ===
     with col_form:
         delete_key_state = f"confirm_delete_{unique_key}"
         
+        # ZMĚNA BAREV PRO KONTEJNER (Dark Mode)
         with stylable_container(
             key=f"form_cont_{unique_key}",
-            css_styles="{border: 1px solid #E5E7EB; border-radius: 12px; padding: 20px; background-color: #F9FAFB; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);}"
+            css_styles="{border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 20px; background-color: rgba(255,255,255,0.03);}"
         ):
             if not je_po_deadlinu and delete_key_state not in st.session_state:
                 st.markdown("<h4 style='margin-top:0;'>✍️ Přihláška</h4>", unsafe_allow_html=True)
                 
-                # Widgety
                 vybrane_jmeno = st.selectbox("Jméno", options=seznam_jmen, index=None, placeholder="Vyber jméno...", key=f"sel_jmeno_{unique_key}")
                 nove_jmeno = st.text_input("Nebo nové jméno", key=f"inp_new_{unique_key}")
                 poznamka = st.text_input("Poznámka", key=f"inp_note_{unique_key}")
@@ -645,8 +641,8 @@ def vykreslit_detail_akce(akce, unique_key):
 
                 c_btn1, c_btn2 = st.columns([1, 1], gap="small")
                 with c_btn1:
-                    with stylable_container(key=f"c_save_{unique_key}", css_styles="button {background-color: #16A34A !important; color: white !important; border: none !important; width: 100%;}"):
-                        if st.button("💾 Zapsat se", key=f"btn_save_{unique_key}"):
+                    with stylable_container(key=f"c_save_{unique_key}", css_styles="button {width: 100%;}"):
+                        if st.button("💾 Zapsat se", key=f"btn_save_{unique_key}", type="primary"):
                             if finalni_jmeno:
                                 try:
                                     df_full = data_manager.load_prihlasky()
@@ -665,7 +661,6 @@ def vykreslit_detail_akce(akce, unique_key):
                                         "id_auto": old_id_auto
                                     }])
                                     conn.update(worksheet="prihlasky", data=pd.concat([df_full, novy], ignore_index=True))
-                                    # Uložení nového jména
                                     if finalni_jmeno not in seznam_jmen:
                                         try:
                                             j_df = conn.read(worksheet="jmena")
@@ -685,42 +680,41 @@ def vykreslit_detail_akce(akce, unique_key):
             elif je_po_deadlinu: st.info("🔒 Přihlášky uzavřeny.")
 
     # --- SEZNAM ---
-    st.markdown("<hr style='margin: 30px 0;'>", unsafe_allow_html=True)
+    st.markdown("<hr style='margin: 30px 0; border-top: 1px solid rgba(255,255,255,0.1);'>", unsafe_allow_html=True)
     if body_k_vykresleni:
         start_lat, start_lon, _ = body_k_vykresleni[0]
-        m = folium.Map(location=[start_lat, start_lon], tiles="OpenStreetMap")
+        m = folium.Map(location=[start_lat, start_lon], tiles="CartoDB dark_matter") # Tmavé mapy!
         folium.Marker([start_lat, start_lon], tooltip="Sraz").add_to(m)
         st_folium(m, height=250, width=700, key=f"m_{unique_key}", returned_objects=[])
 
     st.markdown(f"#### 👥 Zapsaní ({len(lidi)})")
     if not lidi.empty:
         h1, h2, h3, h4, h5, h6 = st.columns([0.4, 2.0, 1.5, 1.2, 0.6, 0.5]) 
-        h1.markdown("<b style='color:#9CA3AF'>#</b>", unsafe_allow_html=True)
+        h1.markdown("<b style='color:#666'>#</b>", unsafe_allow_html=True)
         h2.markdown("<b>Jméno</b>", unsafe_allow_html=True)
         h3.markdown("<b>Poznámka</b>", unsafe_allow_html=True)
         h4.markdown("<b>Doprava</b>", unsafe_allow_html=True)
         h5.markdown("<b>Ubyt</b>", unsafe_allow_html=True)
-        st.markdown("<hr style='margin: 5px 0 10px 0; border-top: 1px solid #E5E7EB;'>", unsafe_allow_html=True)
+        st.markdown("<hr style='margin: 5px 0 10px 0; border-top: 1px solid rgba(255,255,255,0.1);'>", unsafe_allow_html=True)
         
         for i, (_, row) in enumerate(lidi.iterrows()):
-             bg = "#F3F4F6" if i % 2 == 0 else "white"
+             # ZMĚNA BAREV PRO ŘÁDKY (Zebra - průhledná vs. jemná šedá)
+             bg = "rgba(255, 255, 255, 0.05)" if i % 2 == 0 else "transparent"
              pad = "10px 5px 25px 5px !important" if i % 2 == 0 else "0px 5px 10px 5px !important"
              
-             with stylable_container(key=f"r_{unique_key}_{i}", css_styles=f"{{background-color: {bg}; border-radius: 6px; padding: {pad}; margin-bottom: 2px; display: flex; align-items: center; min-height: 40px;}}"):
+             with stylable_container(key=f"r_{unique_key}_{i}", css_styles=f"{{background-color: {bg}; border-radius: 6px; padding: {pad}; margin-bottom: 2px; display: flex; align-items: center; min-height: 40px; color: #e0e0e0;}}"):
                  
                  je_k_smazani = (delete_key_state in st.session_state) and (st.session_state[delete_key_state] == row['jméno'])
                  
                  if je_k_smazani:
                      col_warn, col_yes, col_no = st.columns([3, 1, 1], vertical_alignment="center")
                      col_warn.warning(f"Smazat: **{row['jméno']}**?", icon="⚠️")
-                     with stylable_container(key=f"btn_yes_c_{i}", css_styles="button {background-color: #DC2626 !important; color: white !important; border: none;}"):
+                     with stylable_container(key=f"btn_yes_c_{i}", css_styles="button {background-color: rgba(220, 38, 38, 0.3) !important; border: 1px solid #DC2626 !important; color: white !important;}"):
                          if col_yes.button("ANO", key=f"yes_{unique_key}_{i}"):
-                            handle_driver_removal(conn, akce_id_str, row['jméno']) # <--- ÚKLID
-                            
+                            handle_driver_removal(conn, akce_id_str, row['jméno'])
                             df_curr = data_manager.load_prihlasky()
                             df_curr = df_curr[~((df_curr['id_akce'] == akce_id_str) & (df_curr['jméno'] == row['jméno']))]
                             conn.update(worksheet="prihlasky", data=df_curr)
-                            
                             del st.session_state[delete_key_state]
                             st.rerun()
                      if col_no.button("ZPĚT", key=f"no_{unique_key}_{i}"):
@@ -734,21 +728,26 @@ def vykreslit_detail_akce(akce, unique_key):
                      
                      dopr = str(row.get('doprava', ''))
                      btn_label = dopr if dopr else "➕"
-                     btn_color, btn_bg = "#374151", "#E5E7EB"
                      
-                     if "Řidič" in dopr: btn_color, btn_bg = "white", "#16A34A"
+                     # NEONOVÁ TLAČÍTKA V TABULCE
+                     btn_color, btn_bg, btn_border = "#ccc", "rgba(255,255,255,0.05)", "1px solid rgba(255,255,255,0.2)"
+                     
+                     if "Řidič" in dopr: 
+                         btn_color, btn_bg, btn_border = "#39ff14", "rgba(57, 255, 20, 0.1)", "1px solid #39ff14"
                      elif "Spolujízda" in dopr or "Jedu s" in dopr: 
-                         btn_color, btn_bg = "white", "#2563EB"
+                         btn_color, btn_bg, btn_border = "#00f3ff", "rgba(0, 243, 255, 0.1)", "1px solid #00f3ff"
                          btn_label = dopr.replace("Spolujízda: ", "🚙 ").replace("Jedu s: ", "🚙 ")
-                     elif "Chci" in dopr: btn_color, btn_bg = "white", "#DC2626"; btn_label = "🙋‍♂️ Chci"
+                     elif "Chci" in dopr: 
+                         btn_color, btn_bg, btn_border = "#ff073a", "rgba(255, 7, 58, 0.1)", "1px solid #ff073a"
+                         btn_label = "🙋‍♂️ Chci"
 
-                     with stylable_container(key=f"cont_btn_d_{unique_key}_{i}", css_styles=f"button {{background-color: {btn_bg} !important; color: {btn_color} !important; border: none; padding: 2px 8px; font-size: 0.8rem; height: auto !important; min-height: 0px !important;}}"):
+                     with stylable_container(key=f"cont_btn_d_{unique_key}_{i}", css_styles=f"button {{background-color: {btn_bg} !important; color: {btn_color} !important; border: {btn_border} !important; padding: 2px 8px; font-size: 0.8rem; height: auto !important; min-height: 0px !important;}}"):
                          if c4.button(btn_label, key=f"btn_row_d_{unique_key}_{i}"):
                              show_doprava_dialog(akce_id_str, akce.get('název', ''), akce['datum'].strftime('%d.%m.'), row['jméno'], None, None)
 
                      c5.write(row.get('ubytování', ''))
                      if not je_po_deadlinu:
-                         with stylable_container(key=f"delc_{unique_key}_{i}", css_styles="button {margin:0 !important; padding:0 !important; height:auto !important; border:none; background:transparent; color: #EF4444;}"):
+                         with stylable_container(key=f"delc_{unique_key}_{i}", css_styles="button {margin:0 !important; padding:0 !important; height:auto !important; border:none; background:transparent; color: #ff073a;}"):
                              if c6.button("🗑️", key=f"del_{unique_key}_{i}"):
                                  st.session_state[delete_key_state] = row['jméno']
                                  st.rerun()
