@@ -25,7 +25,7 @@ BARVY_AKCI = {
 def load_css():
     st.markdown(f"""
     <style>
-        /* ZMĚNA FONTU: Rajdhani místo Orbitron (podpora češtiny) */
+        /* FONT FIX: Rajdhani pro češtinu */
         @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;600;800&family=Rajdhani:wght@500;600;700&display=swap&subset=latin,latin-ext');
 
         /* === GLOBÁLNÍ RESET === */
@@ -45,7 +45,6 @@ def load_css():
             text-transform: uppercase;
             font-weight: 700 !important;
         }}
-        /* Rajdhani je opticky menší, trochu ho zvětšíme */
         h1 {{ font-size: 2.5rem !important; }}
 
         /* === LOGO === */
@@ -76,38 +75,49 @@ def load_css():
             background-attachment: fixed;
         }}
 
-        /* === TLAČÍTKA (GLOBÁLNÍ - PROTI OVÁLŮM) === */
-        .stButton > button {{
+        /* === TLAČÍTKA - HARD FIX PROTI OVÁLŮM === */
+        /* Cílíme na všechny možné varianty buttonů ve Streamlitu */
+        .stButton button, 
+        div[data-testid="stButton"] button, 
+        button[kind="secondary"], 
+        button[kind="primary"] {{
             background: rgba(255, 255, 255, 0.05) !important;
             backdrop-filter: blur(5px);
             color: {NEON_BLUE} !important;
             border: none !important;
             box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
-            border-radius: 6px !important; /* Výchozí hranaté */
             font-weight: 600 !important;
             font-family: 'Exo 2', sans-serif !important;
             transition: all 0.3s ease !important;
-            
             font-size: 1rem !important; 
             padding: 0.5rem 1rem !important;
             min-height: 2.5rem !important;
             line-height: 1.6 !important;
+            
+            /* KLÍČOVÉ: VYNUCENÍ HRANATÉHO TVARU */
+            border-radius: 6px !important; 
         }}
         
-        .stButton > button:hover {{
+        /* HOVER STAV */
+        .stButton button:hover, 
+        div[data-testid="stButton"] button:hover,
+        button[kind="secondary"]:hover,
+        button[kind="primary"]:hover {{
             box-shadow: inset 0 0 0 1px {NEON_BLUE}, 0 0 10px {NEON_BLUE} !important;
             background-color: rgba(0, 243, 255, 0.1) !important;
             transform: translateY(-2px);
-            border-radius: 6px !important; /* ZAJIŠTĚNÍ HRANATÉHO TVARU */
+            
+            /* ZDE JE POJISTKA - MUSÍ BÝT STEJNÉ JAKO NORMÁLNÍ STAV */
+            border-radius: 6px !important; 
         }}
 
         /* Primary tlačítko (Zapsat se) */
-        .stButton > button[kind="primary"] {{
+        button[kind="primary"] {{
             background: rgba(57, 255, 20, 0.1) !important;
             color: {NEON_GREEN} !important;
             box-shadow: inset 0 0 0 1px {NEON_GREEN} !important;
         }}
-        .stButton > button[kind="primary"]:hover {{
+        button[kind="primary"]:hover {{
             box-shadow: inset 0 0 0 1px {NEON_GREEN}, 0 0 20px {NEON_GREEN} !important;
             background-color: rgba(57, 255, 20, 0.2) !important;
             border-radius: 6px !important;
