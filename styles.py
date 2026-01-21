@@ -13,43 +13,43 @@ BARVY_AKCI = {
     "mcr": {
         "bg": "linear-gradient(135deg, rgba(255, 7, 58, 0.4), rgba(0, 243, 255, 0.4))", 
         "color": "#fff", "border": "1px solid #ff073a", "shadow": "0 0 10px rgba(255, 7, 58, 0.6)",
-        "glow": "#ff073a" # Červená záře
+        "glow": "#ff073a" # Červená
     },
     "za": {
         "bg": "rgba(220, 38, 38, 0.3)", "color": "#fecaca", "border": "1px solid #ef4444", "shadow": "0 0 5px rgba(239, 68, 68, 0.4)",
-        "glow": "#ef4444" # Červená
+        "glow": "#ef4444" 
     },
     "zb": {
         "bg": "rgba(194, 65, 12, 0.3)", "color": "#fed7aa", "border": "1px solid #f97316", "shadow": "0 0 5px rgba(249, 115, 22, 0.4)",
-        "glow": "#f97316" # Oranžová
+        "glow": "#f97316"
     },
     "soustredeni": {
         "bg": "rgba(161, 98, 7, 0.3)", "color": "#fef08a", "border": "1px solid #eab308", "shadow": "0 0 5px rgba(234, 179, 8, 0.4)",
-        "glow": "#eab308" # Zlatá
+        "glow": "#eab308"
     },
     "oblastni": {
         "bg": "rgba(29, 78, 216, 0.3)", "color": "#bfdbfe", "border": "1px solid #3b82f6", "shadow": "0 0 5px rgba(59, 130, 246, 0.4)",
-        "glow": "#3b82f6" # Modrá
+        "glow": "#3b82f6"
     },
     "zimni_liga": {
         "bg": "rgba(55, 65, 81, 0.4)", "color": "#e5e7eb", "border": "1px solid #6b7280", "shadow": "none",
-        "glow": "#9ca3af" # Šedá
+        "glow": "#9ca3af"
     },
     "stafety": {
         "bg": "rgba(126, 34, 206, 0.3)", "color": "#e9d5ff", "border": "1px solid #a855f7", "shadow": "0 0 5px rgba(168, 85, 247, 0.4)",
-        "glow": "#a855f7" # Fialová
+        "glow": "#a855f7"
     },
     "trenink": {
         "bg": "rgba(21, 128, 61, 0.3)", "color": "#bbf7d0", "border": "1px solid #22c55e", "shadow": "none",
-        "glow": "#22c55e" # Zelená
+        "glow": "#22c55e"
     },
     "zavod": {
         "bg": "rgba(15, 118, 110, 0.3)", "color": "#99f6e4", "border": "1px solid #14b8a6", "shadow": "none",
-        "glow": "#14b8a6" # Tyrkysová
+        "glow": "#14b8a6"
     },
     "default": {
         "bg": "rgba(255, 255, 255, 0.05)", "color": "#e0e0e0", "border": "1px solid rgba(255,255,255,0.1)", "shadow": "none",
-        "glow": "#ffffff" # Bílá
+        "glow": "#ffffff"
     }
 }
 
@@ -60,12 +60,18 @@ def load_css():
         /* === 1. FONTY (Exo 2 pro vše) === */
         @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;600;800&display=swap&subset=latin,latin-ext');
 
-        /* Aplikace fontů */
-        html, body, [class*="css"], p, h1, h2, h3, h4, span, div, label, input, button, textarea {{
+        /* === 2. BEZPEČNÁ APLIKACE FONTŮ === */
+        /* NEPOUŽÍVÁME 'div' ani 'span' globálně - to ničí ikony! */
+        body, p, h1, h2, h3, h4, h5, h6, li, a, label, input, textarea, button {{
             font-family: 'Exo 2', sans-serif !important;
             color: #e0e0e0;
         }}
         
+        /* Specifické cílení pro Streamlit komponenty, kde je text */
+        .stMarkdown, .stButton, .stTextInput, .stTextArea, .stSelectbox {{
+            font-family: 'Exo 2', sans-serif !important;
+        }}
+
         /* Nadpisy - Bold */
         h1, h2, h3 {{
             text-transform: uppercase;
@@ -73,8 +79,7 @@ def load_css():
             font-weight: 800 !important;
         }}
 
-        /* === 2. OPRAVA LOGA (NATVRDO) === */
-        /* Musíme cílit přímo na třídu a vynutit velikost */
+        /* === 3. OPRAVA LOGA === */
         img.header-logo {{
             height: 60px !important;
             max-height: 60px !important;
@@ -86,7 +91,6 @@ def load_css():
         }}
         img.header-logo:hover {{ transform: scale(1.1) rotate(5deg); }}
 
-        /* Gradient text vedle loga */
         h1 span.gradient-text {{
             background: linear-gradient(90deg, {NEON_GREEN}, {NEON_BLUE});
             -webkit-background-clip: text;
@@ -95,7 +99,7 @@ def load_css():
             text-shadow: 0 0 20px rgba(57, 255, 20, 0.3);
         }}
 
-        /* === 3. ROG POZADÍ === */
+        /* === 4. ROG POZADÍ === */
         .stApp {{
             background-color: {DARK_BG};
             background-image: 
@@ -105,7 +109,6 @@ def load_css():
             background-attachment: fixed;
         }}
         
-        /* Linky */
         body::before, body::after {{
             content: ""; position: fixed; top: 0; bottom: 0; width: 2px; z-index: 9999; pointer-events: none; opacity: 0.5;
             box-shadow: 0 0 8px {NEON_BLUE};
@@ -113,7 +116,7 @@ def load_css():
         body::before {{ left: 10px; background: linear-gradient(to bottom, transparent, {NEON_BLUE}, {NEON_GREEN}, transparent); }}
         body::after {{ right: 10px; background: linear-gradient(to bottom, transparent, {NEON_GREEN}, {NEON_BLUE}, transparent); }}
 
-        /* === 4. TLAČÍTKA (Glass) === */
+        /* === 5. TLAČÍTKA (Glass) === */
         .stButton > button {{
             background: rgba(255, 255, 255, 0.05) !important;
             backdrop-filter: blur(5px);
@@ -125,9 +128,8 @@ def load_css():
             font-weight: 600 !important;
             transition: all 0.3s ease !important;
         }}
+        /* Hover efekt definujeme dynamicky v app.py, zde jen default transformace */
         .stButton > button:hover {{
-            background: rgba(0, 243, 255, 0.15) !important;
-            border-color: {NEON_BLUE} !important;
             transform: translateY(-2px);
         }}
         
@@ -140,7 +142,7 @@ def load_css():
             box-shadow: 0 0 20px rgba(57, 255, 20, 0.6) !important;
         }}
 
-        /* === 5. INPUTY A KALENDÁŘ === */
+        /* === 6. INPUTY A KALENDÁŘ === */
         .stTextInput input, .stSelectbox div[data-baseweb="select"], .stNumberInput input, .stTextArea textarea {{
             background-color: rgba(255, 255, 255, 0.05) !important;
             color: white !important;
@@ -191,7 +193,7 @@ def load_css():
     </style>
     """, unsafe_allow_html=True)
 
-# --- OSTATNÍ FUNKCE (Beze změny) ---
+# --- OSTATNÍ FUNKCE ---
 def inject_mobile_warning(): st.markdown("""<style>@media only screen and (orientation: portrait) and (max-width: 900px) {#rotate-warning {display:flex !important;} .stApp {overflow:hidden;}}</style>""", unsafe_allow_html=True)
 def get_ics_button_html(b64_data, filename): return f"""<a href="data:text/calendar;base64,{b64_data}" download="{filename}.ics" style="text-decoration:none;"><div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 6px 0; text-align: center; cursor: pointer; color: #fff; transition: 0.3s;" onmouseover="this.style.borderColor='#00f3ff'; this.style.color='#00f3ff'; this.style.boxShadow='0 0 10px #00f3ff';" onmouseout="this.style.borderColor='rgba(255, 255, 255, 0.2)'; this.style.color='#fff'; this.style.boxShadow='none';">📅</div></a>"""
 def get_weather_card_html(w_icon, w_text, temp, rain, wind, sunset_html=""):
