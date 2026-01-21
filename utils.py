@@ -771,47 +771,40 @@ def vykreslit_detail_akce(akce, unique_key):
 
                      c5.write(row.get('ubytování', ''))
                      if not je_po_deadlinu:
-                              # === CENTROVÁNÍ KOŠE - ÚROVEŇ PARENT ELEMENT ===
-                              with stylable_container(key=f"delc_{unique_key}_{i}_final", css_styles="""
-                                /* 1. Donutíme obal tlačítka (ten neviditelný box okolo), aby se vycentroval ve sloupci */
-                                div[data-testid="stButton"] {
-                                    display: flex !important;
-                                    justify-content: center !important;
-                                    align-items: center !important;
-                                    margin: 0 auto !important;
-                                    width: 100% !important;
-                                }
-
-                                /* 2. Samotné tlačítko uděláme malé a vycentrované */
+                              # === BEZPEČNÉ CENTROVÁNÍ KOŠE ===
+                              # Odstraněn nebezpečný selektor div[data-testid="stButton"]
+                              with stylable_container(key=f"delc_{unique_key}_{i}_safe", css_styles="""
                                 button {
                                     border: none !important; 
                                     background: transparent !important; 
                                     box-shadow: none !important;
                                     padding: 0 !important;
                                     
-                                    /* Fixní čtverec */
-                                    width: 35px !important;
-                                    height: 35px !important;
+                                    /* Roztáhneme tlačítko na šířku sloupce, aby centr fungoval */
+                                    width: 100% !important; 
+                                    height: auto !important;
+                                    min-height: 35px !important;
                                     
+                                    /* Zarovnání obsahu (ikonky) na střed */
                                     display: flex !important; 
                                     justify-content: center !important; 
                                     align-items: center !important;
+                                    
                                     color: #ff073a !important;
                                 }
                                 
-                                /* Hover efekt */
                                 button:hover {
                                     color: #ff5f1f !important;
                                     background: rgba(255, 7, 58, 0.1) !important;
                                     border-radius: 6px !important;
+                                    box-shadow: none !important; /* Žádný stín, jen barva */
                                 }
                                 
-                                /* Pojistka pro obsah tlačítka (ikonku) */
-                                button > div, button > span {
+                                /* Pojistka: Ikonka uvnitř tlačítka se nesmí hýbat */
+                                button > div {
                                     display: flex !important;
                                     justify-content: center !important;
                                     align-items: center !important;
-                                    margin: 0 !important;
                                 }
                               """):
                                   if c6.button("🗑️", key=f"del_{unique_key}_{i}"):
