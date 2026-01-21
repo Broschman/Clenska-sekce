@@ -74,6 +74,30 @@ def load_css():
             background-attachment: fixed;
         }}
 
+        /* Kalendář - Oprava mřížky */
+        hr {{ border-top: 1px solid rgba(255,255,255,0.1) !important; }}
+        
+        .today-box {{
+            background: rgba(255, 7, 58, 0.2); 
+            color: {NEON_RED}; 
+            border: 1px solid {NEON_RED};
+            
+            /* === FIX CENTROVÁNÍ === */
+            display: inline-flex;       /* Flexbox pro vnitřní centrování */
+            align-items: center;        /* Vertikální střed */
+            justify-content: center;    /* Horizontální střed */
+            
+            width: 30px;                /* Fixní šířka (aby to byl kroužek/čtverec) */
+            height: 30px;               /* Fixní výška */
+            border-radius: 8px;         /* ROG styl (zaoblený čtverec) */
+            
+            font-weight: 800;
+            box-shadow: 0 0 15px rgba(255, 7, 58, 0.4);
+            margin: 0 auto 8px auto;    /* 'auto' na stranách zajistí vycentrování v rodiči */
+        }}
+        
+        .day-number {{ color: #888; font-weight: 600; display: block; text-align: center; margin-bottom: 8px; }}
+
         /* === TLAČÍTKA (ZÁKLAD - GLASS) === */
         /* Aplikujeme font a styl JEN na tlačítka uvnitř .stButton, ne na ikony */
         .stButton > button {{
