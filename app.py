@@ -82,8 +82,9 @@ if not future_deadlines.empty:
                 button {{
                     background-color: {bg_c} !important;
                     border: none !important;
-                    /* Základní stav: tenký 1px rámeček */
-                    box-shadow: inset 0 0 0 1px {glow_c} !important;
+                    /* === PERMANENTNÍ GLOW === */
+                    /* Inset 1px = tenký rámeček, 10px = jemná záře */
+                    box-shadow: inset 0 0 0 1px {glow_c}, 0 0 10px {glow_c}44 !important;
                     color: #fff !important;
                     border-radius: 12px !important;
                     width: 100% !important;
@@ -98,12 +99,11 @@ if not future_deadlines.empty:
                     font-family: 'Exo 2', sans-serif !important;
                     transition: transform 0.2s ease, box-shadow 0.2s ease !important;
                 }}
-                /* === GLOW EFEKT === */
+                /* === NAJETÍ MYŠÍ (ZESÍLENÍ) === */
                 button:hover {{
-                    /* 1. Inset 2px = Tlustý vnitřní rámeček */
-                    /* 2. 0 0 20px = Vnější záře */
-                    box-shadow: inset 0 0 0 2px {glow_c}, 0 0 20px {glow_c} !important;
-                    background-color: {glow_c}22 !important; /* Lehké podbarvení */
+                    /* Tlustší rámeček (2px) a silnější záře (25px) */
+                    box-shadow: inset 0 0 0 2px {glow_c}, 0 0 25px {glow_c} !important;
+                    background-color: {glow_c}22 !important;
                     transform: scale(1.05) !important;
                     z-index: 100 !important;
                     color: #fff !important;
@@ -209,18 +209,19 @@ def show_calendar_section():
                         css_styles=f"""
                         button {{
                             background: {bg_color} !important; 
-                            border: none !important; /* Bez borderu */
-                            /* Simulace borderu (tenká) */
-                            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.15) !important;
+                            border: none !important; 
+                            /* === PERMANENTNÍ SVÍCENÍ === */
+                            /* Vytvoří barevný rámeček (inset) a lehkou záři okolo */
+                            box-shadow: inset 0 0 0 1px {glow_color}, 0 0 8px {glow_color}44 !important;
                             color: #e0e0e0 !important;
                             width: 100%; border-radius: 8px; padding: 8px 10px !important; text-align: left; font-size: 0.85rem; font-weight: 600; 
                             margin-bottom: 6px; white-space: normal !important; height: auto !important; min-height: 40px; 
                             font-family: 'Exo 2', sans-serif !important;
                             transition: all 0.2s ease !important;
                         }} 
-                        /* === GLOW EFEKT (Extra silný) === */
+                        /* === ZESÍLENÍ PŘI HOVERU === */
                         button:hover {{
-                            /* Inset 2px = Tlustý rám, 20px = Záře */
+                            /* Zvýrazní se vnitřní barva a zvětší vnější záře */
                             box-shadow: inset 0 0 0 2px {glow_color}, 0 0 20px {glow_color} !important;
                             color: #fff !important;
                             z-index: 99 !important;
@@ -302,7 +303,8 @@ if search_text or len(search_date_value) > 0:
                         background: {bg_color} !important;
                         color: #e0e0e0 !important;
                         border: none !important;
-                        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.15) !important;
+                        /* === PERMANENTNÍ SVÍCENÍ === */
+                        box-shadow: inset 0 0 0 1px {glow_color}, 0 0 8px {glow_color}44 !important;
                         width: 100%; border-radius: 8px; padding: 12px 15px !important; text-align: left; font-weight: 600;
                         margin-bottom: 8px;
                         font-family: 'Exo 2', sans-serif !important;
@@ -310,7 +312,7 @@ if search_text or len(search_date_value) > 0:
                     }}
                     button:hover {{
                         filter: brightness(1.2); transform: translateY(-2px);
-                        /* Tlustý inset rám + záře */
+                        /* === ZESÍLENÍ === */
                         box-shadow: inset 0 0 0 2px {glow_color}, 0 0 20px {glow_color} !important;
                         color: #fff !important;
                         z-index: 99 !important;
