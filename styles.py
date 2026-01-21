@@ -76,7 +76,6 @@ def load_css():
         }}
 
         /* === TLAČÍTKA - HARD FIX PROTI OVÁLŮM === */
-        /* Cílíme na všechny možné varianty buttonů ve Streamlitu */
         .stButton button, 
         div[data-testid="stButton"] button, 
         button[kind="secondary"], 
@@ -106,8 +105,6 @@ def load_css():
             box-shadow: inset 0 0 0 1px {NEON_BLUE}, 0 0 10px {NEON_BLUE} !important;
             background-color: rgba(0, 243, 255, 0.1) !important;
             transform: translateY(-2px);
-            
-            /* ZDE JE POJISTKA - MUSÍ BÝT STEJNÉ JAKO NORMÁLNÍ STAV */
             border-radius: 6px !important; 
         }}
 
@@ -160,11 +157,22 @@ def load_css():
             box-shadow: 0 0 40px rgba(0, 0, 0, 0.8) !important;
         }}
 
-        .floating-container button {{
+        /* === PLOVOUCÍ TLAČÍTKO - OPRAVA TVARU === */
+        .floating-container button {
             background: linear-gradient(135deg, {NEON_BLUE}, #0056b3) !important;
             box-shadow: 0 0 20px {NEON_BLUE} !important;
-            border-radius: 50% !important;
-        }}
+            /* ZMĚNA Z 50% NA 8px = HRANATÉ */
+            border-radius: 8px !important;
+            padding: 10px 20px !important;
+            height: auto !important;
+            width: auto !important;
+        }
+        .floating-container button:hover {
+            transform: scale(1.05);
+            /* ZAJIŠTĚNÍ HRANATÉHO TVARU PŘI HOVERU */
+            border-radius: 8px !important;
+            box-shadow: 0 0 30px {NEON_BLUE} !important;
+        }
 
         .footer-glow img {{
             filter: drop-shadow(0 0 5px rgba(255,255,255,0.5));
