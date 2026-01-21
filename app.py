@@ -140,9 +140,9 @@ if not future_deadlines.empty:
                 button {{
                     background-color: {bg_color} !important;
                     border: 1px solid {border_color} !important;
-                    box-shadow: {shadow} !important; /* Záře */
+                    box-shadow: {shadow} !important;
                     border-radius: 12px !important;
-                    color: #fff !important; /* Bílý text */
+                    color: #fff !important;
                     width: 100% !important;
                     height: auto !important;
                     min-height: 110px !important;
@@ -153,15 +153,19 @@ if not future_deadlines.empty:
                     align-items: center !important;
                     padding: 10px !important;
                     transition: all 0.3s !important;
+                    /* === ZDE JE ZMĚNA === */
+                    font-family: 'Exo 2', sans-serif !important;
                 }}
                 button:hover {{
                     transform: scale(1.05) !important;
-                    box-shadow: 0 0 30px {border_color} !important; /* Silnější záře při najetí */
-                    background-color: {border_color}22 !important; /* Trochu jasnější pozadí */
+                    box-shadow: 0 0 30px {border_color} !important;
+                    background-color: {border_color}22 !important;
                 }}
                 button p {{
-                    font-family: 'Orbitron', sans-serif !important; /* Futuristický font */
+                    /* === I ZDE PRO JISTOTU === */
+                    font-family: 'Exo 2', sans-serif !important;
                     letter-spacing: 1px;
+                    font-weight: 700;
                 }}
                 """
             ):
@@ -274,7 +278,8 @@ def show_calendar_section():
 
                     with stylable_container(
                         key=f"btn_c_{unique_key}",
-                        css_styles=f"""button {{background: {styly['bg']} !important; color: {styly['color']} !important; border: {styly['border']} !important; width: 100%; border-radius: 8px; padding: 8px 10px !important; text-align: left; font-size: 0.85rem; font-weight: 600; box-shadow: {styly.get('shadow', 'none')}; margin-bottom: 6px; white-space: normal !important; height: auto !important; min-height: 40px;}} button:hover {{filter: brightness(1.1); transform: translateY(-2px); z-index: 5;}}"""
+                        # Přidal jsem font-family na konec stringu
+                        css_styles=f"""button {{background: {styly['bg']} !important; color: {styly['color']} !important; border: {styly['border']} !important; width: 100%; border-radius: 8px; padding: 8px 10px !important; text-align: left; font-size: 0.85rem; font-weight: 600; box-shadow: {styly.get('shadow', 'none')}; margin-bottom: 6px; white-space: normal !important; height: auto !important; min-height: 40px; font-family: 'Exo 2', sans-serif !important;}} button:hover {{filter: brightness(1.2); transform: translateY(-2px); z-index: 5;}}"""
                     ):
                         with st.popover(label, use_container_width=True):
                             utils.vykreslit_detail_akce(akce, unique_key)
@@ -421,9 +426,11 @@ if search_text or len(search_date_value) > 0:
                         font-weight: 600;
                         box-shadow: {styly.get('shadow', 'none')};
                         margin-bottom: 8px;
+                        /* === PŘIDÁNO === */
+                        font-family: 'Exo 2', sans-serif !important;
                     }}
                     button:hover {{
-                        filter: brightness(1.1);
+                        filter: brightness(1.2);
                         transform: translateY(-2px);
                     }}
                 """
