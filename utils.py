@@ -328,9 +328,7 @@ def export_admin_section(lidi, nazev_akce, unique_key):
 def show_doprava_dialog(akce_id, nazev_akce, datum_akce, pre_jmeno, in_poznamka=None, in_ubytovani=None):
     """
     Modální okno pro řešení dopravy.
-    - Seřazená auta.
-    - Inteligentní default výběr.
-    - Zobrazuje ČAS i MÍSTO odjezdu v nabídce.
+    FIX: Pokud předvybrané jméno není v seznamu, dynamicky ho přidáme, aby fungoval výběr.
     """
     conn = data_manager.get_connection()
     
@@ -348,12 +346,28 @@ def show_doprava_dialog(akce_id, nazev_akce, datum_akce, pre_jmeno, in_poznamka=
 
     st.markdown(f"**{nazev_akce}** ({datum_akce})")
     
-    idx_jmeno = None
+    # === OPRAVENÁ LOGIKA VÝBĚRU JMÉNA ===
+    # 1. Načíst seznam
     seznam_jmen = data_manager.load_jmena()
-    if pre_jmeno and pre_jmeno in seznam_jmen:
-        idx_jmeno = seznam_jmen.index(pre_jmeno)
+    
+    # 2. Ošetřit vstup (str a strip)
+    target_jmeno = str(pre_jmeno).strip() if pre_jmeno else None
+    
+    # 3. Pokud jméno existuje, ale není v seznamu (např. nové), přidáme ho tam
+    if target_jmeno and target_jmeno not in seznam_jmen:
+        seznam_jmen.append(target_jmeno)
+        seznam_jmen.sort() # Ať je to hezké
+        
+    # 4. Najít index (teď už to musí klapnout)
+    idx_jmeno = None
+    if target_jmeno:
+        try:
+            idx_jmeno = seznam_jmen.index(target_jmeno)
+        except ValueError:
+            idx_jmeno = None
 
-    vybrane_jmeno = st.selectbox("Kdo jsi?", options=seznam_jmen, index=idx_jmeno, key="diag_jmeno", disabled=(pre_jmeno is not None))
+    # 5. Vykreslit selectbox
+    vybrane_jmeno = st.selectbox("Kdo jsi?", options=seznam_jmen, index=idx_jmeno, key="diag_jmeno", disabled=(target_jmeno is not None))
     
     st.markdown("---")
 
@@ -419,7 +433,7 @@ def show_doprava_dialog(akce_id, nazev_akce, datum_akce, pre_jmeno, in_poznamka=
                 conn.update(worksheet="prihlasky", data=pd.concat([df_clean_lidi, novy_clovek], ignore_index=True))
                 st.rerun()
 
-        # --- B) PASAŽÉR (S časem i místem) ---
+        # --- B) PASAŽÉR (S časem i místem a řazením) ---
         elif "Hledám" in role:
             dostupna_auta_list = []
             
@@ -431,7 +445,6 @@ def show_doprava_dialog(akce_id, nazev_akce, datum_akce, pre_jmeno, in_poznamka=
                 volno = kap - 1 - obs 
                 
                 if volno > 0 or ridic == id_auto_curr:
-                    # === ZDE JE ZMĚNA: Přidání místa do labelu ===
                     cas_txt = str(row_auto['cas']).strip() if pd.notna(row_auto['cas']) else ""
                     misto_txt = str(row_auto['misto']).strip() if pd.notna(row_auto['misto']) else ""
                     
@@ -457,7 +470,6 @@ def show_doprava_dialog(akce_id, nazev_akce, datum_akce, pre_jmeno, in_poznamka=
             options_auta.append(wait_label)
             mapa_aut[wait_label] = ""
 
-            # Default výběr
             idx_select = 0
             if stav_dopravy == "waiting":
                 idx_select = len(options_auta) - 1
