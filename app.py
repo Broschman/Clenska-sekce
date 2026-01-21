@@ -82,12 +82,13 @@ if not future_deadlines.empty:
                 button {{
                     background-color: {bg_c} !important;
                     border: none !important;
-                    /* === PERMANENTNÍ GLOW === */
+                    /* Pevný stín */
                     box-shadow: inset 0 0 0 1px {glow_c}, 0 0 10px {glow_c}44 !important;
                     color: #fff !important;
                     
-                    /* ZÁKLADNÍ TVAR - ZAOBLEMÝ */
+                    /* PEVNÝ TVAR - BEZ TRANSFROMACE */
                     border-radius: 12px !important;
+                    transform: none !important; 
                     
                     width: 100% !important;
                     height: auto !important;
@@ -99,19 +100,19 @@ if not future_deadlines.empty:
                     align-items: center !important;
                     padding: 10px !important;
                     font-family: 'Exo 2', sans-serif !important;
-                    transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+                    transition: box-shadow 0.2s ease !important; /* Animujeme jen stín */
                 }}
-                /* === NAJETÍ MYŠÍ (ZESÍLENÍ) === */
+                
                 button:hover {{
-                    /* Tlustší rámeček (2px) a silnější záře (25px) */
+                    /* Pouze zintenzivnění záře, ŽÁDNÝ SCALE (zvětšení), aby se nerozbily rohy */
                     box-shadow: inset 0 0 0 2px {glow_c}, 0 0 25px {glow_c} !important;
                     background-color: {glow_c}22 !important;
-                    transform: scale(1.05) !important;
-                    z-index: 100 !important;
                     color: #fff !important;
+                    z-index: 100 !important;
                     
-                    /* !!! POJISTKA TVARU PŘI HOVERU !!! */
+                    /* Znovu vynucení tvaru pro jistotu */
                     border-radius: 12px !important;
+                    transform: none !important;
                 }}
                 button p {{ font-family: 'Exo 2', sans-serif !important; letter-spacing: 1px; font-weight: 700; }}
                 """
@@ -119,7 +120,7 @@ if not future_deadlines.empty:
                 label_text = f"{icon}\n{row['název']}\n{time_msg}"
                 with st.popover(label_text, use_container_width=True):
                     utils.vykreslit_detail_akce(row, unique_key_dash)
-
+                    
     st.markdown("<div style='margin-bottom: 25px'></div>", unsafe_allow_html=True)
 
 @st.fragment
