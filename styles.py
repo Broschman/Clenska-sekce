@@ -25,7 +25,7 @@ BARVY_AKCI = {
 def load_css():
     st.markdown(f"""
     <style>
-        /* IMPORT FONTŮ: Rajdhani (nadpisy s češtinou) + Exo 2 (text) */
+        /* FONT FIX: Orbitron -> Rajdhani (pro češtinu v nadpisech) */
         @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;600;800&family=Rajdhani:wght@500;600;700&display=swap&subset=latin,latin-ext');
 
         /* === GLOBÁLNÍ RESET === */
@@ -45,7 +45,6 @@ def load_css():
             text-transform: uppercase;
             font-weight: 700 !important;
         }}
-        
         h1 {{ font-size: 2.5rem !important; }}
 
         /* === LOGO === */
@@ -76,14 +75,14 @@ def load_css():
             background-attachment: fixed;
         }}
 
-        /* === TLAČÍTKA (GLOBÁLNÍ) === */
+        /* === TLAČÍTKA (OPRAVA TVARU) === */
         .stButton > button {{
             background: rgba(255, 255, 255, 0.05) !important;
             backdrop-filter: blur(5px);
             color: {NEON_BLUE} !important;
             border: none !important;
             box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
-            border-radius: 6px !important;
+            border-radius: 6px !important; /* Výchozí obdélník */
             font-weight: 600 !important;
             font-family: 'Exo 2', sans-serif !important;
             transition: all 0.3s ease !important;
@@ -98,11 +97,11 @@ def load_css():
             box-shadow: inset 0 0 0 1px {NEON_BLUE}, 0 0 10px {NEON_BLUE} !important;
             background-color: rgba(0, 243, 255, 0.1) !important;
             transform: translateY(-2px);
-            /* OPRAVA: Vynucení hranatého tvaru i při hoveru */
+            /* ZDE JE FIX: Vynucujeme hranatý tvar i při hoveru */
             border-radius: 6px !important; 
         }}
 
-        /* Primary tlačítko */
+        /* Primary tlačítko (Zapsat se) */
         .stButton > button[kind="primary"] {{
             background: rgba(57, 255, 20, 0.1) !important;
             color: {NEON_GREEN} !important;
@@ -111,7 +110,7 @@ def load_css():
         .stButton > button[kind="primary"]:hover {{
             box-shadow: inset 0 0 0 1px {NEON_GREEN}, 0 0 20px {NEON_GREEN} !important;
             background-color: rgba(57, 255, 20, 0.2) !important;
-            border-radius: 6px !important; /* OPRAVA */
+            border-radius: 6px !important; /* I tady fix tvaru */
         }}
 
         /* Inputy */
