@@ -752,7 +752,7 @@ def vykreslit_detail_akce(akce, unique_key):
                          btn_label = "🙋‍♂️ Chci"
 
                      # === FIX VELIKOSTI PÍSMA DOPRAVY (0.7rem a menší padding) ===
-                     with stylable_container(key=f"cont_btn_d_{unique_key}_{i}", css_styles=f"button {{background-color: {btn_bg} !important; color: {btn_color} !important; border: {btn_border} !important; padding: 2px 4px !important; font-size: 0.7rem !important; height: auto !important; min-height: 28px !important;}}"):
+                     with stylable_container(key=f"cont_btn_d_{unique_key}_{i}", css_styles=f"button {{background-color: {btn_bg} !important; color: {btn_color} !important; border: {btn_border} !important; padding: 2px 4px !important; font-size: 0.5rem !important; height: auto !important; min-height: 28px !important;}}"):
                          if c4.button(btn_label, key=f"btn_row_d_{unique_key}_{i}"):
                              show_doprava_dialog(akce_id_str, akce.get('název', ''), akce['datum'].strftime('%d.%m.'), row['jméno'], None, None)
 
