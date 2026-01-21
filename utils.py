@@ -322,8 +322,9 @@ def export_admin_section(lidi, nazev_akce, unique_key):
 def show_doprava_dialog(akce_id, nazev_akce, datum_akce, pre_jmeno, in_poznamka=None, in_ubytovani=None):
     """
     Modální okno pro řešení dopravy.
-    Inteligentně pozná, zda má použít nová data z formuláře (in_poznamka), 
-    nebo načíst existující data z DB (když in_poznamka is None - voláno ze seznamu).
+    - Seřazená auta podle volných míst.
+    - Čekací listina dole.
+    - Plná auta se nezobrazují (pokud v nich už nesedíš).
     """
     conn = data_manager.get_connection()
     
@@ -341,7 +342,6 @@ def show_doprava_dialog(akce_id, nazev_akce, datum_akce, pre_jmeno, in_poznamka=
 
     st.markdown(f"**{nazev_akce}** ({datum_akce})")
     
-    # Výběr jména
     idx_jmeno = None
     seznam_jmen = data_manager.load_jmena()
     if pre_jmeno and pre_jmeno in seznam_jmen:
@@ -371,8 +371,7 @@ def show_doprava_dialog(akce_id, nazev_akce, datum_akce, pre_jmeno, in_poznamka=
         
         # Rozhodovací logika dat
         final_poznamka = in_poznamka if in_poznamka is not None else db_poznamka
-        if in_ubytovani is None: final_ubytovani_txt = db_ubytovani
-        else: final_ubytovani_txt = "Ano 🛏️" if in_ubytovani else ""
+        final_ubytovani_txt = ("Ano 🛏️" if in_ubytovani else "") if in_ubytovani is not None else db_ubytovani
 
         role = st.radio("Možnosti dopravy:", 
                  ["Nic (Zrušit dopravu)", "🚙 Nabízím auto (Řidič)", "🙋‍♂️ Hledám odvoz (Pasažér)"],
@@ -385,24 +384,17 @@ def show_doprava_dialog(akce_id, nazev_akce, datum_akce, pre_jmeno, in_poznamka=
             c1, c2 = st.columns(2)
             moje_auto = auta_akce[auta_akce['ridic'] == vybrane_jmeno]
             
-            # === DEFAULTS (5 míst, prázdný čas, prázdné místo) ===
-            def_kap = 5
-            def_cas = "" 
-            def_misto = ""
-            
-            # Pokud už auto existuje, načteme uložené hodnoty
+            def_kap, def_cas, def_misto = 5, "", ""
             if not moje_auto.empty:
                 def_kap = int(moje_auto.iloc[0]['kapacita'])
                 def_cas = str(moje_auto.iloc[0]['cas'])
                 def_misto = str(moje_auto.iloc[0]['misto'])
 
             novy_kap = c1.number_input("Kapacita", 1, 9, def_kap)
-            # Placeholdery napovídají, ale nepředepisují
             novy_cas = c2.text_input("Čas", value=def_cas, placeholder="např. 17:00")
             novy_misto = st.text_input("Místo", value=def_misto, placeholder="např. Loděnice")
             
             if st.button("💾 Uložit nastavení", type="primary", use_container_width=True):
-                # Auto
                 df_clean_auta = df_auta[~((df_auta['id_akce'] == akce_id) & (df_auta['ridic'] == vybrane_jmeno))]
                 nove_auto_row = pd.DataFrame([{
                     "id_akce": akce_id, "ridic": vybrane_jmeno, 
@@ -410,12 +402,10 @@ def show_doprava_dialog(akce_id, nazev_akce, datum_akce, pre_jmeno, in_poznamka=
                 }])
                 conn.update(worksheet="auta", data=pd.concat([df_clean_auta, nove_auto_row], ignore_index=True))
                 
-                # Přihláška
                 df_clean_lidi = df_lidi[~((df_lidi['id_akce'] == akce_id) & (df_lidi['jméno'] == vybrane_jmeno))]
                 novy_clovek = pd.DataFrame([{
                     "id_akce": akce_id, "název": nazev_akce, "jméno": vybrane_jmeno,
-                    "poznámka": final_poznamka, 
-                    "doprava": "Řidič 🚙", 
+                    "poznámka": final_poznamka, "doprava": "Řidič 🚙", 
                     "ubytování": final_ubytovani_txt,
                     "čas zápisu": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                     "id_auto": ""
@@ -423,29 +413,55 @@ def show_doprava_dialog(akce_id, nazev_akce, datum_akce, pre_jmeno, in_poznamka=
                 conn.update(worksheet="prihlasky", data=pd.concat([df_clean_lidi, novy_clovek], ignore_index=True))
                 st.rerun()
 
-        # --- B) PASAŽÉR ---
+        # --- B) PASAŽÉR (S INTELIGENTNÍM ŘAZENÍM) ---
         elif "Hledám" in role:
-            options_auta = ["⏳ Čekací listina (zatím nemám auto)"]
-            mapa_aut = {"⏳ Čekací listina (zatím nemám auto)": ""}
-            idx_select = 0
+            # 1. Nasbíráme dostupná auta do listu
+            dostupna_auta_list = []
             
             for i, (_, row_auto) in enumerate(auta_akce.iterrows()):
                 ridic = str(row_auto['ridic'])
-                if ridic == vybrane_jmeno: continue
+                if ridic == vybrane_jmeno: continue # Sám sebe nevidím
+                
                 kap = int(row_auto['kapacita'])
                 obs = obsazenost.get(ridic, 0)
                 volno = kap - 1 - obs 
-                label = f"🚙 {ridic} ({volno} volných) - {row_auto['cas']}"
-                if volno <= 0: label = f"❌ {ridic} (PLNO)"
-                options_auta.append(label)
-                mapa_aut[label] = ridic
-                if id_auto_curr == ridic: idx_select = len(options_auta) - 1
+                
+                # Zobrazíme auto jen pokud má volno NEBO pokud v něm už uživatel sedí (aby se mu neztratilo)
+                if volno > 0 or ridic == id_auto_curr:
+                    label = f"🚙 {ridic} ({volno} volných) - {row_auto['cas']}"
+                    if volno <= 0: label = f"⚠️ {ridic} (PLNO - Jsi tu)" # Jen pro info, kdyby tam už byl
+                    
+                    dostupna_auta_list.append({
+                        "label": label,
+                        "ridic_id": ridic,
+                        "volno": volno
+                    })
+            
+            # 2. Seřadíme podle volných míst sestupně (nejvíc volná nahoře)
+            dostupna_auta_list.sort(key=lambda x: x['volno'], reverse=True)
+            
+            # 3. Vytvoříme finální seznam options (Auta + Čekací listina nakonec)
+            options_auta = [item['label'] for item in dostupna_auta_list]
+            mapa_aut = {item['label']: item['ridic_id'] for item in dostupna_auta_list}
+            
+            wait_label = "⏳ Čekací listina (zatím nemám auto)"
+            options_auta.append(wait_label)
+            mapa_aut[wait_label] = ""
+
+            # 4. Určení default indexu
+            idx_select = len(options_auta) - 1 # Defaultně poslední = Čekací listina
+            
+            # Pokud už u někoho jsem, najdeme ho v seznamu
+            if id_auto_curr:
+                for idx, item_label in enumerate(options_auta):
+                    if mapa_aut.get(item_label) == id_auto_curr:
+                        idx_select = idx
+                        break
 
             vybrane_label = st.selectbox("Ke komu?", options_auta, index=idx_select)
             target_ridic = mapa_aut[vybrane_label]
             
             if st.button("💾 Uložit změnu", type="primary", use_container_width=True):
-                # Úklid, pokud byl předtím řidič
                 if stav_dopravy == "driver":
                     handle_driver_removal(conn, akce_id, vybrane_jmeno)
                     df_lidi = data_manager.load_prihlasky()
@@ -467,7 +483,6 @@ def show_doprava_dialog(akce_id, nazev_akce, datum_akce, pre_jmeno, in_poznamka=
         # --- C) ZRUŠIT ---
         else:
             if st.button("🗑️ Smazat dopravu", use_container_width=True):
-                # Úklid, pokud byl předtím řidič
                 if stav_dopravy == "driver":
                     handle_driver_removal(conn, akce_id, vybrane_jmeno)
                     df_lidi = data_manager.load_prihlasky()
@@ -482,8 +497,7 @@ def show_doprava_dialog(akce_id, nazev_akce, datum_akce, pre_jmeno, in_poznamka=
                     "id_auto": ""
                 }])
                 conn.update(worksheet="prihlasky", data=pd.concat([df_clean_lidi, novy_clovek], ignore_index=True))
-                st.rerun()
-                
+                st.rerun()                
 def handle_driver_removal(conn, akce_id, driver_name):
     """
     Když se ruší řidič (smazání nebo změna role), tato funkce:
