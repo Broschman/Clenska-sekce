@@ -65,7 +65,7 @@ if not future_deadlines.empty:
     for i, (_, row) in enumerate(future_deadlines.iterrows()):
         days_left = (row['deadline'] - dnes).days
         
-        # Logika barev pro Dashboard
+        # Logika barev
         if days_left == 0:
             border_c, bg_c, icon, time_msg = styles.NEON_RED, "rgba(255, 7, 58, 0.1)", "🚨", "DNES!"
         elif days_left <= 3:
@@ -96,12 +96,13 @@ if not future_deadlines.empty:
                     padding: 10px !important;
                     font-family: 'Exo 2', sans-serif !important;
                 }}
-                /* DYNAMICKÁ BARVA GLOW PODLE STAVU (border_c) */
-                button:hover {{
+                /* Cílíme přesně na button v hoveru */
+                button:hover, div[data-testid="stButton"] > button:hover {{
                     transform: scale(1.05) !important;
                     border-color: {border_c} !important;
                     background-color: {border_c}22 !important;
                     box-shadow: 0 0 25px {border_c} !important;
+                    color: #fff !important;
                 }}
                 button p {{ font-family: 'Exo 2', sans-serif !important; letter-spacing: 1px; font-weight: 700; }}
                 """
@@ -192,7 +193,7 @@ def show_calendar_section():
                     
                     styly = styles.BARVY_AKCI.get(style_key, styles.BARVY_AKCI["default"])
                     
-                    # === DŮLEŽITÉ: Načítáme "glow" z definice ===
+                    # === ZDE ZÍSKÁVÁME GLOW ===
                     glow_color = styly.get("glow", "#39ff14")
 
                     ikony = { "les": "🌲", "sprint": "🏙️", "nočák": "🌗" }
@@ -212,13 +213,14 @@ def show_calendar_section():
                             margin-bottom: 6px; white-space: normal !important; height: auto !important; min-height: 40px; 
                             font-family: 'Exo 2', sans-serif !important;
                         }} 
-                        /* ZDE POUŽIJEME PROMĚNNOU glow_color */
-                        button:hover {{
+                        /* Cílíme přesněji na hover */
+                        button:hover, div[data-testid="stButton"] > button:hover {{
                             filter: brightness(1.2); 
                             transform: translateY(-2px); 
                             z-index: 5;
                             box-shadow: 0 0 15px {glow_color} !important;
                             border-color: {glow_color} !important;
+                            color: #fff !important;
                         }}
                         """
                     ):
@@ -299,7 +301,7 @@ if search_text or len(search_date_value) > 0:
                         box-shadow: {styly.get('shadow', 'none')}; margin-bottom: 8px;
                         font-family: 'Exo 2', sans-serif !important;
                     }}
-                    button:hover {{
+                    button:hover, div[data-testid="stButton"] > button:hover {{
                         filter: brightness(1.2); transform: translateY(-2px);
                         box-shadow: 0 0 15px {glow_color} !important;
                         border-color: {glow_color} !important;
