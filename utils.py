@@ -771,19 +771,37 @@ def vykreslit_detail_akce(akce, unique_key):
 
                      c5.write(row.get('ubytování', ''))
                      if not je_po_deadlinu:
-                         # === CENTROVÁNÍ KOŠE ===
-                         with stylable_container(key=f"delc_{unique_key}_{i}_fix", css_styles="""
+                          # === CENTROVÁNÍ KOŠE (OPRAVA) ===
+                          # Trik: Tlačítko má width: 100%, aby vyplnilo sloupec c6.
+                          # Flexbox se pak postará o to, aby ikonka uvnitř byla uprostřed.
+                          with stylable_container(key=f"delc_{unique_key}_{i}_fix", css_styles="""
                             button {
-                                border: none !important; background: transparent !important; padding: 0 !important;
-                                margin: 0 auto !important; 
-                                display: flex !important; justify-content: center !important; align-items: center !important;
-                                width: 30px !important; height: 30px !important;
+                                border: none !important; 
+                                background: transparent !important; 
+                                padding: 0 !important;
+                                width: 100% !important; /* ZMĚNA: Roztáhnout na celou šířku */
+                                height: 30px !important;
+                                margin: 0 !important;
+                                display: flex !important; 
+                                justify-content: center !important; 
+                                align-items: center !important;
                                 color: #ff073a !important;
+                                box-shadow: none !important; /* Žádný rámeček */
                             }
-                            button > div { display: flex !important; justify-content: center !important; }
-                         """):
-                             if c6.button("🗑️", key=f"del_{unique_key}_{i}"):
-                                 st.session_state[delete_key_state] = row['jméno']
-                                 st.rerun()
+                            /* Pojistka pro vnitřní elementy Streamlitu */
+                            button > div, button > span {
+                                display: flex !important;
+                                justify-content: center !important;
+                                align-items: center !important;
+                                width: 100% !important;
+                            }
+                            button:hover {
+                                background-color: rgba(255, 7, 58, 0.1) !important;
+                                border-radius: 50% !important; /* Efekt kolečka při najetí */
+                            }
+                          """):
+                              if c6.button("🗑️", key=f"del_{unique_key}_{i}"):
+                                  st.session_state[delete_key_state] = row['jméno']
+                                  st.rerun()
                                  
     export_admin_section(lidi, akce.get('název', ''), unique_key)
