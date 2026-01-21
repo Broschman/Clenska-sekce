@@ -25,26 +25,20 @@ BARVY_AKCI = {
 def load_css():
     st.markdown(f"""
     <style>
-        /* ZMĚNA: Orbitron nahrazen za Rajdhani (podpora češtiny).
-           Zároveň ponecháváme Exo 2 pro běžný text.
-        */
+        /* IMPORT FONTŮ: Rajdhani (nadpisy s češtinou) + Exo 2 (text) */
         @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;600;800&family=Rajdhani:wght@500;600;700&display=swap&subset=latin,latin-ext');
 
-        /* === GLOBÁLNÍ RESET (BEZ DIV a SPAN - OPRAVA EXPAND_MORE) === */
-        /* Tento seznam explicitně vyjmenovává elementy pro změnu fontu.
-           NEPŘIDÁVAT 'span', 'div' nebo '*' -> to by rozbilo ikonky (šipky).
-        */
+        /* === GLOBÁLNÍ RESET === */
         body, p, h1, h2, h3, h4, h5, h6, li, a, label, input, textarea, button {{
             font-family: 'Exo 2', sans-serif !important;
             color: #e0e0e0;
         }}
         
-        /* Specifické cílení pro Streamlit inputy */
         .stMarkdown, .stTextInput, .stTextArea, .stSelectbox, .stNumberInput {{
             font-family: 'Exo 2', sans-serif !important;
         }}
 
-        /* === NADPISY (TECH LOOK) === */
+        /* === NADPISY (Rajdhani) === */
         h1, h2, h3 {{
             font-family: 'Rajdhani', 'Exo 2', sans-serif !important;
             letter-spacing: 1px;
@@ -52,10 +46,7 @@ def load_css():
             font-weight: 700 !important;
         }}
         
-        /* Zvětšíme trochu H1, protože Rajdhani je opticky menší než Orbitron */
-        h1 {{
-            font-size: 2.5rem !important;
-        }}
+        h1 {{ font-size: 2.5rem !important; }}
 
         /* === LOGO === */
         img.header-logo {{
@@ -85,7 +76,7 @@ def load_css():
             background-attachment: fixed;
         }}
 
-        /* === TLAČÍTKA (GLOBÁLNÍ NASTAVENÍ) === */
+        /* === TLAČÍTKA (GLOBÁLNÍ) === */
         .stButton > button {{
             background: rgba(255, 255, 255, 0.05) !important;
             backdrop-filter: blur(5px);
@@ -107,9 +98,11 @@ def load_css():
             box-shadow: inset 0 0 0 1px {NEON_BLUE}, 0 0 10px {NEON_BLUE} !important;
             background-color: rgba(0, 243, 255, 0.1) !important;
             transform: translateY(-2px);
+            /* OPRAVA: Vynucení hranatého tvaru i při hoveru */
+            border-radius: 6px !important; 
         }}
 
-        /* Primary tlačítko (Zapsat se) */
+        /* Primary tlačítko */
         .stButton > button[kind="primary"] {{
             background: rgba(57, 255, 20, 0.1) !important;
             color: {NEON_GREEN} !important;
@@ -118,6 +111,7 @@ def load_css():
         .stButton > button[kind="primary"]:hover {{
             box-shadow: inset 0 0 0 1px {NEON_GREEN}, 0 0 20px {NEON_GREEN} !important;
             background-color: rgba(57, 255, 20, 0.2) !important;
+            border-radius: 6px !important; /* OPRAVA */
         }}
 
         /* Inputy */
@@ -178,7 +172,7 @@ def load_css():
     </style>
     """, unsafe_allow_html=True)
 
-# --- OSTATNÍ FUNKCE ---
+# --- OSTATNÍ FUNKCE (beze změny) ---
 def inject_mobile_warning(): st.markdown("""<style>@media only screen and (orientation: portrait) and (max-width: 900px) {#rotate-warning {display:flex !important;} .stApp {overflow:hidden;}}</style>""", unsafe_allow_html=True)
 def get_ics_button_html(b64_data, filename): return f"""<a href="data:text/calendar;base64,{b64_data}" download="{filename}.ics" style="text-decoration:none;"><div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 6px 0; text-align: center; cursor: pointer; color: #fff; transition: 0.3s;" onmouseover="this.style.borderColor='#00f3ff'; this.style.color='#00f3ff'; this.style.boxShadow='0 0 10px #00f3ff';" onmouseout="this.style.borderColor='rgba(255, 255, 255, 0.2)'; this.style.color='#fff'; this.style.boxShadow='none';">📅</div></a>"""
 def get_weather_card_html(w_icon, w_text, temp, rain, wind, sunset_html=""):
