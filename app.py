@@ -227,6 +227,8 @@ def show_calendar_section():
                             color: #fff !important;
                             z-index: 99 !important;
                             transform: translateY(-2px) !important;
+                            /* FIX: ZACHOVAT HRANATÝ TVAR */
+                            border-radius: 8px !important;
                         }}
                         """
                     ):
