@@ -771,33 +771,44 @@ def vykreslit_detail_akce(akce, unique_key):
 
                      c5.write(row.get('ubytování', ''))
                      if not je_po_deadlinu:
-                              # === CENTROVÁNÍ KOŠE - FIX ===
+                              # === CENTROVÁNÍ KOŠE - ABSOLUTNÍ FIX ===
                               with stylable_container(key=f"delc_{unique_key}_{i}_fix", css_styles="""
                                 button {
                                     border: none !important; 
                                     background: transparent !important; 
+                                    box-shadow: none !important;
                                     padding: 0 !important;
                                     
-                                    /* Tady je změna: Roztáhneme tlačítko na celý sloupec */
-                                    width: 100% !important; 
-                                    height: auto !important;
-                                    min-height: 30px !important;
+                                    /* Roztáhneme tlačítko na celou šířku buňky */
+                                    width: 100% !important;
+                                    height: 100% !important;
+                                    min-height: 35px !important;
                                     
-                                    /* A obsah vycentrujeme flexboxem */
+                                    /* Flexbox pro samotné tlačítko */
                                     display: flex !important; 
                                     justify-content: center !important; 
                                     align-items: center !important;
                                     
                                     color: #ff073a !important;
-                                    box-shadow: none !important;
                                 }
+                                
+                                /* !!! TOTO JE TA OPRAVA !!! */
+                                /* Cílíme na vnitřní kontejner tlačítka, který drží ikonku */
+                                button > div {
+                                    display: flex !important;
+                                    justify-content: center !important;
+                                    align-items: center !important;
+                                    width: 100% !important;
+                                    margin: 0 !important;
+                                }
+                                
                                 button:hover {
                                     color: #ff5f1f !important;
                                     background: rgba(255, 7, 58, 0.1) !important;
                                     border-radius: 6px !important;
                                 }
-                                button > div { display: flex !important; justify-content: center !important; }
                               """):
+                                  # Tlačítko samotné
                                   if c6.button("🗑️", key=f"del_{unique_key}_{i}"):
                                       st.session_state[delete_key_state] = row['jméno']
                                       st.rerun()
