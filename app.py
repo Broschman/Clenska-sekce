@@ -83,7 +83,6 @@ if not future_deadlines.empty:
                     background-color: {bg_c} !important;
                     border: none !important;
                     /* === PERMANENTNÍ GLOW === */
-                    /* Inset 1px = tenký rámeček, 10px = jemná záře */
                     box-shadow: inset 0 0 0 1px {glow_c}, 0 0 10px {glow_c}44 !important;
                     color: #fff !important;
                     border-radius: 12px !important;
@@ -107,6 +106,7 @@ if not future_deadlines.empty:
                     transform: scale(1.05) !important;
                     z-index: 100 !important;
                     color: #fff !important;
+                    border-radius: 12px !important; /* FIX TVARU */
                 }}
                 button p {{ font-family: 'Exo 2', sans-serif !important; letter-spacing: 1px; font-weight: 700; }}
                 """
@@ -228,7 +228,7 @@ def show_calendar_section():
                             transform: translateY(-2px) !important;
                         }}
                         """
-                    ):
+                    ):                    
                         with st.popover(label, use_container_width=True):
                             utils.vykreslit_detail_akce(akce, unique_key)
 
