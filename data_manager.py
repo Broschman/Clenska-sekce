@@ -8,6 +8,7 @@ SHEET_ID = "1LaojGRVAGtWmfQZ4DfDXDyiZs1TO7Fck4HRgT8Pyook"
 URL_AKCE = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=akce"
 URL_PRIHLASKY = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=prihlasky"
 URL_JMENA = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=jmena"
+URL_AUTA = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=auta"
 
 def get_connection():
     return st.connection("gsheets", type=GSheetsConnection)
@@ -68,3 +69,19 @@ def load_jmena():
         df = pd.read_csv(URL_JMENA)
         return sorted(df['jméno'].dropna().unique().tolist())
     except: return []
+
+# --- 4. AUTA (NOVÉ) ---
+def load_auta():
+    try:
+        df = pd.read_csv(URL_AUTA)
+        # Ošetření, aby sloupce existovaly, i když je list prázdný
+        expected_cols = ["id_akce", "ridic", "kapacita", "cas", "misto", "poznamka"]
+        for col in expected_cols:
+            if col not in df.columns:
+                df[col] = ""
+        
+        df['id_akce'] = df['id_akce'].astype(str).str.replace(r'\.0$', '', regex=True)
+        return df
+    except Exception as e:
+        print(f"Chyba načítání aut: {e}")
+        return pd.DataFrame(columns=["id_akce", "ridic", "kapacita", "cas", "misto", "poznamka"])
