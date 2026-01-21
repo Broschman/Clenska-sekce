@@ -751,24 +751,19 @@ def vykreslit_detail_akce(akce, unique_key):
                          btn_color, btn_bg, btn_border = "#ff073a", "rgba(255, 7, 58, 0.1)", "1px solid #ff073a"
                          btn_label = "🙋‍♂️ Chci"
 
-                     # === LOKÁLNÍ ZMENŠENÍ TLAČÍTKA DOPRAVY ===
+                     # === LOKÁLNÍ NASTAVENÍ TLAČÍTKA DOPRAVY (Exo 2, 0.9rem, menší padding) ===
                      with stylable_container(key=f"cont_btn_d_{unique_key}_{i}_fix", css_styles=f"""
-                        /* Kontejner tlačítka: */
-                        div[data-testid="stButton"] button {{
+                        button {{
                             background-color: {btn_bg} !important; 
                             color: {btn_color} !important; 
                             border: {btn_border} !important; 
-                            padding: 2px 5px !important;
+                            padding: 4px 8px !important; /* Menší okraje než standard */
+                            font-size: 0.9rem !important; /* Stejná velikost jako jméno */
+                            font-family: 'Exo 2', sans-serif !important;
                             height: auto !important; 
-                            min-height: 24px !important;
+                            min-height: 30px !important;
                             width: 100% !important;
-                        }}
-                        /* Text uvnitř tlačítka: */
-                        div[data-testid="stButton"] button p {{
-                            font-size: 11px !important;
-                            margin: 0 !important;
-                            padding: 0 !important;
-                            line-height: 1.2 !important;
+                            white-space: nowrap !important;
                         }}
                      """):
                          if c4.button(btn_label, key=f"btn_row_d_{unique_key}_{i}"):
@@ -776,30 +771,19 @@ def vykreslit_detail_akce(akce, unique_key):
 
                      c5.write(row.get('ubytování', ''))
                      if not je_po_deadlinu:
-                         # === LOKÁLNÍ ZMENŠENÍ A CENTROVÁNÍ KOŠE ===
+                         # === CENTROVÁNÍ KOŠE ===
                          with stylable_container(key=f"delc_{unique_key}_{i}_fix", css_styles="""
-                            div[data-testid="stButton"] button {
-                                border: none !important; 
-                                background: transparent !important; 
-                                padding: 0 !important;
+                            button {
+                                border: none !important; background: transparent !important; padding: 0 !important;
                                 margin: 0 auto !important; 
-                                width: 30px !important; height: 30px !important; min-height: 30px !important;
                                 display: flex !important; justify-content: center !important; align-items: center !important;
+                                width: 30px !important; height: 30px !important;
                                 color: #ff073a !important;
                             }
-                            /* Dvojitý úder na vnitřek koše */
-                            div[data-testid="stButton"] button > div, 
-                            div[data-testid="stButton"] button > div > p {
-                                display: flex !important;
-                                justify-content: center !important;
-                                align-items: center !important;
-                                margin: 0 !important;
-                                padding: 0 !important;
-                                line-height: 1 !important;
-                                font-size: 16px !important;
-                            }
+                            button > div { display: flex !important; justify-content: center !important; }
                          """):
                              if c6.button("🗑️", key=f"del_{unique_key}_{i}"):
                                  st.session_state[delete_key_state] = row['jméno']
                                  st.rerun()
+                                 
     export_admin_section(lidi, akce.get('název', ''), unique_key)
