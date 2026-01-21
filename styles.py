@@ -11,14 +11,13 @@ NEON_ORANGE = "#ff5f1f"
 NEON_PURPLE = "#bd00ff"
 DARK_BG = "#0e1117"
 
-# --- DEFINICE BAREV PRO AKCE (Neonová edice) ---
-# (Toto zůstává stejné jako v minulé verzi)
+# --- DEFINICE BAREV PRO AKCE (Zůstává stejné) ---
 BARVY_AKCI = {
     "mcr": {"bg": "linear-gradient(135deg, rgba(255, 7, 58, 0.2), rgba(0, 243, 255, 0.2))", "color": "#fff", "border": "1px solid #ff073a", "shadow": "0 0 15px rgba(255, 7, 58, 0.4)"},
     "za": {"bg": "rgba(255, 7, 58, 0.15)", "color": "#ffadb8", "border": "1px solid #ff073a", "shadow": "0 0 10px rgba(255, 7, 58, 0.2)"},
     "zb": {"bg": "rgba(255, 95, 31, 0.15)", "color": "#ffcbb3", "border": "1px solid #ff5f1f", "shadow": "0 0 10px rgba(255, 95, 31, 0.2)"},
     "soustredeni": {"bg": "rgba(255, 215, 0, 0.15)", "color": "#fff5cc", "border": "1px solid #ffd700", "shadow": "0 0 10px rgba(255, 215, 0, 0.2)"},
-    "oblastni": {"bg": "rgba(0, 243, 255, 0.15)", "color": "#ccfcff", "border": "1px solid #00f3ff", "shadow": "0 0 10px rgba(0, 243, 255, 0.2)"},
+    "oblastní": {"bg": "rgba(0, 243, 255, 0.15)", "color": "#ccfcff", "border": "1px solid #00f3ff", "shadow": "0 0 10px rgba(0, 243, 255, 0.2)"},
     "zimni_liga": {"bg": "rgba(100, 116, 139, 0.3)", "color": "#e2e8f0", "border": "1px solid #64748b", "shadow": "none"},
     "stafety": {"bg": "rgba(189, 0, 255, 0.15)", "color": "#f2ccff", "border": "1px solid #bd00ff", "shadow": "0 0 10px rgba(189, 0, 255, 0.2)"},
     "trenink": {"bg": "rgba(57, 255, 20, 0.1)", "color": "#ccffc4", "border": "1px solid #39ff14", "shadow": "0 0 8px rgba(57, 255, 20, 0.15)"},
@@ -30,40 +29,47 @@ BARVY_AKCI = {
 def load_css():
     st.markdown(f"""
     <style>
-        /* Import futuristického fontu */
-        @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;600&family=Orbitron:wght@400;700;900&display=swap');
+        /* === IMPORT FONTŮ S ČESKOU PODPOROU (latin-ext) === */
+        @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;600&family=Orbitron:wght@400;700;900&display=swap&subset=latin,latin-ext');
 
-        /* === GLOBÁLNÍ RESET & ROG POZADÍ === */
+        /* === GLOBÁLNÍ RESET === */
         html, body, [class*="css"] {{
             font-family: 'Exo 2', sans-serif;
             background-color: {DARK_BG};
             color: #e0e0e0;
         }}
 
-        /* ROG STYLE: Kybernetická mřížka na pozadí */
+        /* ROG STYLE: Pozadí */
         .stApp {{
             background-color: {DARK_BG};
             background-image: 
-                radial-gradient(circle at 50% 30%, rgba(0, 243, 255, 0.05) 0%, transparent 50%), /* Centrální modrá záře */
-                repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.015) 0px, rgba(255, 255, 255, 0.015) 1px, transparent 1px, transparent 50px), /* Vertikální čáry */
-                repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.015) 0px, rgba(255, 255, 255, 0.015) 1px, transparent 1px, transparent 50px); /* Horizontální čáry */
+                radial-gradient(circle at 50% 30%, rgba(0, 243, 255, 0.05) 0%, transparent 50%),
+                repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.015) 0px, rgba(255, 255, 255, 0.015) 1px, transparent 1px, transparent 50px),
+                repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.015) 0px, rgba(255, 255, 255, 0.015) 1px, transparent 1px, transparent 50px);
             background-attachment: fixed;
         }}
 
-        /* ROG STYLE: Svítící postranní linky */
-        [data-testid="stMain"]::before, [data-testid="stMain"]::after {{
+        /* === ROG STYLE: SVÍTÍCÍ POSTRANNÍ LINKY (Opraveno) === */
+        /* Používáme pseudo-elementy na 'body' pro jistotu zobrazení */
+        body::before, body::after {{
             content: "";
             position: fixed;
-            top: 10%; bottom: 10%; width: 1px;
-            background: linear-gradient(to bottom, transparent, {NEON_BLUE}, {NEON_GREEN}, transparent);
-            z-index: -1;
-            opacity: 0.4;
-            filter: blur(1px);
+            top: 0; bottom: 0;
+            width: 2px; /* Trochu širší pro lepší viditelnost */
+            z-index: 0; /* Pod obsahem, ale nad pozadím */
+            pointer-events: none; /* Aby přes ně šlo klikat */
+            opacity: 0.6;
+            filter: blur(2px);
         }}
-        [data-testid="stMain"]::before {{ left: 10px; }}
-        [data-testid="stMain"]::after {{ right: 10px; }}
+        body::before {{
+            left: 15px;
+            background: linear-gradient(to bottom, transparent, {NEON_BLUE}, {NEON_GREEN}, transparent);
+        }}
+        body::after {{
+            right: 15px;
+            background: linear-gradient(to bottom, transparent, {NEON_GREEN}, {NEON_BLUE}, transparent);
+        }}
 
-        
         /* Nadpisy - Orbitron Font */
         h1, h2, h3, h4 {{
             font-family: 'Orbitron', sans-serif !important;
@@ -88,7 +94,6 @@ def load_css():
         h1 img.header-logo:hover {{ transform: scale(1.1) rotate(5deg); }}
 
         /* === UI KOMPONENTY === */
-        /* Tlačítka (Buttons) - Glassmorphism + Neon Border */
         .stButton > button {{
             background: rgba(255, 255, 255, 0.05) !important;
             color: {NEON_BLUE} !important;
@@ -104,7 +109,6 @@ def load_css():
             box-shadow: 0 0 15px rgba(0, 243, 255, 0.4) !important;
             transform: translateY(-2px);
         }}
-        /* Primary button */
         .stButton > button[kind="primary"] {{
             background: linear-gradient(135deg, rgba(57, 255, 20, 0.2), rgba(57, 255, 20, 0.1)) !important;
             color: {NEON_GREEN} !important;
@@ -114,33 +118,28 @@ def load_css():
             box-shadow: 0 0 20px rgba(57, 255, 20, 0.6) !important;
         }}
 
-        /* Inputy */
         .stTextInput input, .stSelectbox div[data-baseweb="select"], .stNumberInput input, .stTextArea textarea {{
             background-color: rgba(255, 255, 255, 0.03) !important;
             color: #fff !important;
             border: 1px solid rgba(255, 255, 255, 0.1) !important;
             border-radius: 6px !important;
+            font-family: 'Exo 2', sans-serif !important; /* Jistota pro inputy */
         }}
         .stTextInput input:focus, .stSelectbox div[data-baseweb="select"]:focus-within, .stNumberInput input:focus, .stTextArea textarea:focus {{
             border-color: {NEON_BLUE} !important;
             box-shadow: 0 0 10px rgba(0, 243, 255, 0.2) !important;
         }}
 
-        .stCheckbox span, .stRadio label {{ color: #ccc !important; }}
+        .stCheckbox span, .stRadio label {{ color: #ccc !important; font-family: 'Exo 2', sans-serif !important; }}
 
         /* === KALENDÁŘ A KARTY === */
-        /* Dnešní den */
         .today-box {{
-            background: rgba(255, 7, 58, 0.2);
-            color: {NEON_RED};
-            border: 1px solid {NEON_RED};
+            background: rgba(255, 7, 58, 0.2); color: {NEON_RED}; border: 1px solid {NEON_RED};
             padding: 4px 12px; border-radius: 20px; font-weight: 700;
-            box-shadow: 0 0 15px rgba(255, 7, 58, 0.4);
-            display: inline-block; margin-bottom: 8px;
+            box-shadow: 0 0 15px rgba(255, 7, 58, 0.4); display: inline-block; margin-bottom: 8px;
         }}
         .day-number {{ font-family: 'Orbitron', sans-serif; color: #666; font-size: 1.1em; display: block; text-align: center; margin-bottom: 8px; }}
 
-        /* POPOVER (Bublina detailu) */
         div[data-testid="stPopoverBody"] {{
             background-color: rgba(14, 17, 23, 0.95) !important;
             border: 1px solid rgba(255, 255, 255, 0.15) !important;
@@ -150,33 +149,30 @@ def load_css():
             box-shadow: 0 0 50px rgba(0, 0, 0, 0.8) !important;
         }}
 
-        /* Floating Button */
         .floating-container button {{
             background: linear-gradient(135deg, {NEON_BLUE}, #0056b3) !important;
             box-shadow: 0 0 20px {NEON_BLUE} !important;
             border-radius: 50% !important;
         }}
         
-        /* === PATIČKA - BÍLÁ ZÁŘE === */
+        /* === PATIČKA - BÍLÁ ZÁŘE (Opraveno - silnější) === */
         .footer-glow img {{
-            filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.4)); /* Jemná bílá záře */
+            /* Dvojitý stín pro silnější efekt na tmavém pozadí */
+            filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.8)) drop-shadow(0 0 10px rgba(255, 255, 255, 0.4));
             transition: filter 0.3s, transform 0.3s;
         }}
         .footer-glow img:hover {{
-            filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.8)); /* Silnější záře při najetí */
+            filter: drop-shadow(0 0 10px rgba(255, 255, 255, 1)) drop-shadow(0 0 20px rgba(255, 255, 255, 0.6));
             transform: scale(1.05);
         }}
 
-        /* Skrytí default prvků */
         #MainMenu, footer, header, .stDeployButton {{visibility: hidden;}}
         [data-testid="stToolbar"] {{visibility: hidden;}}
         [data-testid="stDecoration"] {{display:none;}}
     </style>
     """, unsafe_allow_html=True)
 
-# ... (zbytek funkcí v styles.py - inject_mobile_warning, get_ics_button_html, atd. zůstává stejný, jen si zkontroluj, že tam jsou) ...
-# Pro jistotu je sem dám taky, ať je soubor kompletní.
-
+# --- OSTATNÍ FUNKCE (Beze změny) ---
 def inject_mobile_warning():
     st.markdown("""
     <style>
