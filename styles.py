@@ -8,7 +8,7 @@ NEON_RED = "#ff073a"
 NEON_ORANGE = "#ff5f1f"
 DARK_BG = "#0e1117"
 
-# --- DEFINICE BAREV PRO AKCE (Používáme 'glow' pro hover) ---
+# --- DEFINICE BAREV (Složka 'bg' je průhledná, 'glow' je plná barva) ---
 BARVY_AKCI = {
     "mcr": {"bg": "rgba(255, 7, 58, 0.1)", "glow": "#ff073a"},      # Červená
     "za": {"bg": "rgba(255, 7, 58, 0.1)", "glow": "#ef4444"},       # Světlejší červená
@@ -68,33 +68,23 @@ def load_css():
             background-attachment: fixed;
         }}
 
-        /* === DEFAULTNÍ TLAČÍTKA (GLASS) === */
+        /* === TLAČÍTKA (ZÁKLAD) === */
+        /* Vypínáme border úplně, aby do toho Streamlit nehrabal */
         .stButton > button {{
             background: rgba(255, 255, 255, 0.05) !important;
             backdrop-filter: blur(5px);
             color: {NEON_BLUE} !important;
-            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            border: none !important; /* DŮLEŽITÉ: Žádný border = Streamlit nemá co přebarvit */
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2); /* Falešný border */
             border-radius: 6px !important;
             font-weight: 600 !important;
-            transition: all 0.3s ease !important;
+            transition: all 0.2s ease !important;
         }}
         
-        /* Default hover (neutrální modrá z configu) */
+        /* Default hover */
         .stButton > button:hover {{
-            border-color: {NEON_BLUE} !important;
-            box-shadow: 0 0 10px {NEON_BLUE} !important;
-            background-color: rgba(0, 243, 255, 0.1) !important;
-        }}
-
-        /* Primary tlačítko (Zapsat se) - ZELENÉ */
-        .stButton > button[kind="primary"] {{
-            background: rgba(57, 255, 20, 0.1) !important;
-            color: {NEON_GREEN} !important;
-            border: 1px solid {NEON_GREEN} !important;
-        }}
-        .stButton > button[kind="primary"]:hover {{
-            box-shadow: 0 0 20px {NEON_GREEN} !important;
-            background-color: rgba(57, 255, 20, 0.2) !important;
+            box-shadow: inset 0 0 0 1px {NEON_BLUE}, 0 0 10px {NEON_BLUE} !important;
+            transform: translateY(-2px);
         }}
 
         /* Inputy */
