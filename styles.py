@@ -25,24 +25,36 @@ BARVY_AKCI = {
 def load_css():
     st.markdown(f"""
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;600;800&family=Orbitron:wght@400;700;900&display=swap&subset=latin,latin-ext');
+        /* ZMĚNA: Orbitron nahrazen za Rajdhani (podpora češtiny).
+           Zároveň ponecháváme Exo 2 pro běžný text.
+        */
+        @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;600;800&family=Rajdhani:wght@500;600;700&display=swap&subset=latin,latin-ext');
 
         /* === GLOBÁLNÍ RESET (BEZ DIV a SPAN - OPRAVA EXPAND_MORE) === */
+        /* Tento seznam explicitně vyjmenovává elementy pro změnu fontu.
+           NEPŘIDÁVAT 'span', 'div' nebo '*' -> to by rozbilo ikonky (šipky).
+        */
         body, p, h1, h2, h3, h4, h5, h6, li, a, label, input, textarea, button {{
             font-family: 'Exo 2', sans-serif !important;
             color: #e0e0e0;
         }}
         
-        /* Specifické cílení pro Streamlit, aby texty vypadaly dobře */
+        /* Specifické cílení pro Streamlit inputy */
         .stMarkdown, .stTextInput, .stTextArea, .stSelectbox, .stNumberInput {{
             font-family: 'Exo 2', sans-serif !important;
         }}
 
+        /* === NADPISY (TECH LOOK) === */
         h1, h2, h3 {{
-            font-family: 'Orbitron', 'Exo 2', sans-serif !important;
+            font-family: 'Rajdhani', 'Exo 2', sans-serif !important;
             letter-spacing: 1px;
             text-transform: uppercase;
-            font-weight: 800 !important;
+            font-weight: 700 !important;
+        }}
+        
+        /* Zvětšíme trochu H1, protože Rajdhani je opticky menší než Orbitron */
+        h1 {{
+            font-size: 2.5rem !important;
         }}
 
         /* === LOGO === */
@@ -85,7 +97,6 @@ def load_css():
             font-family: 'Exo 2', sans-serif !important;
             transition: all 0.3s ease !important;
             
-            /* Výchozí velká velikost pro hlavní tlačítka */
             font-size: 1rem !important; 
             padding: 0.5rem 1rem !important;
             min-height: 2.5rem !important;
@@ -127,11 +138,11 @@ def load_css():
             background: rgba(255, 7, 58, 0.2); 
             color: {NEON_RED}; 
             border: 1px solid {NEON_RED};
-            display: inline-flex;       
-            align-items: center;        
+            display: inline-flex;        
+            align-items: center;         
             justify-content: center;    
             width: 30px; height: 30px;  
-            border-radius: 8px;         
+            border-radius: 8px;          
             font-weight: 800;
             box-shadow: 0 0 15px rgba(255, 7, 58, 0.4);
             margin: 0 auto 8px auto;    
