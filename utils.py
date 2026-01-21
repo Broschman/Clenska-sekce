@@ -322,7 +322,9 @@ def export_admin_section(lidi, nazev_akce, unique_key):
 def show_doprava_dialog(akce_id, nazev_akce, datum_akce, pre_jmeno, in_poznamka=None, in_ubytovani=None):
     """
     Modální okno pro řešení dopravy.
-    Inteligentní výběr defaultního auta (nejlepší volné, pokud člověk ještě nikde není).
+    - Seřazená auta.
+    - Inteligentní default výběr.
+    - Zobrazuje ČAS i MÍSTO odjezdu v nabídce.
     """
     conn = data_manager.get_connection()
     
@@ -411,7 +413,7 @@ def show_doprava_dialog(akce_id, nazev_akce, datum_akce, pre_jmeno, in_poznamka=
                 conn.update(worksheet="prihlasky", data=pd.concat([df_clean_lidi, novy_clovek], ignore_index=True))
                 st.rerun()
 
-        # --- B) PASAŽÉR (Update: Default na nejlepší auto) ---
+        # --- B) PASAŽÉR (S časem i místem) ---
         elif "Hledám" in role:
             dostupna_auta_list = []
             
@@ -423,8 +425,21 @@ def show_doprava_dialog(akce_id, nazev_akce, datum_akce, pre_jmeno, in_poznamka=
                 volno = kap - 1 - obs 
                 
                 if volno > 0 or ridic == id_auto_curr:
-                    label = f"🚙 {ridic} ({volno} volných) - {row_auto['cas']}"
+                    # === ZDE JE ZMĚNA: Přidání místa do labelu ===
+                    cas_txt = str(row_auto['cas']).strip() if pd.notna(row_auto['cas']) else ""
+                    misto_txt = str(row_auto['misto']).strip() if pd.notna(row_auto['misto']) else ""
+                    
+                    info_part = ""
+                    if cas_txt: info_part += cas_txt
+                    if misto_txt: 
+                        if info_part: info_part += f", {misto_txt}"
+                        else: info_part = misto_txt
+                    
+                    label = f"🚙 {ridic} ({volno} volných)"
+                    if info_part: label += f" - {info_part}"
+                    
                     if volno <= 0: label = f"⚠️ {ridic} (PLNO - Jsi tu)"
+                    
                     dostupna_auta_list.append({ "label": label, "ridic_id": ridic, "volno": volno })
             
             dostupna_auta_list.sort(key=lambda x: x['volno'], reverse=True)
@@ -436,15 +451,10 @@ def show_doprava_dialog(akce_id, nazev_akce, datum_akce, pre_jmeno, in_poznamka=
             options_auta.append(wait_label)
             mapa_aut[wait_label] = ""
 
-            # === INTELIGENTNÍ INDEX ===
-            # 1. Default: První položka (Nejvíce volné auto), nebo Čekačka (pokud nejsou auta)
+            # Default výběr
             idx_select = 0
-            
-            # 2. Pokud je uživatel explicitně "waiting", vybereme poslední položku (Čekačku)
             if stav_dopravy == "waiting":
                 idx_select = len(options_auta) - 1
-            
-            # 3. Pokud je uživatel "passenger" a má auto, najdeme ho
             elif stav_dopravy == "passenger" and id_auto_curr:
                 for idx, item_label in enumerate(options_auta):
                     if mapa_aut.get(item_label) == id_auto_curr:
