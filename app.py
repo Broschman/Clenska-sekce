@@ -208,8 +208,6 @@ def show_calendar_section():
                         button {{
                             background: {bg_color} !important; 
                             border: none !important; 
-                            /* === PERMANENTNÍ SVÍCENÍ === */
-                            /* Vytvoří barevný rámeček (inset) a lehkou záři okolo */
                             box-shadow: inset 0 0 0 1px {glow_color}, 0 0 8px {glow_color}44 !important;
                             color: #e0e0e0 !important;
                             width: 100%; border-radius: 8px; padding: 8px 10px !important; text-align: left; font-size: 0.85rem; font-weight: 600; 
@@ -217,13 +215,13 @@ def show_calendar_section():
                             font-family: 'Exo 2', sans-serif !important;
                             transition: all 0.2s ease !important;
                         }} 
-                        /* === ZESÍLENÍ PŘI HOVERU === */
+                        /* ZDE JE FIX PRO KALENDÁŘ */
                         button:hover {{
-                            /* Zvýrazní se vnitřní barva a zvětší vnější záře */
                             box-shadow: inset 0 0 0 2px {glow_color}, 0 0 20px {glow_color} !important;
                             color: #fff !important;
                             z-index: 99 !important;
                             transform: translateY(-2px) !important;
+                            border-radius: 8px !important; /* !!! */
                         }}
                         """
                     ):                    
