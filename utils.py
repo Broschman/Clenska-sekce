@@ -751,21 +751,24 @@ def vykreslit_detail_akce(akce, unique_key):
                          btn_color, btn_bg, btn_border = "#ff073a", "rgba(255, 7, 58, 0.1)", "1px solid #ff073a"
                          btn_label = "🙋‍♂️ Chci"
 
-                     # === TLAČÍTKO DOPRAVA (Deep Fix) ===
+                     # === LOKÁLNÍ ZMENŠENÍ TLAČÍTKA DOPRAVY ===
                      with stylable_container(key=f"cont_btn_d_{unique_key}_{i}_fix", css_styles=f"""
-                        button {{
+                        /* Kontejner tlačítka: */
+                        div[data-testid="stButton"] button {{
                             background-color: {btn_bg} !important; 
                             color: {btn_color} !important; 
                             border: {btn_border} !important; 
                             padding: 2px 5px !important;
                             height: auto !important; 
                             min-height: 24px !important;
+                            width: 100% !important;
                         }}
-                        /* Tady je kouzlo: cílíme na text uvnitř tlačítka */
-                        button p {{
-                            font-size: 12px !important;
-                            padding: 0 !important;
+                        /* Text uvnitř tlačítka: */
+                        div[data-testid="stButton"] button p {{
+                            font-size: 11px !important;
                             margin: 0 !important;
+                            padding: 0 !important;
+                            line-height: 1.2 !important;
                         }}
                      """):
                          if c4.button(btn_label, key=f"btn_row_d_{unique_key}_{i}"):
@@ -773,9 +776,9 @@ def vykreslit_detail_akce(akce, unique_key):
 
                      c5.write(row.get('ubytování', ''))
                      if not je_po_deadlinu:
-                         # === TLAČÍTKO KOŠE (Deep Fix) ===
+                         # === LOKÁLNÍ ZMENŠENÍ A CENTROVÁNÍ KOŠE ===
                          with stylable_container(key=f"delc_{unique_key}_{i}_fix", css_styles="""
-                            button {
+                            div[data-testid="stButton"] button {
                                 border: none !important; 
                                 background: transparent !important; 
                                 padding: 0 !important;
@@ -784,14 +787,16 @@ def vykreslit_detail_akce(akce, unique_key):
                                 display: flex !important; justify-content: center !important; align-items: center !important;
                                 color: #ff073a !important;
                             }
-                            /* Dvojitý úder: cílíme na div i p uvnitř, aby se nic neroztahovalo */
-                            button > div, button > div > p {
+                            /* Dvojitý úder na vnitřek koše */
+                            div[data-testid="stButton"] button > div, 
+                            div[data-testid="stButton"] button > div > p {
                                 display: flex !important;
                                 justify-content: center !important;
                                 align-items: center !important;
                                 margin: 0 !important;
                                 padding: 0 !important;
                                 line-height: 1 !important;
+                                font-size: 16px !important;
                             }
                          """):
                              if c6.button("🗑️", key=f"del_{unique_key}_{i}"):
