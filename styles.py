@@ -8,7 +8,7 @@ NEON_RED = "#ff073a"
 NEON_ORANGE = "#ff5f1f"
 DARK_BG = "#0e1117"
 
-# --- DEFINICE BAREV PRO AKCE ---
+# --- DEFINICE BAREV ---
 BARVY_AKCI = {
     "mcr": {"bg": "rgba(255, 7, 58, 0.1)", "glow": "#ff073a"},
     "za": {"bg": "rgba(255, 7, 58, 0.1)", "glow": "#ef4444"},
@@ -28,7 +28,7 @@ def load_css():
         @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;600;800&family=Orbitron:wght@400;700;900&display=swap&subset=latin,latin-ext');
 
         /* === GLOBÁLNÍ RESET === */
-        body, p, h1, h2, h3, h4, h5, h6, li, a, label, input, textarea, button {{
+        body, p, h1, h2, h3, h4, h5, h6, span, div, label, input, button, textarea {{
             font-family: 'Exo 2', sans-serif !important;
             color: #e0e0e0;
         }}
@@ -40,7 +40,7 @@ def load_css():
             font-weight: 800 !important;
         }}
 
-        /* === LOGO FIX === */
+        /* === LOGO === */
         img.header-logo {{
             height: 60px !important;
             width: auto !important;
@@ -68,7 +68,7 @@ def load_css():
             background-attachment: fixed;
         }}
 
-        /* === TLAČÍTKA (ZÁKLAD - BEZ VYNUCENÉ VELIKOSTI) === */
+        /* === TLAČÍTKA (GLOBÁLNÍ NASTAVENÍ - VELKÁ) === */
         .stButton > button {{
             background: rgba(255, 255, 255, 0.05) !important;
             backdrop-filter: blur(5px);
@@ -79,7 +79,12 @@ def load_css():
             font-weight: 600 !important;
             font-family: 'Exo 2', sans-serif !important;
             transition: all 0.3s ease !important;
-            /* ZDE JSEM ODEBRAL PADDING A HEIGHT, ABYCHOM TO MOHLI ŘÍDIT V UTILS */
+            
+            /* === VRACÍME VELIKOST ZPĚT === */
+            font-size: 1rem !important; /* Normální velikost */
+            padding: 0.5rem 1rem !important;
+            min-height: 2.5rem !important;
+            line-height: 1.5 !important;
         }}
         
         .stButton > button:hover {{
@@ -112,7 +117,6 @@ def load_css():
 
         hr {{ border-top: 1px solid rgba(255,255,255,0.1) !important; }}
         
-        /* Kalendář box */
         .today-box {{
             background: rgba(255, 7, 58, 0.2); 
             color: {NEON_RED}; 
@@ -128,7 +132,6 @@ def load_css():
         }}
         .day-number {{ color: #888; font-weight: 600; display: block; text-align: center; margin-bottom: 8px; }}
 
-        /* Popover */
         div[data-testid="stPopoverBody"] {{
             background-color: rgba(14, 17, 23, 0.95) !important;
             border: 1px solid rgba(255, 255, 255, 0.15) !important;
