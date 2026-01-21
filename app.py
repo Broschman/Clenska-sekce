@@ -32,9 +32,9 @@ st.set_page_config(page_title="Kalendář RBK", page_icon="🌲", layout="wide")
 def vykreslit_detail_akce(akce, unique_key):
     """
     Vykreslí detail akce. 
-    Opraven design seznamu (zebra striping) a tlačítko dopravy integrováno do boxu přihlášky.
+    Verze bez st.form pro maximální interaktivitu tlačítek.
     """
-    # --- 1. PŘÍPRAVA DAT ---
+    # --- PŘÍPRAVA DAT ---
     mapa_raw = str(akce['mapa']).strip() if 'mapa' in df_akce.columns and pd.notna(akce['mapa']) else ""
     body_k_vykresleni = utils.parse_map_coordinates(mapa_raw, akce['název']) 
     main_lat, main_lon = None, None
@@ -54,7 +54,6 @@ def vykreslit_detail_akce(akce, unique_key):
     je_po_deadlinu = dnes > akce['deadline']
     deadline_str = akce['deadline'].strftime('%d.%m.%Y')
 
-    # Načtení lidi 
     if akce_id_str:
         df_full = data_manager.load_prihlasky()
         lidi = df_full[df_full['id_akce'] == akce_id_str].copy().fillna("")
@@ -73,7 +72,6 @@ def vykreslit_detail_akce(akce, unique_key):
             st.markdown(styles.get_ics_button_html(b64, akce["název"]), unsafe_allow_html=True)
         
         st.markdown(styles.badge(typ_udalosti.upper(), bg="#F3F4F6", color="#333"), unsafe_allow_html=True)
-        
         st.markdown(f"<div style='margin-top:20px; color:#444'>📍 <b>Místo:</b> {akce['místo']}<br>🗓️ <b>Datum:</b> {akce['datum'].strftime('%d.%m.%Y')}</div>", unsafe_allow_html=True)
         if pd.notna(akce['popis']): st.info(akce['popis'], icon="ℹ️")
         
@@ -89,11 +87,11 @@ def vykreslit_detail_akce(akce, unique_key):
         if je_zavod_obecne:
             st.markdown(f"""<a href="{str(akce.get('odkaz', 'https://oris.orientacnisporty.cz/'))}" target="_blank"><div style="background-color: #2563EB; color: white; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold;">👉 Otevřít ORIS</div></a>""", unsafe_allow_html=True)
 
-    # === PRAVÝ SLOUPEC (PŘIHLÁŠKA + DOPRAVA) ===
+    # === PRAVÝ SLOUPEC (PŘIHLÁŠKA) ===
     with col_form:
         delete_key_state = f"confirm_delete_{unique_key}"
         
-        # Obalíme vše do jednoho kontejneru, aby to vypadalo jako jeden formulář
+        # Container místo Formu
         with stylable_container(
             key=f"form_cont_{unique_key}",
             css_styles="{border: 1px solid #E5E7EB; border-radius: 12px; padding: 20px; background-color: #F9FAFB; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);}"
@@ -101,67 +99,71 @@ def vykreslit_detail_akce(akce, unique_key):
             if not je_po_deadlinu and delete_key_state not in st.session_state:
                 st.markdown("<h4 style='margin-top:0;'>✍️ Přihláška</h4>", unsafe_allow_html=True)
                 
-                # 1. TLAČÍTKO DOPRAVA (Uvnitř boxu, ale technicky před st.form)
-                # Použijeme st.columns, aby to vypadalo hezky
-                cd1, cd2 = st.columns([1, 0.1])
-                with cd1:
-                    if st.button("🚗 Nastavit / Změnit dopravu", key=f"btn_doprava_{unique_key}", use_container_width=True, help="Kliknutím otevřeš správu aut a spolujízdy"):
-                        utils.show_doprava_dialog(akce_id_str, akce['název'], akce['datum'].strftime('%d.%m.'))
+                # == 1. WIDGETY (ŽIVÉ) ==
+                # Klíč je důležitý, aby si pamatoval hodnotu
+                vybrane_jmeno = st.selectbox("Jméno", options=seznam_jmen, index=None, placeholder="Vyber jméno...", key=f"sel_jmeno_{unique_key}")
+                nove_jmeno = st.text_input("Nebo nové jméno", key=f"inp_new_{unique_key}")
+                poznamka = st.text_input("Poznámka", key=f"inp_note_{unique_key}")
                 
-                st.caption("Nastavením dopravy se automaticky přihlásíš na akci.")
-                st.markdown("---")
+                ubyt = False
+                if "trénink" not in typ_udalosti:
+                     ubyt = st.checkbox("🛏️ Společné ubytko", key=f"chk_ubyt_{unique_key}")
 
-                # 2. KLASICKÝ FORMULÁŘ (Poznámka, Ubytko)
-                with st.form(key=f"form_{unique_key}", clear_on_submit=True):
-                    vybrane_jmeno = st.selectbox("Jméno", options=seznam_jmen, index=None, placeholder="Vyber jméno...")
-                    nove_jmeno = st.text_input("Nebo nové jméno")
-                    poznamka = st.text_input("Poznámka")
-                    
-                    # Ubytování jen pokud to není trénink
-                    ubyt = False
-                    if "trénink" not in typ_udalosti:
-                         ubyt = st.checkbox("🛏️ Společné ubytko")
-                    
-                    st.markdown("<br>", unsafe_allow_html=True)
-                    
-                    # Tlačítko pro uložení
-                    with stylable_container(key=f"submit_btn_{unique_key}", css_styles="button {background-color: #16A34A !important; color: white !important; border: none !important; width: 100%;}"):
-                        submit_val = st.form_submit_button("Uložit přihlášku / Ubytování")
+                finalni_jmeno = nove_jmeno.strip() if nove_jmeno else vybrane_jmeno
 
-                    if submit_val:
-                        final = nove_jmeno.strip() if nove_jmeno else vybrane_jmeno
-                        if final:
-                            try:
-                                df_full = data_manager.load_prihlasky()
-                                # Zjistíme, jestli už měl nastavenou dopravu, abychom ji nepřepsali!
-                                existujici = df_full[(df_full['id_akce'] == akce_id_str) & (df_full['jméno'] == final)]
-                                old_dopr, old_id_auto = "", ""
-                                if not existujici.empty:
-                                    old_dopr = existujici.iloc[0].get('doprava', "")
-                                    old_id_auto = existujici.iloc[0].get('id_auto', "")
+                st.markdown("<br>", unsafe_allow_html=True)
 
-                                # Smažeme starý záznam
-                                df_full = df_full[~((df_full['id_akce'] == akce_id_str) & (df_full['jméno'] == final))]
-                                
-                                novy = pd.DataFrame([{
-                                    "id_akce": akce_id_str, "název": akce['název'], "jméno": final,
-                                    "poznámka": poznamka, 
-                                    "doprava": old_dopr, # Zachováme dopravu z Dialogu
-                                    "ubytování": "Ano 🛏️" if ubyt else "",
-                                    "čas zápisu": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                                    "id_auto": old_id_auto # Zachováme ID auta
-                                }])
-                                conn.update(worksheet="prihlasky", data=pd.concat([df_full, novy], ignore_index=True))
-                                st.toast(f"✅ {final} uložen!")
-                                time.sleep(1)
-                                st.rerun()
-                            except Exception as e: st.error(str(e))
-                        else: st.warning("Chybí jméno!")
+                # == 2. TLAČÍTKA ==
+                c_btn1, c_btn2 = st.columns([1, 1], gap="small")
+                
+                with c_btn1:
+                    # Tlačítko pro přímý zápis (bez dopravy)
+                    with stylable_container(key=f"c_save_{unique_key}", css_styles="button {background-color: #16A34A !important; color: white !important; border: none !important; width: 100%;}"):
+                        if st.button("💾 Zapsat se", key=f"btn_save_{unique_key}"):
+                            if finalni_jmeno:
+                                try:
+                                    df_full = data_manager.load_prihlasky()
+                                    # Zachování dopravy, pokud už existuje
+                                    existujici = df_full[(df_full['id_akce'] == akce_id_str) & (df_full['jméno'] == finalni_jmeno)]
+                                    old_dopr, old_id_auto = "", ""
+                                    if not existujici.empty:
+                                        old_dopr = existujici.iloc[0].get('doprava', "")
+                                        old_id_auto = existujici.iloc[0].get('id_auto', "")
+
+                                    df_full = df_full[~((df_full['id_akce'] == akce_id_str) & (df_full['jméno'] == finalni_jmeno))]
+                                    
+                                    novy = pd.DataFrame([{
+                                        "id_akce": akce_id_str, "název": akce['název'], "jméno": finalni_jmeno,
+                                        "poznámka": poznamka, 
+                                        "doprava": old_dopr, 
+                                        "ubytování": "Ano 🛏️" if ubyt else "",
+                                        "čas zápisu": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                                        "id_auto": old_id_auto
+                                    }])
+                                    conn.update(worksheet="prihlasky", data=pd.concat([df_full, novy], ignore_index=True))
+                                    st.toast(f"✅ {finalni_jmeno} uložen!")
+                                    time.sleep(1)
+                                    st.rerun()
+                                except Exception as e: st.error(str(e))
+                            else: st.warning("Vyber jméno!")
+
+                with c_btn2:
+                    # Tlačítko pro DOPRAVU (Otevře dialog)
+                    # Díky absenci st.form můžeme číst 'finalni_jmeno' HNED!
+                    if st.button("🚗 Doprava...", key=f"btn_dopr_{unique_key}", use_container_width=True):
+                        if finalni_jmeno:
+                            # Posíláme i poznámku a ubytko, aby to dialog mohl uložit komplet
+                            utils.show_doprava_dialog(
+                                akce_id_str, akce['název'], akce['datum'].strftime('%d.%m.'), 
+                                finalni_jmeno, poznamka, ubyt
+                            )
+                        else:
+                            st.warning("Nejdřív vyber jméno!")
 
             elif je_po_deadlinu: 
                 st.info("🔒 Přihlášky uzavřeny. Kontaktuj trenéra.")
 
-    # --- SEZNAM (Zobrazuje i auta) ---
+    # --- SEZNAM (Zebra striping preserved) ---
     st.markdown("<hr style='margin: 30px 0;'>", unsafe_allow_html=True)
     if body_k_vykresleni:
         start_lat, start_lon, _ = body_k_vykresleni[0]
@@ -171,7 +173,6 @@ def vykreslit_detail_akce(akce, unique_key):
 
     st.markdown(f"#### 👥 Zapsaní ({len(lidi)})")
     if not lidi.empty:
-        # Hlavička tabulky
         h1, h2, h3, h4, h5, h6 = st.columns([0.4, 2.0, 1.5, 1.2, 0.6, 0.5]) 
         h1.markdown("<b style='color:#9CA3AF'>#</b>", unsafe_allow_html=True)
         h2.markdown("<b>Jméno</b>", unsafe_allow_html=True)
@@ -180,48 +181,36 @@ def vykreslit_detail_akce(akce, unique_key):
         h5.markdown("<b>Ubyt</b>", unsafe_allow_html=True)
         st.markdown("<hr style='margin: 5px 0 10px 0; border-top: 1px solid #E5E7EB;'>", unsafe_allow_html=True)
         
-        # Iterace seznamu s opraveným designem (Zebra Striping)
         for i, (_, row) in enumerate(lidi.iterrows()):
-             # === OPRAVENÝ DESIGN ===
              bg = "#F3F4F6" if i % 2 == 0 else "white"
-             # Vrátil jsem ten původní padding trik, aby to vypadalo jako v originále
              pad = "10px 5px 25px 5px !important" if i % 2 == 0 else "0px 5px 10px 5px !important"
              
              with stylable_container(key=f"r_{unique_key}_{i}", css_styles=f"{{background-color: {bg}; border-radius: 6px; padding: {pad}; margin-bottom: 2px; display: flex; align-items: center; min-height: 40px;}}"):
                  
-                 # Kontrola mazání
                  je_k_smazani = (delete_key_state in st.session_state) and (st.session_state[delete_key_state] == row['jméno'])
                  
                  if je_k_smazani:
                      col_warn, col_yes, col_no = st.columns([3, 1, 1], vertical_alignment="center")
                      col_warn.warning(f"Smazat: **{row['jméno']}**?", icon="⚠️")
-                     
                      with stylable_container(key=f"btn_yes_c_{i}", css_styles="button {background-color: #DC2626 !important; color: white !important; border: none;}"):
                          if col_yes.button("ANO", key=f"yes_{unique_key}_{i}"):
-                            # Smazání z DB
                             df_curr = conn.read(worksheet="prihlasky", ttl=0)
                             df_curr['id_akce'] = df_curr['id_akce'].astype(str).str.replace(r'\.0$', '', regex=True)
                             conn.update(worksheet="prihlasky", data=df_curr[~((df_curr['id_akce'] == akce_id_str) & (df_curr['jméno'] == row['jméno']))])
-                            
-                            # Pokud byl řidič, smažeme i auto
                             try:
                                 df_auta = data_manager.load_auta()
                                 conn.update(worksheet="auta", data=df_auta[~((df_auta['id_akce'] == akce_id_str) & (df_auta['ridic'] == row['jméno']))])
                             except: pass
-
                             del st.session_state[delete_key_state]
                             st.rerun()
-                            
                      if col_no.button("ZPĚT", key=f"no_{unique_key}_{i}"):
                          del st.session_state[delete_key_state]
                          st.rerun()
                  else:
-                     # Standardní řádek
                      c1, c2, c3, c4, c5, c6 = st.columns([0.4, 2.0, 1.5, 1.2, 0.6, 0.5], vertical_alignment="center")
                      c1.write(f"{i+1}.")
                      c2.markdown(f"**{row['jméno']}**")
                      c3.caption(row.get('poznámka', ''))
-                     
                      dopr = str(row.get('doprava', ''))
                      if "Řidič" in dopr: c4.markdown(f"<span style='color:#16A34A;font-weight:bold'>{dopr}</span>", unsafe_allow_html=True)
                      elif "Spolujízda" in dopr: 
@@ -229,16 +218,15 @@ def vykreslit_detail_akce(akce, unique_key):
                          c4.markdown(f"<span style='color:#2563EB'>🚙 {ridic_name}</span>", unsafe_allow_html=True)
                      elif "Chci" in dopr: c4.markdown(f"<span style='color:#DC2626;font-weight:bold'>🙋‍♂️ Chce</span>", unsafe_allow_html=True)
                      else: c4.write(dopr)
-                     
                      c5.write(row.get('ubytování', ''))
-                     
                      if not je_po_deadlinu:
                          with stylable_container(key=f"delc_{unique_key}_{i}", css_styles="button {margin:0 !important; padding:0 !important; height:auto !important; border:none; background:transparent; color: #EF4444;}"):
                              if c6.button("🗑️", key=f"del_{unique_key}_{i}"):
                                  st.session_state[delete_key_state] = row['jméno']
                                  st.rerun()
 
-    utils.export_admin_section(lidi, akce['název'], unique_key)    
+    utils.export_admin_section(lidi, akce['název'], unique_key)
+    
     # --- HLAVIČKA S LOGEM ---
 col_dummy, col_title, col_help = st.columns([1, 10, 1], vertical_alignment="center")
 
