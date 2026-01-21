@@ -317,10 +317,11 @@ def export_admin_section(lidi, nazev_akce, unique_key):
                 """, height=0)
 
 @st.dialog("🚗 Správa dopravy")
-def show_doprava_dialog(akce_id, nazev_akce, datum_akce, pre_jmeno, in_poznamka, in_ubytovani):
+def show_doprava_dialog(akce_id, nazev_akce, datum_akce, pre_jmeno, in_poznamka=None, in_ubytovani=None):
     """
     Modální okno pro řešení dopravy.
-    Nyní přijímá i poznámku a ubytování z hlavního formuláře, aby se vše uložilo naráz.
+    Inteligentně pozná, zda má použít nová data z formuláře (in_poznamka), 
+    nebo načíst existující data z DB (když in_poznamka is None - voláno ze seznamu).
     """
     conn = data_manager.get_connection()
     
@@ -338,7 +339,7 @@ def show_doprava_dialog(akce_id, nazev_akce, datum_akce, pre_jmeno, in_poznamka,
 
     st.markdown(f"**{nazev_akce}** ({datum_akce})")
     
-    # Pokud jméno nebylo vybráno venku, dáme možnost ho vybrat tady
+    # Výběr jména (pokud je předvybráno, zamkneme ho)
     idx_jmeno = None
     seznam_jmen = data_manager.load_jmena()
     if pre_jmeno and pre_jmeno in seznam_jmen:
@@ -349,23 +350,37 @@ def show_doprava_dialog(akce_id, nazev_akce, datum_akce, pre_jmeno, in_poznamka,
     st.markdown("---")
 
     if vybrane_jmeno:
-        # Zjištění stavu
+        # Zjištění stavu z DB
         aktualni_zaznam = lidi_akce[lidi_akce['jméno'] == vybrane_jmeno]
         stav_dopravy = "Nevyřešeno"
         id_auto_curr = ""
+        db_poznamka = ""
+        db_ubytovani = ""
         
         if not aktualni_zaznam.empty:
             dopr_txt = str(aktualni_zaznam.iloc[0]['doprava'])
             id_auto_curr = str(aktualni_zaznam.iloc[0].get('id_auto', ''))
+            db_poznamka = aktualni_zaznam.iloc[0]['poznámka']
+            db_ubytovani = aktualni_zaznam.iloc[0]['ubytování']
+            
             if "Řidič" in dopr_txt: stav_dopravy = "driver"
             elif "Jedu s" in dopr_txt or "Spolujízda" in dopr_txt: stav_dopravy = "passenger"
             elif "Chci" in dopr_txt: stav_dopravy = "waiting"
         
+        # === ROZHODOVACÍ LOGIKA PRO DATA ===
+        # Pokud je input None (voláno ze seznamu), použijeme DB. Jinak input.
+        final_poznamka = in_poznamka if in_poznamka is not None else db_poznamka
+        # Ubytování: Pokud je None, bereme z DB. Pokud není None, převedeme bool na text.
+        if in_ubytovani is None:
+            final_ubytovani_txt = db_ubytovani
+        else:
+            final_ubytovani_txt = "Ano 🛏️" if in_ubytovani else ""
+
+        # UI Formulář
         role = st.radio("Možnosti dopravy:", 
                  ["Nic (Zrušit dopravu)", "🚙 Nabízím auto (Řidič)", "🙋‍♂️ Hledám odvoz (Pasažér)"],
                  index=1 if stav_dopravy == "driver" else (2 if stav_dopravy in ["passenger", "waiting"] else 0)
         )
-        
         st.markdown("<br>", unsafe_allow_html=True)
 
         # --- A) ŘIDIČ ---
@@ -383,8 +398,8 @@ def show_doprava_dialog(akce_id, nazev_akce, datum_akce, pre_jmeno, in_poznamka,
             novy_cas = c2.text_input("Čas", def_cas)
             novy_misto = st.text_input("Místo", def_misto)
             
-            if st.button("💾 Založit auto a ZAPSAT SE", type="primary", use_container_width=True):
-                # 1. Auto
+            if st.button("💾 Uložit nastavení", type="primary", use_container_width=True):
+                # Auto
                 df_clean_auta = df_auta[~((df_auta['id_akce'] == akce_id) & (df_auta['ridic'] == vybrane_jmeno))]
                 nove_auto_row = pd.DataFrame([{
                     "id_akce": akce_id, "ridic": vybrane_jmeno, 
@@ -392,14 +407,13 @@ def show_doprava_dialog(akce_id, nazev_akce, datum_akce, pre_jmeno, in_poznamka,
                 }])
                 conn.update(worksheet="auta", data=pd.concat([df_clean_auta, nove_auto_row], ignore_index=True))
                 
-                # 2. Přihláška (Použijeme poznámku zvenku!)
+                # Přihláška (zachováme poznámku/ubyt)
                 df_clean_lidi = df_lidi[~((df_lidi['id_akce'] == akce_id) & (df_lidi['jméno'] == vybrane_jmeno))]
-                
                 novy_clovek = pd.DataFrame([{
                     "id_akce": akce_id, "název": nazev_akce, "jméno": vybrane_jmeno,
-                    "poznámka": in_poznamka, # <--- TADY SE POUŽIJE TO Z HLAVNÍ STRÁNKY
+                    "poznámka": final_poznamka, 
                     "doprava": "Řidič 🚙", 
-                    "ubytování": "Ano 🛏️" if in_ubytovani else "",
+                    "ubytování": final_ubytovani_txt,
                     "čas zápisu": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                     "id_auto": ""
                 }])
@@ -415,13 +429,11 @@ def show_doprava_dialog(akce_id, nazev_akce, datum_akce, pre_jmeno, in_poznamka,
             for i, (_, row_auto) in enumerate(auta_akce.iterrows()):
                 ridic = str(row_auto['ridic'])
                 if ridic == vybrane_jmeno: continue
-                
                 kap = int(row_auto['kapacita'])
                 obs = obsazenost.get(ridic, 0)
                 volno = kap - 1 - obs 
                 label = f"🚙 {ridic} ({volno} volných) - {row_auto['cas']}"
                 if volno <= 0: label = f"❌ {ridic} (PLNO)"
-                
                 options_auta.append(label)
                 mapa_aut[label] = ridic
                 if id_auto_curr == ridic: idx_select = len(options_auta) - 1
@@ -429,41 +441,36 @@ def show_doprava_dialog(akce_id, nazev_akce, datum_akce, pre_jmeno, in_poznamka,
             vybrane_label = st.selectbox("Ke komu?", options_auta, index=idx_select)
             target_ridic = mapa_aut[vybrane_label]
             
-            if st.button("💾 Potvrdit jízdu a ZAPSAT SE", type="primary", use_container_width=True):
+            if st.button("💾 Uložit změnu", type="primary", use_container_width=True):
                 df_clean_lidi = df_lidi[~((df_lidi['id_akce'] == akce_id) & (df_lidi['jméno'] == vybrane_jmeno))]
                 dopr_text = f"Spolujízda: {target_ridic}" if target_ridic else "Chci odvoz 🙋‍♂️"
                 
                 novy_clovek = pd.DataFrame([{
                     "id_akce": akce_id, "název": nazev_akce, "jméno": vybrane_jmeno,
-                    "poznámka": in_poznamka, # <--- POUŽITÍ POZNÁMKY
+                    "poznámka": final_poznamka,
                     "doprava": dopr_text, 
-                    "ubytování": "Ano 🛏️" if in_ubytovani else "",
+                    "ubytování": final_ubytovani_txt,
                     "čas zápisu": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                     "id_auto": target_ridic
                 }])
-                
-                if stav_dopravy == "driver": # Úklid pokud byl řidič
+                if stav_dopravy == "driver":
                     conn.update(worksheet="auta", data=df_auta[~((df_auta['id_akce'] == akce_id) & (df_auta['ridic'] == vybrane_jmeno))])
-                
                 conn.update(worksheet="prihlasky", data=pd.concat([df_clean_lidi, novy_clovek], ignore_index=True))
                 st.rerun()
 
         # --- C) ZRUŠIT ---
         else:
-            if st.button("🗑️ Smazat dopravu (Zůstat přihlášen)", use_container_width=True):
+            if st.button("🗑️ Smazat dopravu", use_container_width=True):
                 df_clean_lidi = df_lidi[~((df_lidi['id_akce'] == akce_id) & (df_lidi['jméno'] == vybrane_jmeno))]
-                
                 novy_clovek = pd.DataFrame([{
                     "id_akce": akce_id, "název": nazev_akce, "jméno": vybrane_jmeno,
-                    "poznámka": in_poznamka, 
+                    "poznámka": final_poznamka, 
                     "doprava": "", 
-                    "ubytování": "Ano 🛏️" if in_ubytovani else "",
+                    "ubytování": final_ubytovani_txt,
                     "čas zápisu": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                     "id_auto": ""
                 }])
-                
                 if stav_dopravy == "driver":
                     conn.update(worksheet="auta", data=df_auta[~((df_auta['id_akce'] == akce_id) & (df_auta['ridic'] == vybrane_jmeno))])
-                
                 conn.update(worksheet="prihlasky", data=pd.concat([df_clean_lidi, novy_clovek], ignore_index=True))
                 st.rerun()
