@@ -1,49 +1,54 @@
 import streamlit as st
 import requests
 
-# === 1. BARVY (Paleta Cyber-ROG - Stabilní) ===
+# === 1. BARVY (Paleta Cyber-ROG) ===
 NEON_GREEN = "#39ff14"
 NEON_BLUE = "#00f3ff"
 NEON_RED = "#ff073a"
 NEON_ORANGE = "#ff5f1f"
 DARK_BG = "#0e1117"
-CARD_BG = "#1b1e24" # Tmavá šedá pro karty (aby byly čitelné)
 
-# --- DEFINICE BAREV PRO AKCE (Zůstává stejné) ---
+# --- DEFINICE BAREV PRO AKCE ---
 BARVY_AKCI = {
-    "mcr": {"bg": "linear-gradient(135deg, #7f1d1d, #be123c)", "color": "#fff", "border": "1px solid #ff073a", "shadow": "0 2px 5px rgba(0,0,0,0.5)"},
-    "za": {"bg": "#7f1d1d", "color": "#fecaca", "border": "1px solid #ef4444", "shadow": "none"},
-    "zb": {"bg": "#7c2d12", "color": "#fed7aa", "border": "1px solid #f97316", "shadow": "none"},
-    "soustredeni": {"bg": "#713f12", "color": "#fef08a", "border": "1px solid #eab308", "shadow": "none"},
-    "oblastni": {"bg": "#1e3a8a", "color": "#bfdbfe", "border": "1px solid #3b82f6", "shadow": "none"},
-    "zimni_liga": {"bg": "#374151", "color": "#e5e7eb", "border": "1px solid #6b7280", "shadow": "none"},
-    "stafety": {"bg": "#581c87", "color": "#e9d5ff", "border": "1px solid #a855f7", "shadow": "none"},
-    "trenink": {"bg": "#14532d", "color": "#bbf7d0", "border": "1px solid #22c55e", "shadow": "none"},
-    "zavod": {"bg": "#134e4a", "color": "#99f6e4", "border": "1px solid #14b8a6", "shadow": "none"},
-    "default": {"bg": "#262626", "color": "#e5e5e5", "border": "1px solid #404040", "shadow": "none"}
+    "mcr": {"bg": "linear-gradient(135deg, rgba(255, 7, 58, 0.2), rgba(0, 243, 255, 0.2))", "color": "#fff", "border": "1px solid #ff073a", "shadow": "0 0 15px rgba(255, 7, 58, 0.4)"},
+    "za": {"bg": "rgba(255, 7, 58, 0.15)", "color": "#ffadb8", "border": "1px solid #ff073a", "shadow": "0 0 10px rgba(255, 7, 58, 0.2)"},
+    "zb": {"bg": "rgba(255, 95, 31, 0.15)", "color": "#ffcbb3", "border": "1px solid #ff5f1f", "shadow": "0 0 10px rgba(255, 95, 31, 0.2)"},
+    "soustredeni": {"bg": "rgba(255, 215, 0, 0.15)", "color": "#fff5cc", "border": "1px solid #ffd700", "shadow": "0 0 10px rgba(255, 215, 0, 0.2)"},
+    "oblastni": {"bg": "rgba(0, 243, 255, 0.15)", "color": "#ccfcff", "border": "1px solid #00f3ff", "shadow": "0 0 10px rgba(0, 243, 255, 0.2)"},
+    "zimni_liga": {"bg": "rgba(100, 116, 139, 0.3)", "color": "#e2e8f0", "border": "1px solid #64748b", "shadow": "none"},
+    "stafety": {"bg": "rgba(189, 0, 255, 0.15)", "color": "#f2ccff", "border": "1px solid #bd00ff", "shadow": "0 0 10px rgba(189, 0, 255, 0.2)"},
+    "trenink": {"bg": "rgba(57, 255, 20, 0.1)", "color": "#ccffc4", "border": "1px solid #39ff14", "shadow": "0 0 8px rgba(57, 255, 20, 0.15)"},
+    "zavod": {"bg": "rgba(0, 243, 255, 0.1)", "color": "#ccfcff", "border": "1px solid #00f3ff", "shadow": "none"},
+    "default": {"bg": "rgba(255, 255, 255, 0.05)", "color": "#e0e0e0", "border": "1px solid rgba(255,255,255,0.1)", "shadow": "none"}
 }
 
 # --- 2. CSS STYLY ---
 def load_css():
     st.markdown(f"""
     <style>
-        /* === 1. FONTY S ČESKOU PODPOROU === */
-        /* Načítáme latin-ext pro správné zobrazení háčků a čárek */
+        /* === 1. FONTY === */
         @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;600&family=Orbitron:wght@400;700;900&display=swap&subset=latin,latin-ext');
 
-        /* Aplikace fontů - SPECIFICKY, aby se nerozbily ikony (expand_m) */
+        /* === 2. FIX IKON (EXPAND_M) === */
+        /* Aplikujeme fonty jen na textové elementy, NE na ikony */
+        html, body, p, div, span, label, input, textarea, button {{
+            color: #e0e0e0;
+        }}
+        
+        /* Nadpisy = Orbitron */
         h1, h2, h3, h4 {{
             font-family: 'Orbitron', sans-serif !important;
             letter-spacing: 1px;
             text-transform: uppercase;
         }}
-        
-        /* Aplikujeme Exo 2 na textové elementy, ale NE na ikonové kontejnery */
-        p, div:not([class*="stIcon"]), span, label, input, textarea, button {{
-            font-family: 'Exo 2', sans-serif;
+
+        /* Běžný text = Exo 2 (Čeština) */
+        /* Zde je ten trik: Aplikujeme to na stMarkdown, p, button, ale ne globálně na [class*="css"] */
+        .stMarkdown, p, label, .stTextInput, .stTextArea, .stSelectbox, .stButton button p {{
+            font-family: 'Exo 2', sans-serif !important;
         }}
 
-        /* === 2. ROG POZADÍ A LINKY === */
+        /* === 3. ROG POZADÍ A LINKY === */
         .stApp {{
             background-color: {DARK_BG};
             background-image: 
@@ -53,7 +58,7 @@ def load_css():
             background-attachment: fixed;
         }}
 
-        /* Boční svítící linky */
+        /* Boční linky */
         body::before, body::after {{
             content: "";
             position: fixed;
@@ -64,74 +69,69 @@ def load_css():
             opacity: 0.5;
             box-shadow: 0 0 8px {NEON_BLUE};
         }}
-        body::before {{
-            left: 10px;
-            background: linear-gradient(to bottom, transparent, {NEON_BLUE}, {NEON_GREEN}, transparent);
-        }}
-        body::after {{
-            right: 10px;
-            background: linear-gradient(to bottom, transparent, {NEON_GREEN}, {NEON_BLUE}, transparent);
-        }}
+        body::before {{ left: 10px; background: linear-gradient(to bottom, transparent, {NEON_BLUE}, {NEON_GREEN}, transparent); }}
+        body::after {{ right: 10px; background: linear-gradient(to bottom, transparent, {NEON_GREEN}, {NEON_BLUE}, transparent); }}
 
-        /* === 3. TLAČÍTKA (PLNÁ A ČITELNÁ) === */
+        /* === 4. TLAČÍTKA (TRANSPARENTNÍ GLASS) === */
         .stButton > button {{
-            background-color: {CARD_BG} !important;
+            background: rgba(255, 255, 255, 0.03) !important; /* Průhledná */
+            backdrop-filter: blur(5px);
             color: {NEON_BLUE} !important;
-            border: 1px solid {NEON_BLUE} !important;
-            border-radius: 4px !important;
-            font-family: 'Orbitron', sans-serif !important;
-            transition: all 0.2s ease !important;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.5) !important;
+            border: 1px solid rgba(0, 243, 255, 0.3) !important;
+            border-radius: 6px !important;
+            font-family: 'Orbitron', sans-serif !important; /* Font jen pro text tlačítka */
+            text-shadow: 0 0 5px rgba(0, 243, 255, 0.5);
+            transition: all 0.3s ease !important;
         }}
         .stButton > button:hover {{
-            background-color: {NEON_BLUE} !important;
-            color: #000 !important;
+            background: rgba(0, 243, 255, 0.15) !important;
+            border-color: {NEON_BLUE} !important;
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.4) !important;
             transform: translateY(-2px);
-            box-shadow: 0 0 15px {NEON_BLUE} !important;
         }}
         
         /* Primary (Zelená) */
         .stButton > button[kind="primary"] {{
-            background-color: rgba(34, 197, 94, 0.15) !important;
+            background: linear-gradient(135deg, rgba(57, 255, 20, 0.2), rgba(57, 255, 20, 0.1)) !important;
             color: {NEON_GREEN} !important;
             border: 1px solid {NEON_GREEN} !important;
         }}
         .stButton > button[kind="primary"]:hover {{
-            background-color: {NEON_GREEN} !important;
-            color: #000 !important;
-            box-shadow: 0 0 15px {NEON_GREEN} !important;
+            box-shadow: 0 0 20px rgba(57, 255, 20, 0.6) !important;
         }}
 
-        /* === 4. INPUTY A KALENDÁŘ === */
+        /* === 5. INPUTY A KALENDÁŘ === */
         .stTextInput input, .stSelectbox div[data-baseweb="select"], .stNumberInput input, .stTextArea textarea {{
-            background-color: #111827 !important;
+            background-color: rgba(255, 255, 255, 0.05) !important;
             color: white !important;
-            border: 1px solid #374151 !important;
-            font-family: 'Exo 2', sans-serif !important;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            border-radius: 6px !important;
         }}
         .stTextInput input:focus, .stSelectbox div[data-baseweb="select"]:focus-within {{
             border-color: {NEON_BLUE} !important;
-            box-shadow: 0 0 5px rgba(0, 243, 255, 0.3) !important;
+            box-shadow: 0 0 10px rgba(0, 243, 255, 0.2) !important;
         }}
 
-        /* Oprava mřížky kalendáře */
-        hr {{
-            margin: 0 0 15px 0;
-            border: 0;
-            border-top: 1px solid #374151 !important; /* Viditelná šedá čára */
-        }}
+        /* Kalendář Grid */
+        hr {{ margin: 0 0 15px 0; border: 0; border-top: 1px solid rgba(255,255,255,0.15) !important; }}
         
         .today-box {{
-            background-color: #ef4444; color: white;
+            background: rgba(255, 7, 58, 0.2); color: {NEON_RED}; border: 1px solid {NEON_RED};
             padding: 4px 12px; border-radius: 20px; font-weight: 700;
-            box-shadow: 0 0 10px #ef4444; display: inline-block; margin-bottom: 8px;
+            box-shadow: 0 0 15px rgba(255, 7, 58, 0.4); display: inline-block; margin-bottom: 8px;
         }}
-        
-        .day-number {{
-            color: #9ca3af; font-weight: 600; display: block; text-align: center; margin-bottom: 8px;
+        .day-number {{ color: #888; font-weight: 600; display: block; text-align: center; margin-bottom: 8px; }}
+
+        /* Popover Glow */
+        div[data-testid="stPopoverBody"] {{
+            background-color: rgba(14, 17, 23, 0.95) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            backdrop-filter: blur(15px);
+            border-radius: 12px !important;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.8) !important;
         }}
 
-        /* === 5. HEADER A PATIČKA === */
+        /* === 6. HEADER A PATIČKA === */
         h1 span.gradient-text {{
             background: linear-gradient(90deg, {NEON_GREEN}, {NEON_BLUE});
             -webkit-background-clip: text;
@@ -140,19 +140,19 @@ def load_css():
         
         h1 img.header-logo {{
             height: 60px;
-            filter: drop-shadow(0 0 5px {NEON_GREEN});
+            filter: drop-shadow(0 0 8px {NEON_GREEN});
             transition: transform 0.3s;
         }}
         h1 img.header-logo:hover {{ transform: scale(1.1) rotate(5deg); }}
 
-        /* GLOW PRO LOGA (Contour drop-shadow) */
+        /* GLOW PRO LOGA */
         .footer-glow img {{
-            filter: drop-shadow(0 0 3px rgba(255,255,255,0.6));
+            filter: drop-shadow(0 0 5px rgba(255,255,255,0.5));
             transition: transform 0.3s;
         }}
         .footer-glow img:hover {{
             transform: scale(1.05);
-            filter: drop-shadow(0 0 8px rgba(255,255,255,0.9));
+            filter: drop-shadow(0 0 10px rgba(255,255,255,0.9));
         }}
 
         /* Skrytí UI Streamlitu */
@@ -163,16 +163,16 @@ def load_css():
     </style>
     """, unsafe_allow_html=True)
 
-# --- OSTATNÍ FUNKCE (Zůstávají) ---
+# --- OSTATNÍ FUNKCE ---
 def inject_mobile_warning():
     st.markdown("""<style>@media only screen and (orientation: portrait) and (max-width: 900px) {#rotate-warning {display:flex !important;} .stApp {overflow:hidden;}}</style>""", unsafe_allow_html=True)
 
 def get_ics_button_html(b64_data, filename):
-    return f"""<a href="data:text/calendar;base64,{b64_data}" download="{filename}.ics" style="text-decoration:none;"><div style="background: #1f2937; border: 1px solid #374151; border-radius: 8px; padding: 6px 0; text-align: center; cursor: pointer; color: white; transition: 0.3s;" onmouseover="this.style.borderColor='#00f3ff'; this.style.color='#00f3ff';" onmouseout="this.style.borderColor='#374151'; this.style.color='white';">📅</div></a>"""
+    return f"""<a href="data:text/calendar;base64,{b64_data}" download="{filename}.ics" style="text-decoration:none;"><div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 6px 0; text-align: center; cursor: pointer; color: #fff; transition: 0.3s;" onmouseover="this.style.borderColor='#00f3ff'; this.style.color='#00f3ff'; this.style.boxShadow='0 0 10px #00f3ff';" onmouseout="this.style.borderColor='rgba(255, 255, 255, 0.2)'; this.style.color='#fff'; this.style.boxShadow='none';">📅</div></a>"""
 
 def get_weather_card_html(w_icon, w_text, temp, rain, wind, sunset_html=""):
     border = NEON_BLUE if rain < 2 else NEON_RED
-    return f"""<div style="margin-top:10px; margin-bottom:20px; padding:10px; background:#111827; border:1px solid {border}; border-left:4px solid {border}; border-radius:8px; display:flex; align-items:center; color:white;"><div style="font-size:2rem; margin-right:15px;">{w_icon}</div><div style="flex-grow:1;"><div style="font-weight:bold; color:{border}">{w_text}, {temp}°C</div><div style="font-size:0.85rem; color:#9ca3af;">💧 {rain} mm • 💨 {wind} km/h</div></div>{sunset_html}</div>"""
+    return f"""<div style="margin-top:10px; margin-bottom:20px; padding:15px; background:linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01)); border:1px solid {border}; border-left:4px solid {border}; border-radius:10px; display:flex; align-items:center; color:white; box-shadow: 0 4px 15px rgba(0,0,0,0.2);"><div style="font-size:2rem; margin-right:15px; filter: drop-shadow(0 0 5px rgba(255,255,255,0.3));">{w_icon}</div><div style="flex-grow:1;"><div style="font-weight:bold; font-family:'Exo 2'; color:{border}">{w_text}, {temp}°C</div><div style="font-size:0.85rem; color:#aaa;">💧 {rain} mm • 💨 {wind} km/h</div></div>{sunset_html}</div>"""
 
 def get_footer_html():
     return f"<div style='text-align: center; color: #6b7280; font-size: 0.8em; margin-top: 20px; font-family: \"Orbitron\", sans-serif;'>SYSTEM: <span style='color:{NEON_GREEN}'>ONLINE</span> • RBK 2026</div>"
@@ -180,7 +180,6 @@ def get_footer_html():
 def badge(text, bg="#333", color="#fff"):
     return f"<span style='background-color: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #e5e7eb; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; margin-right: 6px; font-family: \"Orbitron\", sans-serif;'>{text}</span>"
 
-# Lottie
 @st.cache_data(ttl=3600*24)
 def load_lottieurl(url):
     try: return requests.get(url).json()
