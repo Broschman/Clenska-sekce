@@ -767,45 +767,53 @@ def vykreslit_detail_akce(akce, unique_key):
                             min-height: 30px !important;
                             width: 100% !important;
                             white-space: nowrap !important;
+                            border-radius: 6px !important;
                         }}
                      """):
-                         if c4.button(btn_label, key=f"btn_row_d_{unique_key}_{i}"):
+                         if c4.button(btn_label, key=f"btn_row_d_{unique_key}_{i}", use_container_width=True):
                              show_doprava_dialog(akce_id_str, akce.get('název', ''), akce['datum'].strftime('%d.%m.'), row['jméno'], None, None)
 
                      c5.write(row.get('ubytování', ''))
 
-                     # === TLAČÍTKO KOŠE (NOVÁ VERZE - UPRAVENÉ ODSAZENÍ) ===
+                     # === TLAČÍTKO KOŠE (OPRAVA ZAROVNÁNÍ) ===
                      if not je_po_deadlinu:
                          with stylable_container(key=f"del_btn_container_{unique_key}_{i}", css_styles="""
                              button {
-                                 background-color: transparent !important;
-                                 border: none !important;
-                                 box-shadow: none !important;
-                                 padding: 0 !important;
+                                 /* Vyresetujeme pozadí a okraje */
+                                 background-color: rgba(255, 255, 255, 0.05) !important;
+                                 border: 1px solid rgba(255, 255, 255, 0.2) !important;
+                                 border-radius: 6px !important;
                                  color: #ff073a !important;
+                                 padding: 0 !important;
+                                 
+                                 /* KLÍČOVÉ: Roztáhneme na 100% a centrujeme obsah */
+                                 width: 100% !important;
+                                 height: auto !important;
+                                 min-height: 40px !important;
                                  
                                  display: flex !important;
                                  justify-content: center !important;
                                  align-items: center !important;
-                                 
-                                 width: 100% !important;
-                                 height: auto !important;
-                                 min-height: 40px !important;
-                                 transition: all 0.2s ease !important;
+                                 margin: 0 !important; /* Žádné auto marginy! */
                              }
+                             
+                             /* Hover efekt */
                              button:hover {
                                  color: #ff5f1f !important;
-                                 background-color: rgba(255, 7, 58, 0.1) !important;
-                                 border-radius: 8px !important;
-                                 transform: scale(1.1);
+                                 background-color: rgba(255, 7, 58, 0.2) !important;
+                                 border-color: #ff073a !important;
+                                 transform: scale(1.05);
                              }
+                             
+                             /* Pojistka pro vnitřní element */
                              button > div {
                                  display: flex !important;
                                  justify-content: center !important;
                                  align-items: center !important;
-                                 width: 100% !important;
+                                 margin: 0 !important;
                              }
                          """):
+                             # use_container_width=True je nutné, aby CSS width: 100% fungovalo správně
                              if c6.button("🗑️", key=f"del_{unique_key}_{i}", use_container_width=True):
                                  st.session_state[delete_key_state] = row['jméno']
                                  st.rerun()
