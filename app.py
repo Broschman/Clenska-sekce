@@ -82,8 +82,8 @@ if not future_deadlines.empty:
                 button {{
                     background-color: {bg_c} !important;
                     border: none !important;
-                    /* Falešný border přes inset stín */
-                    box-shadow: inset 0 0 0 1px {glow_c}, 0 0 10px {glow_c}44 !important;
+                    /* Základní stav: tenký 1px rámeček */
+                    box-shadow: inset 0 0 0 1px {glow_c} !important;
                     color: #fff !important;
                     border-radius: 12px !important;
                     width: 100% !important;
@@ -96,12 +96,14 @@ if not future_deadlines.empty:
                     align-items: center !important;
                     padding: 10px !important;
                     font-family: 'Exo 2', sans-serif !important;
-                    transition: transform 0.2s ease !important;
+                    transition: transform 0.2s ease, box-shadow 0.2s ease !important;
                 }}
-                /* ZDE JE TRIK: Místo borderu měníme stín. To Streamlit nehlídá. */
+                /* === GLOW EFEKT === */
                 button:hover {{
-                    box-shadow: inset 0 0 0 1px {glow_c}, 0 0 25px {glow_c} !important;
-                    background-color: {glow_c}22 !important;
+                    /* 1. Inset 2px = Tlustý vnitřní rámeček */
+                    /* 2. 0 0 20px = Vnější záře */
+                    box-shadow: inset 0 0 0 2px {glow_c}, 0 0 20px {glow_c} !important;
+                    background-color: {glow_c}22 !important; /* Lehké podbarvení */
                     transform: scale(1.05) !important;
                     z-index: 100 !important;
                     color: #fff !important;
@@ -207,8 +209,8 @@ def show_calendar_section():
                         css_styles=f"""
                         button {{
                             background: {bg_color} !important; 
-                            border: none !important;
-                            /* Simulace borderu */
+                            border: none !important; /* Bez borderu */
+                            /* Simulace borderu (tenká) */
                             box-shadow: inset 0 0 0 1px rgba(255,255,255,0.15) !important;
                             color: #e0e0e0 !important;
                             width: 100%; border-radius: 8px; padding: 8px 10px !important; text-align: left; font-size: 0.85rem; font-weight: 600; 
@@ -216,9 +218,10 @@ def show_calendar_section():
                             font-family: 'Exo 2', sans-serif !important;
                             transition: all 0.2s ease !important;
                         }} 
-                        /* Glow přes box-shadow */
+                        /* === GLOW EFEKT (Extra silný) === */
                         button:hover {{
-                            box-shadow: inset 0 0 0 1px {glow_color}, 0 0 15px {glow_color} !important;
+                            /* Inset 2px = Tlustý rám, 20px = Záře */
+                            box-shadow: inset 0 0 0 2px {glow_color}, 0 0 20px {glow_color} !important;
                             color: #fff !important;
                             z-index: 99 !important;
                             transform: translateY(-2px) !important;
@@ -307,8 +310,10 @@ if search_text or len(search_date_value) > 0:
                     }}
                     button:hover {{
                         filter: brightness(1.2); transform: translateY(-2px);
-                        box-shadow: inset 0 0 0 1px {glow_color}, 0 0 15px {glow_color} !important;
+                        /* Tlustý inset rám + záře */
+                        box-shadow: inset 0 0 0 2px {glow_color}, 0 0 20px {glow_color} !important;
                         color: #fff !important;
+                        z-index: 99 !important;
                     }}
                 """
             ):
