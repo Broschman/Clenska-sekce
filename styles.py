@@ -25,17 +25,14 @@ BARVY_AKCI = {
 def load_css():
     st.markdown(f"""
     <style>
-        /* FONT FIX: Importujeme všechny váhy */
         @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;600;700;800;900&family=Rajdhani:wght@500;600;700&display=swap&subset=latin,latin-ext');
 
         /* === GLOBÁLNÍ RESET === */
-        /* Nastavíme jen font a barvu textu, žádné styly pro buttony */
         body, p, h1, h2, h3, h4, h5, h6, li, a, label, input, textarea {{
             font-family: 'Exo 2', sans-serif !important;
             color: #e0e0e0;
         }}
         
-        /* Nadpisy */
         h1, h2, h3 {{
             font-family: 'Rajdhani', 'Exo 2', sans-serif !important;
             letter-spacing: 1px;
@@ -44,7 +41,6 @@ def load_css():
         }}
         h1 {{ font-size: 2.5rem !important; }}
 
-        /* Logo */
         img.header-logo {{
             height: 60px !important;
             width: auto !important;
@@ -70,10 +66,7 @@ def load_css():
                 repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.02) 0px, rgba(255, 255, 255, 0.02) 1px, transparent 1px, transparent 40px);
             background-attachment: fixed;
         }}
-        
-        /* ZDE BYLO GLOBÁLNÍ NASTAVENÍ TLAČÍTEK - JE PRYČ */
 
-        /* Primary tlačítko (Zapsat se) - to necháme, je specifické */
         button[kind="primary"] {{
             background: rgba(57, 255, 20, 0.1) !important;
             color: {NEON_GREEN} !important;
@@ -81,7 +74,6 @@ def load_css():
             font-weight: 700 !important;
         }}
 
-        /* Kalendář box */
         .today-box {{
             background: rgba(255, 7, 58, 0.2); 
             color: {NEON_RED}; 
@@ -107,46 +99,38 @@ def load_css():
     </style>
     """, unsafe_allow_html=True)
 
-# --- GENERÁTORY STYLŮ (Zcela nezávislé) ---
+# --- GENERÁTORY STYLŮ ---
 
 def get_cyber_button_css(bg_color, glow_color):
     """
-    PRO: Kalendář, Dashboard, Hledání
-    VZHLED: Tučné, Velké, Svítící (Hack s obtažením)
+    PRO: Kalendář, Dashboard
+    VZHLED: EXTRÉMNĚ TUČNÉ (Stroke Hack)
     """
     return f"""
         button {{
             background: {bg_color} !important;
             border: none !important;
             box-shadow: inset 0 0 0 1px {glow_color}, 0 0 8px {glow_color}44 !important;
-            
             width: 100% !important;
             border-radius: 8px !important;
             padding: 12px 15px !important;
             text-align: left !important;
             margin-bottom: 8px !important;
             min-height: 55px !important;
-            
             transition: box-shadow 0.2s ease !important;
         }}
 
-        /* !!! ABSOLUTNÍ SÍLA !!! */
-        /* Cílíme specificky na kontejner markdownu uvnitř tlačítka */
+        /* AGRESIVNÍ TUČNOST */
         button div[data-testid="stMarkdownContainer"] p, 
         button p {{
             font-family: 'Exo 2', sans-serif !important;
             font-size: 18px !important;
             color: #ffffff !important;
             line-height: 1.3 !important;
-            
-            /* 1. Vynucení tučného řezu */
             font-weight: 700 !important;
             
-            /* 2. ZÁLOŽNÍ PLÁN: Fyzické obtažení textu */
-            /* Pokud prohlížeč ignoruje bold, toto přidá 0.5px barvy okolo každého písmene */
+            /* Zapneme obtažení - toto dělá tu tloušťku */
             -webkit-text-stroke: 0.8px #ffffff !important;
-            
-            /* Aby obtažení nedeformovalo písmo moc */
             paint-order: stroke fill !important;
             
             margin: 0 !important;
@@ -160,11 +144,11 @@ def get_cyber_button_css(bg_color, glow_color):
             z-index: 99 !important;
         }}
     """
-    
+
 def get_transport_css(bg, color, border):
     """
     PRO: Doprava
-    VZHLED: Tenké (Light), Malé
+    VZHLED: Tenké - MUSÍ VYNULOVAT "CYBER" EFEKTY
     """
     return f"""
         button {{
@@ -177,18 +161,23 @@ def get_transport_css(bg, color, border):
             min-height: 28px !important;
             width: 100% !important;
             transition: all 0.2s ease !important;
-            
-            /* ZÁKLADNÍ NASTAVENÍ PRO KONTEJNER */
-            font-family: 'Exo 2', sans-serif !important;
-            font-weight: 400 !important; /* Normal weight */
-            font-size: 0.85rem !important;
         }}
         
-        /* SPECIFICKÉ CÍLENÍ NA TEXT UVNITŘ */
+        /* OBRANA PROTI PŘETÉKÁNÍ STYLŮ */
+        button div[data-testid="stMarkdownContainer"] p, 
         button p {{
-            font-weight: 400 !important;
-            font-size: 0.85rem !important;
+            font-family: 'Exo 2', sans-serif !important;
+            font-weight: 300 !important;  /* Tenké */
+            font-size: 0.85rem !important; /* Malé */
+            color: {color} !important;
+            
+            /* !!! DŮLEŽITÉ: Vypínáme efekty z cyber tlačítek !!! */
+            -webkit-text-stroke: 0px transparent !important; /* Žádné obtažení */
+            text-shadow: none !important; /* Žádný stín */
+            
             margin: 0 !important;
+            padding: 0 !important;
+            line-height: 1.2 !important;
         }}
 
         button:hover {{
@@ -227,7 +216,6 @@ def get_delete_css():
         }}
     """
 
-# --- OSTATNÍ FUNKCE (beze změny) ---
 def inject_mobile_warning(): st.markdown("""<style>@media only screen and (orientation: portrait) and (max-width: 900px) {#rotate-warning {display:flex !important;} .stApp {overflow:hidden;}}</style>""", unsafe_allow_html=True)
 def get_ics_button_html(b64_data, filename): return f"""<a href="data:text/calendar;base64,{b64_data}" download="{filename}.ics" style="text-decoration:none;"><div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 6px 0; text-align: center; cursor: pointer; color: #fff; transition: 0.3s;" onmouseover="this.style.borderColor='#00f3ff'; this.style.color='#00f3ff'; this.style.boxShadow='0 0 10px #00f3ff';" onmouseout="this.style.borderColor='rgba(255, 255, 255, 0.2)'; this.style.color='#fff'; this.style.boxShadow='none';">📅</div></a>"""
 def get_weather_card_html(w_icon, w_text, temp, rain, wind, sunset_html=""):
