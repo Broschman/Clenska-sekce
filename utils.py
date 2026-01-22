@@ -17,6 +17,30 @@ import streamlit.components.v1 as components
 import data_manager
 import styles
 
+def stylable_container(key, css_styles):
+    """
+    Robustní kontejner, který IZOLUJE styly.
+    Vytvoří unikátní selektor, takže se CSS nepromítne jinam.
+    """
+    # Vytvoříme unikátní identifikátor pro tento blok
+    import streamlit as st
+    
+    # Injektujeme CSS, které cílí POUZE na element následující po našem "markru"
+    st.markdown(f"""
+        <style>
+            div[data-testid="stVerticalBlock"]:has(> div.element-container > div.stMarkdown > p[data-key="{key}"]) {{
+                {css_styles}
+            }}
+            /* Fallback pro starší prohlížeče/jiné verze Streamlitu */
+            div[data-testid="stVerticalBlock"] > div.element-container:has(p[data-key="{key}"]) + div {{
+                {css_styles}
+            }}
+        </style>
+        <p data-key="{key}" style="display:none;"></p>
+    """, unsafe_allow_html=True)
+
+    return st.container()
+
 @st.cache_data(ttl=3600*24) # Uložíme si to na 24 hodin
 def get_coords_from_place(place_name):
     """Zjistí souřadnice podle názvu místa (Geocoding přes Nominatim)."""
