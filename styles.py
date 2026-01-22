@@ -29,7 +29,6 @@ def load_css():
         @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;600;700;800;900&family=Rajdhani:wght@500;600;700&display=swap&subset=latin,latin-ext');
 
         /* === GLOBÁLNÍ RESET === */
-        /* Nastavíme jen font a barvu textu, žádné styly pro buttony */
         body, p, h1, h2, h3, h4, h5, h6, li, a, label, input, textarea {{
             font-family: 'Exo 2', sans-serif !important;
             color: #e0e0e0;
@@ -71,13 +70,14 @@ def load_css():
             background-attachment: fixed;
         }}
         
-        /* ZDE BYLO GLOBÁLNÍ NASTAVENÍ TLAČÍTEK - JE PRYČ */
-        /* PŘIDÁNO: Globální vynucení tučného písma pro všechna tlačítka */
+        /* === GLOBÁLNÍ TLAČÍTKA (OPRAVA) === */
+        /* Nastavíme tučné písmo na kontejner, ale NENUTÍME font rodinu dětem (aby se nerozbily ikonky) */
         .stButton > button {{
+            font-family: 'Exo 2', sans-serif !important;
             font-weight: 700 !important;
         }}
-
-        /* Primary tlačítko (Zapsat se) - to necháme, je specifické */
+        
+        /* Primary tlačítko (Zapsat se) */
         button[kind="primary"] {{
             background: rgba(57, 255, 20, 0.1) !important;
             color: {NEON_GREEN} !important;
@@ -116,10 +116,10 @@ def load_css():
 def get_cyber_button_css(bg_color, glow_color):
     """
     PRO: Kalendář, Dashboard, Hledání
-    VZHLED: Tučné, Velké, Svítící (Agresivní CSS)
+    VZHLED: Tučné, Velké, Svítící
     """
     return f"""
-        /* 1. Vzhled samotného tlačítka (okraje, pozadí) */
+        /* 1. Vzhled samotného tlačítka */
         button {{
             background: {bg_color} !important;
             border: none !important;
@@ -130,26 +130,21 @@ def get_cyber_button_css(bg_color, glow_color):
             padding: 12px 15px !important;
             text-align: left !important;
             margin-bottom: 8px !important;
-            min-height: 55px !important; /* Vynutíme výšku */
+            min-height: 55px !important;
             
             transition: box-shadow 0.2s ease !important;
         }}
 
-        /* 2. TEXT UVNITŘ - TOTO JE TO KLÍČOVÉ MÍSTO */
-        /* Cílíme na p, div i span uvnitř tlačítka a dáváme !important všemu */
-        button p, button span, button div {{
+        /* 2. TEXT UVNITŘ - CÍLÍME JEN NA 'P' ABYCHOM NEROZBILI IKONKY */
+        button p {{
             font-family: 'Exo 2', sans-serif !important;
-            
-            /* VELIKOST A TLOUŠŤKA NATVRDO */
-            font-size: 18px !important;   /* Zvětšeno a fixováno v px */
+            font-size: 18px !important;
             font-weight: 700 !important;  /* Tučné */
-            
-            color: #ffffff !important;    /* Čistě bílá */
+            color: #ffffff !important;
             line-height: 1.3 !important;  
             letter-spacing: 0.5px !important;
-            
-            /* Optický trik: Jemný stín textu ho udělá ještě tlustším */
             text-shadow: 0 0 1px rgba(255,255,255,0.4) !important;
+            margin: 0 !important;
         }}
 
         /* Hover efekt */
@@ -178,15 +173,16 @@ def get_transport_css(bg, color, border):
             width: 100% !important;
             transition: all 0.2s ease !important;
             
-            /* ZÁKLADNÍ NASTAVENÍ PRO KONTEJNER */
+            /* Kontejner */
             font-family: 'Exo 2', sans-serif !important;
-            font-weight: 700 !important; /* ZMĚNĚNO NA TUČNÉ */
+            font-weight: 700 !important; /* Tučné */
             font-size: 0.85rem !important;
         }}
         
-        /* SPECIFICKÉ CÍLENÍ NA TEXT UVNITŘ */
+        /* Pouze text (P), ikonky (SPAN/DIV) necháme být */
         button p {{
-            font-weight: 700 !important; /* ZMĚNĚNO NA TUČNÉ */
+            font-family: 'Exo 2', sans-serif !important;
+            font-weight: 700 !important; /* Tučné */
             font-size: 0.85rem !important;
             margin: 0 !important;
         }}
@@ -210,9 +206,10 @@ def get_delete_css():
             min-height: 40px !important;
             display: block !important;
             margin: 0 auto !important;
-            font-weight: 700 !important; /* PŘIDÁNO TUČNÉ */
+            font-weight: 700 !important; 
         }}
         
+        /* Ikonka koše je obvykle emoji, tak ji vycentrujeme */
         button > div {{
             display: flex !important;
             justify-content: center !important;
