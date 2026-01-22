@@ -116,7 +116,7 @@ def load_css():
 def get_cyber_button_css(bg_color, glow_color):
     """
     PRO: Kalendář, Dashboard, Hledání
-    VZHLED: Tučné, Velké, Svítící
+    VZHLED: Tučné, Velké, Svítící + ZALAMOVÁNÍ TEXTU
     """
     return f"""
         /* 1. Vzhled samotného tlačítka */
@@ -130,24 +130,28 @@ def get_cyber_button_css(bg_color, glow_color):
             padding: 12px 15px !important;
             text-align: left !important;
             margin-bottom: 8px !important;
-            min-height: 55px !important;
+            
+            /* POVOLENÍ ROZTAŽENÍ NA VÝŠKU */
+            height: auto !important;       
+            min-height: 60px !important;   
+            white-space: pre-wrap !important; /* TOTO ZAŘÍDÍ, ŽE \n FUNGUJE */
             
             transition: box-shadow 0.2s ease !important;
         }}
 
-        /* 2. TEXT UVNITŘ - CÍLÍME JEN NA 'P' ABYCHOM NEROZBILI IKONKY */
+        /* 2. TEXT UVNITŘ */
         button p {{
             font-family: 'Exo 2', sans-serif !important;
             font-size: 18px !important;
-            font-weight: 700 !important;  /* Tučné */
+            font-weight: 700 !important;
             color: #ffffff !important;
-            line-height: 1.3 !important;  
+            
+            line-height: 1.5 !important;  /* Větší rozestup řádků pro čitelnost */
             letter-spacing: 0.5px !important;
             text-shadow: 0 0 1px rgba(255,255,255,0.4) !important;
             margin: 0 !important;
         }}
 
-        /* Hover efekt */
         button:hover {{
             box-shadow: inset 0 0 0 2px {glow_color}, 0 0 25px {glow_color} !important;
             background-color: {glow_color}22 !important;
