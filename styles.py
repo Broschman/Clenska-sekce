@@ -116,7 +116,7 @@ def load_css():
 def get_cyber_button_css(bg_color, glow_color):
     """
     PRO: Kalendář, Dashboard, Hledání
-    VZHLED: Tučné, Velké, Svítící + ZALAMOVÁNÍ TEXTU
+    VZHLED: Tučné, Velké, Svítící + ZALAMOVÁNÍ + VYCENTROVÁNÍ
     """
     return f"""
         /* 1. Vzhled samotného tlačítka */
@@ -127,14 +127,21 @@ def get_cyber_button_css(bg_color, glow_color):
             
             width: 100% !important;
             border-radius: 8px !important;
-            padding: 12px 15px !important;
-            text-align: left !important;
+            padding: 12px 5px !important; /* Menší padding po stranách, aby se tam vešlo víc textu */
+            
+            /* ZMĚNA: CENTROVÁNÍ KONTEJNERU */
+            text-align: center !important;
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+            flex-direction: column !important; /* Důležité pro \n řádkování */
+            
             margin-bottom: 8px !important;
             
             /* POVOLENÍ ROZTAŽENÍ NA VÝŠKU */
             height: auto !important;       
             min-height: 60px !important;   
-            white-space: pre-wrap !important; /* TOTO ZAŘÍDÍ, ŽE \n FUNGUJE */
+            white-space: pre-wrap !important; /* Povolí \n */
             
             transition: box-shadow 0.2s ease !important;
         }}
@@ -146,7 +153,11 @@ def get_cyber_button_css(bg_color, glow_color):
             font-weight: 700 !important;
             color: #ffffff !important;
             
-            line-height: 1.5 !important;  /* Větší rozestup řádků pro čitelnost */
+            /* ZMĚNA: CENTROVÁNÍ SAMOTNÉHO TEXTU */
+            text-align: center !important;
+            width: 100% !important;
+            
+            line-height: 1.4 !important;
             letter-spacing: 0.5px !important;
             text-shadow: 0 0 1px rgba(255,255,255,0.4) !important;
             margin: 0 !important;
