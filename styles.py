@@ -143,11 +143,6 @@ def get_cyber_button_css(bg_color, glow_color):
             box-shadow: inset 0 0 0 1px {glow_color}, 0 0 8px {glow_color}44 !important;
             color: #e0e0e0 !important;
             
-            /* TYPOGRAFIE - TUČNÁ */
-            font-family: 'Exo 2', sans-serif !important;
-            font-weight: 700 !important; 
-            font-size: 0.9rem !important;
-            
             width: 100% !important;
             border-radius: 8px !important;
             padding: 12px 15px !important;
@@ -155,23 +150,31 @@ def get_cyber_button_css(bg_color, glow_color):
             margin-bottom: 8px !important;
             white-space: normal !important;
             height: auto !important;
-            min-height: 45px !important;
+            min-height: 50px !important; /* Trochu vyšší pro větší text */
             
             transition: box-shadow 0.2s ease !important;
         }}
         
+        /* !!! AGRESIVNÍ ZVĚTŠENÍ PÍSMA PRO VŠECHNO UVNITŘ !!! */
+        button p, button span, button div {{
+            font-family: 'Exo 2', sans-serif !important;
+            font-weight: 700 !important;   /* Tučné */
+            font-size: 1.05rem !important; /* Větší než základ (bývalo 0.9rem) */
+            letter-spacing: 0.5px !important;
+            line-height: 1.4 !important;
+            color: #ffffff !important;     /* Jasně bílá pro lepší čitelnost */
+        }}
+        
         button:hover {{
-            /* ZESÍLENÍ GLOW - BEZ ZVĚTŠOVÁNÍ */
+            /* ZESÍLENÍ GLOW */
             box-shadow: inset 0 0 0 2px {glow_color}, 0 0 25px {glow_color} !important;
             background-color: {glow_color}22 !important;
             color: #fff !important;
             z-index: 99 !important;
             border-radius: 8px !important;
         }}
-        
-        button p {{ font-weight: 700 !important; }}
     """
-
+    
 def get_transport_css(bg, color, border):
     """
     PRO: Tlačítka dopravy v tabulce
