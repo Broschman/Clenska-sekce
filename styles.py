@@ -187,6 +187,79 @@ def load_css():
     </style>
     """, unsafe_allow_html=True)
 
+# --- NOVÉ FUNKCE PRO GENERUJÍ CÍLENÉHO CSS (Vlož na konec styles.py) ---
+
+def get_transport_css(bg, color, border):
+    """Vrátí CSS pro tlačítko dopravy: Tenké písmo, menší padding."""
+    return f"""
+        button {{
+            background-color: {bg} !important;
+            color: {color} !important;
+            border: {border} !important;
+            border-radius: 6px !important;
+            padding: 2px 8px !important;
+            height: auto !important;
+            min-height: 28px !important;
+            width: 100% !important;
+            transition: all 0.2s ease !important;
+        }}
+        
+        /* Cílíme přímo na text uvnitř - aby nebyl tučný */
+        button p {{
+            font-family: 'Exo 2', sans-serif !important;
+            font-weight: 400 !important;  /* Tenké písmo */
+            font-size: 0.85rem !important;
+            line-height: 1.2 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }}
+
+        button:hover {{
+            filter: brightness(1.2);
+            border-radius: 6px !important;
+        }}
+    """
+
+def get_delete_css():
+    """Vrátí CSS pro tlačítko koše: Fixní čtverec, vycentrovaný."""
+    return f"""
+        button {{
+            background-color: rgba(255, 255, 255, 0.05) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            border-radius: 6px !important;
+            color: #ff073a !important;
+            padding: 0 !important;
+            
+            /* FIXNÍ ČTVEREC */
+            width: 40px !important;
+            height: 40px !important;
+            min-height: 40px !important;
+            
+            /* CENTROVÁNÍ V BUŇCE (MARGIN AUTO) */
+            display: block !important;
+            margin: 0 auto !important;
+        }}
+        
+        /* Centrování ikonky uvnitř */
+        button > div {{
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+            width: 100% !important;
+            height: 100% !important;
+            margin: 0 !important;
+        }}
+        
+        button:hover {{
+            color: #ff5f1f !important;
+            background-color: rgba(255, 7, 58, 0.2) !important;
+            border-color: #ff073a !important;
+            transform: scale(1.05);
+            /* Pojistka pozice při hoveru */
+            margin: 0 auto !important;
+        }}
+    """
+
 # --- OSTATNÍ FUNKCE (beze změny) ---
 def inject_mobile_warning(): st.markdown("""<style>@media only screen and (orientation: portrait) and (max-width: 900px) {#rotate-warning {display:flex !important;} .stApp {overflow:hidden;}}</style>""", unsafe_allow_html=True)
 def get_ics_button_html(b64_data, filename): return f"""<a href="data:text/calendar;base64,{b64_data}" download="{filename}.ics" style="text-decoration:none;"><div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 6px 0; text-align: center; cursor: pointer; color: #fff; transition: 0.3s;" onmouseover="this.style.borderColor='#00f3ff'; this.style.color='#00f3ff'; this.style.boxShadow='0 0 10px #00f3ff';" onmouseout="this.style.borderColor='rgba(255, 255, 255, 0.2)'; this.style.color='#fff'; this.style.boxShadow='none';">📅</div></a>"""
