@@ -43,7 +43,7 @@ def load_css():
         }}
         h1 {{ font-size: 2.5rem !important; }}
 
-        /* Logo, Pozadí, Scrollbary - beze změn */
+        /* Logo, Pozadí */
         img.header-logo {{
             height: 60px !important;
             width: auto !important;
@@ -70,22 +70,19 @@ def load_css():
             background-attachment: fixed;
         }}
 
-        /* === ZÁKLADNÍ STYLE PRO OSTATNÍ TLAČÍTKA (Formuláře, Search) === */
-        /* Toto je 'fallback' styl, aby tlačítka nebyla hnusná, když nemají speciální styl */
+        /* === GLOBÁLNÍ DEFAULT PRO TLAČÍTKA === */
+        /* Zde nastavíme jen to nejnutnější. ŽÁDNÉ PŘEBÍJENÍ FONT-WEIGHT! */
         .stButton > button {{
             background: rgba(255, 255, 255, 0.05);
             color: {NEON_BLUE};
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 6px;
-            font-weight: 600; /* Semi-bold pro běžná tlačítka */
+            /* Zlatý střed - ani tučné, ani tenké. Specifické styly si to přepíšou. */
+            font-weight: 500; 
             transition: all 0.3s ease;
         }}
-        .stButton > button:hover {{
-            background: rgba(0, 243, 255, 0.1);
-            border-color: {NEON_BLUE};
-        }}
 
-        /* Primary tlačítko (Zapsat se) */
+        /* Primary tlačítko (Zapsat se) - to chceme vždy výrazné */
         button[kind="primary"] {{
             background: rgba(57, 255, 20, 0.1) !important;
             color: {NEON_GREEN} !important;
@@ -113,6 +110,7 @@ def load_css():
             box-shadow: 0 0 40px rgba(0, 0, 0, 0.8) !important;
         }}
 
+        /* Plovoucí tlačítko */
         .floating-container button {{
             background: linear-gradient(135deg, {NEON_BLUE}, #0056b3) !important;
             box-shadow: 0 0 20px {NEON_BLUE} !important;
@@ -127,7 +125,7 @@ def load_css():
     </style>
     """, unsafe_allow_html=True)
 
-# --- GENERÁTORY STYLŮ (Tlačítko po tlačítku) ---
+# --- GENERÁTORY STYLŮ (IZOLOVANÉ) ---
 
 def get_cyber_button_css(bg_color, glow_color):
     """
@@ -138,8 +136,6 @@ def get_cyber_button_css(bg_color, glow_color):
         button {{
             background: {bg_color} !important;
             border: none !important;
-            
-            /* GLOW EFEKT */
             box-shadow: inset 0 0 0 1px {glow_color}, 0 0 8px {glow_color}44 !important;
             color: #e0e0e0 !important;
             
@@ -155,23 +151,16 @@ def get_cyber_button_css(bg_color, glow_color):
             transition: box-shadow 0.2s ease !important;
         }}
         
-        /* !!! ZDE JE TA ZMĚNA - CÍLÍME PŘESNĚ NA TEXT !!! */
-        /* Streamlit balí text do stMarkdownContainer. Musíme zacílit ten. */
-        button div[data-testid="stMarkdownContainer"] p {{
+        /* Cílíme na obsah tlačítka - VYNUCUJEME TUČNÉ */
+        button p, button div {{
             font-family: 'Exo 2', sans-serif !important;
-            font-weight: 700 !important;    /* TUČNÉ */
-            font-size: 1.1rem !important;   /* VĚTŠÍ */
+            font-weight: 700 !important;   /* <--- TUČNÉ */
+            font-size: 1.05rem !important;
             letter-spacing: 0.5px !important;
             line-height: 1.4 !important;
-            color: #ffffff !important;      /* BÍLÁ */
-            text-shadow: 0 0 5px rgba(0,0,0,0.5) !important;
+            color: #ffffff !important;
         }}
         
-        /* Pojistka pro případné jiné elementy */
-        button span, button div {{
-            font-weight: 700 !important;
-        }}
-
         button:hover {{
             box-shadow: inset 0 0 0 2px {glow_color}, 0 0 25px {glow_color} !important;
             background-color: {glow_color}22 !important;
@@ -180,10 +169,10 @@ def get_cyber_button_css(bg_color, glow_color):
             border-radius: 8px !important;
         }}
     """
-    
+
 def get_transport_css(bg, color, border):
     """
-    PRO: Tlačítka dopravy v tabulce
+    PRO: Doprava
     VZHLED: Jemné, Tenké, Malé
     """
     return f"""
@@ -199,14 +188,15 @@ def get_transport_css(bg, color, border):
             transition: all 0.2s ease !important;
         }}
         
-        /* Cílíme přímo na text uvnitř - JEMNÝ */
-        button p {{
+        /* Cílíme na obsah tlačítka - VYNUCUJEME TENKÉ */
+        button p, button div {{
             font-family: 'Exo 2', sans-serif !important;
-            font-weight: 400 !important;  /* TENKÉ PÍSMO */
+            font-weight: 400 !important;  /* <--- TENKÉ */
             font-size: 0.85rem !important;
             line-height: 1.2 !important;
             margin: 0 !important;
             padding: 0 !important;
+            letter-spacing: 0px !important;
         }}
 
         button:hover {{
@@ -216,10 +206,7 @@ def get_transport_css(bg, color, border):
     """
 
 def get_delete_css():
-    """
-    PRO: Koš
-    VZHLED: Fixní čtverec, centr
-    """
+    """PRO: Koš"""
     return f"""
         button {{
             background-color: rgba(255, 255, 255, 0.05) !important;
@@ -227,11 +214,9 @@ def get_delete_css():
             border-radius: 6px !important;
             color: #ff073a !important;
             padding: 0 !important;
-            
             width: 40px !important;
             height: 40px !important;
             min-height: 40px !important;
-            
             display: block !important;
             margin: 0 auto !important;
         }}
@@ -254,7 +239,7 @@ def get_delete_css():
         }}
     """
 
-# --- OSTATNÍ FUNKCE (beze změny) ---
+# --- OSTATNÍ FUNKCE ---
 def inject_mobile_warning(): st.markdown("""<style>@media only screen and (orientation: portrait) and (max-width: 900px) {#rotate-warning {display:flex !important;} .stApp {overflow:hidden;}}</style>""", unsafe_allow_html=True)
 def get_ics_button_html(b64_data, filename): return f"""<a href="data:text/calendar;base64,{b64_data}" download="{filename}.ics" style="text-decoration:none;"><div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 6px 0; text-align: center; cursor: pointer; color: #fff; transition: 0.3s;" onmouseover="this.style.borderColor='#00f3ff'; this.style.color='#00f3ff'; this.style.boxShadow='0 0 10px #00f3ff';" onmouseout="this.style.borderColor='rgba(255, 255, 255, 0.2)'; this.style.color='#fff'; this.style.boxShadow='none';">📅</div></a>"""
 def get_weather_card_html(w_icon, w_text, temp, rain, wind, sunset_html=""):
