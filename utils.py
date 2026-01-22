@@ -733,7 +733,6 @@ def vykreslit_detail_akce(akce, unique_key):
                          st.rerun()
                  else:
                      # Definice sloupců
-                     # Změna: c6 dáme o kousek víc místa (0.6), aby se marginy měly o co opřít
                      c1, c2, c3, c4, c5, c6 = st.columns([0.4, 2.0, 1.5, 1.2, 0.6, 0.6], vertical_alignment="center")
                      
                      c1.write(f"{i+1}.")
@@ -755,39 +754,28 @@ def vykreslit_detail_akce(akce, unique_key):
                          btn_color, btn_bg, btn_border = "#ff073a", "rgba(255, 7, 58, 0.1)", "1px solid #ff073a"
                          btn_label = "🙋‍♂️ Chci"
 
-                     # Vykreslení tlačítka dopravy
+                     # Vykreslení tlačítka dopravy - ZJEMNĚNÍ FONTS
                      with stylable_container(key=f"cont_btn_d_{unique_key}_{i}_fix", css_styles=f"""
                         button {{
                             background-color: {btn_bg} !important; 
                             color: {btn_color} !important; 
                             border: {btn_border} !important; 
-                            
-                            /* === ÚPRAVA TEXTU ABY ODPOVÍDAL "Ano" === */
-                            font-family: 'Exo 2', sans-serif !important;
-                            font-size: 0.8rem !important;   /* Menší písmo */
-                            font-weight: 400 !important;    /* Normální tloušťka (ne tučné) */
-                            line-height: 1.2 !important;    /* Menší rozestupy řádků */
-                            letter-spacing: 0px !important; /* Žádné rozvolňování */
-                            text-transform: none !important; /* Žádné vynucování kapitálek */
-                            
-                            padding: 4px 6px !important;
+                            padding: 2px 5px !important;
                             height: auto !important; 
-                            min-height: 30px !important;
+                            min-height: 28px !important;
                             width: 100% !important;
-                            white-space: normal !important; /* Povolíme zalamování, ale kontrolovaně */
                             border-radius: 6px !important;
-                            
-                            display: flex !important;
-                            align-items: center !important;
-                            justify-content: center !important;
-                            text-align: center !important;
                         }}
                         
-                        /* Pojistka pro vnitřní text (Streamlit ho občas balí do <p>) */
+                        /* !!! KLÍČOVÉ PŘEBÍJENÍ styles.py !!! */
+                        /* Cílíme přímo na text uvnitř tlačítka */
                         button p {{
-                            font-weight: 400 !important;
-                            font-size: 0.8rem !important;
+                            font-weight: 400 !important;      /* Tenké písmo jako "Ano" */
+                            font-size: 0.85rem !important;    /* Menší velikost */
+                            font-family: 'Exo 2', sans-serif !important;
+                            line-height: 1.2 !important;
                             margin: 0 !important;
+                            padding: 0 !important;
                         }}
 
                         button:hover {{
@@ -797,9 +785,9 @@ def vykreslit_detail_akce(akce, unique_key):
                      """):
                          if c4.button(btn_label, key=f"btn_row_d_{unique_key}_{i}", use_container_width=True):
                              show_doprava_dialog(akce_id_str, akce.get('název', ''), akce['datum'].strftime('%d.%m.'), row['jméno'], None, None)
-                             
-                     c5.write(row.get('ubytování', ''))
 
+                     c5.write(row.get('ubytování', ''))
+                     
                      # === TLAČÍTKO KOŠE (HARD FIX - MARGIN AUTO) ===
                      if not je_po_deadlinu:
                          with stylable_container(key=f"del_btn_container_{unique_key}_{i}", css_styles="""
