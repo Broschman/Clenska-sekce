@@ -25,8 +25,8 @@ BARVY_AKCI = {
 def load_css():
     st.markdown(f"""
     <style>
-        /* FONT FIX: Rajdhani pro češtinu */
-        @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;600;800&family=Rajdhani:wght@500;600;700&display=swap&subset=latin,latin-ext');
+        /* FONT FIX: Přidána váha 900 (Black) pro extra tlusté písmo */
+        @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;600;700;800;900&family=Rajdhani:wght@500;600;700&display=swap&subset=latin,latin-ext');
 
         /* === GLOBÁLNÍ RESET === */
         body, p, h1, h2, h3, h4, h5, h6, li, a, label, input, textarea, button {{
@@ -70,19 +70,17 @@ def load_css():
             background-attachment: fixed;
         }}
 
-        /* === GLOBÁLNÍ DEFAULT PRO TLAČÍTKA === */
-        /* Zde nastavíme jen to nejnutnější. ŽÁDNÉ PŘEBÍJENÍ FONT-WEIGHT! */
+        /* === GLOBÁLNÍ DEFAULT PRO OBYČEJNÁ TLAČÍTKA === */
         .stButton > button {{
             background: rgba(255, 255, 255, 0.05);
             color: {NEON_BLUE};
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 6px;
-            /* Zlatý střed - ani tučné, ani tenké. Specifické styly si to přepíšou. */
             font-weight: 500; 
             transition: all 0.3s ease;
         }}
 
-        /* Primary tlačítko (Zapsat se) - to chceme vždy výrazné */
+        /* Primary tlačítko (Zapsat se) */
         button[kind="primary"] {{
             background: rgba(57, 255, 20, 0.1) !important;
             color: {NEON_GREEN} !important;
@@ -110,7 +108,6 @@ def load_css():
             box-shadow: 0 0 40px rgba(0, 0, 0, 0.8) !important;
         }}
 
-        /* Plovoucí tlačítko */
         .floating-container button {{
             background: linear-gradient(135deg, {NEON_BLUE}, #0056b3) !important;
             box-shadow: 0 0 20px {NEON_BLUE} !important;
@@ -125,12 +122,12 @@ def load_css():
     </style>
     """, unsafe_allow_html=True)
 
-# --- GENERÁTORY STYLŮ (IZOLOVANÉ) ---
+# --- GENERÁTORY STYLŮ ---
 
 def get_cyber_button_css(bg_color, glow_color):
     """
     PRO: Kalendář, Dashboard, Hledání
-    VZHLED: Tučné, Svítící, Větší padding
+    VZHLED: EXTRÉMNĚ TUČNÉ (Fake Bold + 900 Weight)
     """
     return f"""
         button {{
@@ -151,14 +148,18 @@ def get_cyber_button_css(bg_color, glow_color):
             transition: box-shadow 0.2s ease !important;
         }}
         
-        /* Cílíme na obsah tlačítka - VYNUCUJEME TUČNÉ */
-        button p, button div {{
+        /* !!! NUKLEÁRNÍ ŘEŠENÍ PRO TUČNÝ TEXT !!! */
+        /* Selektor * vybere úplně všechno uvnitř tlačítka */
+        button * {{
             font-family: 'Exo 2', sans-serif !important;
-            font-weight: 700 !important;   /* <--- TUČNÉ */
+            font-weight: 900 !important;   /* Maximální tloušťka fontu */
             font-size: 1.05rem !important;
             letter-spacing: 0.5px !important;
             line-height: 1.4 !important;
             color: #ffffff !important;
+            
+            /* FAKE BOLD: Přidáme malý stín stejné barvy, což text opticky rozšíří */
+            text-shadow: 0 0 0.5px #fff, 0 0 0.5px #fff !important;
         }}
         
         button:hover {{
@@ -173,7 +174,7 @@ def get_cyber_button_css(bg_color, glow_color):
 def get_transport_css(bg, color, border):
     """
     PRO: Doprava
-    VZHLED: Jemné, Tenké, Malé
+    VZHLED: Jemné, Tenké
     """
     return f"""
         button {{
@@ -188,15 +189,16 @@ def get_transport_css(bg, color, border):
             transition: all 0.2s ease !important;
         }}
         
-        /* Cílíme na obsah tlačítka - VYNUCUJEME TENKÉ */
-        button p, button div {{
+        /* Obsah uvnitř tlačítka - VYNUCENĚ TENKÉ */
+        button * {{
             font-family: 'Exo 2', sans-serif !important;
-            font-weight: 400 !important;  /* <--- TENKÉ */
+            font-weight: 300 !important;  /* Light verze fontu */
             font-size: 0.85rem !important;
             line-height: 1.2 !important;
             margin: 0 !important;
             padding: 0 !important;
             letter-spacing: 0px !important;
+            text-shadow: none !important; /* Žádné stíny */
         }}
 
         button:hover {{
@@ -206,7 +208,7 @@ def get_transport_css(bg, color, border):
     """
 
 def get_delete_css():
-    """PRO: Koš"""
+    """PRO: Koš - fixní čtverec"""
     return f"""
         button {{
             background-color: rgba(255, 255, 255, 0.05) !important;
@@ -239,7 +241,7 @@ def get_delete_css():
         }}
     """
 
-# --- OSTATNÍ FUNKCE ---
+# --- OSTATNÍ FUNKCE (beze změny) ---
 def inject_mobile_warning(): st.markdown("""<style>@media only screen and (orientation: portrait) and (max-width: 900px) {#rotate-warning {display:flex !important;} .stApp {overflow:hidden;}}</style>""", unsafe_allow_html=True)
 def get_ics_button_html(b64_data, filename): return f"""<a href="data:text/calendar;base64,{b64_data}" download="{filename}.ics" style="text-decoration:none;"><div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 6px 0; text-align: center; cursor: pointer; color: #fff; transition: 0.3s;" onmouseover="this.style.borderColor='#00f3ff'; this.style.color='#00f3ff'; this.style.boxShadow='0 0 10px #00f3ff';" onmouseout="this.style.borderColor='rgba(255, 255, 255, 0.2)'; this.style.color='#fff'; this.style.boxShadow='none';">📅</div></a>"""
 def get_weather_card_html(w_icon, w_text, temp, rain, wind, sunset_html=""):
