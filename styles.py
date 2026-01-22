@@ -25,11 +25,12 @@ BARVY_AKCI = {
 def load_css():
     st.markdown(f"""
     <style>
-        /* FONT FIX: Přidána váha 900 (Black) pro extra tlusté písmo */
+        /* FONT FIX: Importujeme všechny váhy */
         @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;600;700;800;900&family=Rajdhani:wght@500;600;700&display=swap&subset=latin,latin-ext');
 
         /* === GLOBÁLNÍ RESET === */
-        body, p, h1, h2, h3, h4, h5, h6, li, a, label, input, textarea, button {{
+        /* Nastavíme jen font a barvu textu, žádné styly pro buttony */
+        body, p, h1, h2, h3, h4, h5, h6, li, a, label, input, textarea {{
             font-family: 'Exo 2', sans-serif !important;
             color: #e0e0e0;
         }}
@@ -43,7 +44,7 @@ def load_css():
         }}
         h1 {{ font-size: 2.5rem !important; }}
 
-        /* Logo, Pozadí */
+        /* Logo */
         img.header-logo {{
             height: 60px !important;
             width: auto !important;
@@ -69,18 +70,10 @@ def load_css():
                 repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.02) 0px, rgba(255, 255, 255, 0.02) 1px, transparent 1px, transparent 40px);
             background-attachment: fixed;
         }}
+        
+        /* ZDE BYLO GLOBÁLNÍ NASTAVENÍ TLAČÍTEK - JE PRYČ */
 
-        /* === GLOBÁLNÍ DEFAULT PRO OBYČEJNÁ TLAČÍTKA === */
-        .stButton > button {{
-            background: rgba(255, 255, 255, 0.05);
-            color: {NEON_BLUE};
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 6px;
-            font-weight: 500; 
-            transition: all 0.3s ease;
-        }}
-
-        /* Primary tlačítko (Zapsat se) */
+        /* Primary tlačítko (Zapsat se) - to necháme, je specifické */
         button[kind="primary"] {{
             background: rgba(57, 255, 20, 0.1) !important;
             color: {NEON_GREEN} !important;
@@ -108,33 +101,25 @@ def load_css():
             box-shadow: 0 0 40px rgba(0, 0, 0, 0.8) !important;
         }}
 
-        .floating-container button {{
-            background: linear-gradient(135deg, {NEON_BLUE}, #0056b3) !important;
-            box-shadow: 0 0 20px {NEON_BLUE} !important;
-            border-radius: 8px !important;
-            padding: 10px 20px !important;
-            height: auto !important; width: auto !important;
-        }}
-
         #MainMenu, footer, header, .stDeployButton {{visibility: hidden;}}
         [data-testid="stToolbar"] {{visibility: hidden;}}
         [data-testid="stDecoration"] {{display:none;}}
     </style>
     """, unsafe_allow_html=True)
 
-# --- GENERÁTORY STYLŮ ---
+# --- GENERÁTORY STYLŮ (Zcela nezávislé) ---
 
 def get_cyber_button_css(bg_color, glow_color):
     """
     PRO: Kalendář, Dashboard, Hledání
-    VZHLED: EXTRÉMNĚ TUČNÉ (Fake Bold + 900 Weight)
+    VZHLED: Tučné (Bold), Velké
     """
     return f"""
         button {{
             background: {bg_color} !important;
             border: none !important;
             box-shadow: inset 0 0 0 1px {glow_color}, 0 0 8px {glow_color}44 !important;
-            color: #e0e0e0 !important;
+            color: #ffffff !important;
             
             width: 100% !important;
             border-radius: 8px !important;
@@ -146,20 +131,19 @@ def get_cyber_button_css(bg_color, glow_color):
             min-height: 50px !important;
             
             transition: box-shadow 0.2s ease !important;
+            
+            /* ZÁKLADNÍ NASTAVENÍ PRO KONTEJNER */
+            font-family: 'Exo 2', sans-serif !important;
+            font-weight: 700 !important;
+            font-size: 1.1rem !important;
         }}
         
-        /* !!! NUKLEÁRNÍ ŘEŠENÍ PRO TUČNÝ TEXT !!! */
-        /* Selektor * vybere úplně všechno uvnitř tlačítka */
-        button * {{
-            font-family: 'Exo 2', sans-serif !important;
-            font-weight: 900 !important;   /* Maximální tloušťka fontu */
-            font-size: 1.05rem !important;
-            letter-spacing: 0.5px !important;
-            line-height: 1.4 !important;
+        /* SPECIFICKÉ CÍLENÍ NA TEXT UVNITŘ */
+        button p {{
+            font-weight: 700 !important;
+            font-size: 1.1rem !important;
             color: #ffffff !important;
-            
-            /* FAKE BOLD: Přidáme malý stín stejné barvy, což text opticky rozšíří */
-            text-shadow: 0 0 0.5px #fff, 0 0 0.5px #fff !important;
+            margin: 0 !important;
         }}
         
         button:hover {{
@@ -167,14 +151,13 @@ def get_cyber_button_css(bg_color, glow_color):
             background-color: {glow_color}22 !important;
             color: #fff !important;
             z-index: 99 !important;
-            border-radius: 8px !important;
         }}
     """
 
 def get_transport_css(bg, color, border):
     """
     PRO: Doprava
-    VZHLED: Jemné, Tenké
+    VZHLED: Tenké (Light), Malé
     """
     return f"""
         button {{
@@ -187,28 +170,27 @@ def get_transport_css(bg, color, border):
             min-height: 28px !important;
             width: 100% !important;
             transition: all 0.2s ease !important;
+            
+            /* ZÁKLADNÍ NASTAVENÍ PRO KONTEJNER */
+            font-family: 'Exo 2', sans-serif !important;
+            font-weight: 400 !important; /* Normal weight */
+            font-size: 0.85rem !important;
         }}
         
-        /* Obsah uvnitř tlačítka - VYNUCENĚ TENKÉ */
-        button * {{
-            font-family: 'Exo 2', sans-serif !important;
-            font-weight: 300 !important;  /* Light verze fontu */
+        /* SPECIFICKÉ CÍLENÍ NA TEXT UVNITŘ */
+        button p {{
+            font-weight: 400 !important;
             font-size: 0.85rem !important;
-            line-height: 1.2 !important;
             margin: 0 !important;
-            padding: 0 !important;
-            letter-spacing: 0px !important;
-            text-shadow: none !important; /* Žádné stíny */
         }}
 
         button:hover {{
             filter: brightness(1.2);
-            border-radius: 6px !important;
         }}
     """
 
 def get_delete_css():
-    """PRO: Koš - fixní čtverec"""
+    """PRO: Koš"""
     return f"""
         button {{
             background-color: rgba(255, 255, 255, 0.05) !important;
@@ -227,9 +209,6 @@ def get_delete_css():
             display: flex !important;
             justify-content: center !important;
             align-items: center !important;
-            width: 100% !important;
-            height: 100% !important;
-            margin: 0 !important;
         }}
         
         button:hover {{
