@@ -112,40 +112,43 @@ def load_css():
 def get_cyber_button_css(bg_color, glow_color):
     """
     PRO: Kalendář, Dashboard, Hledání
-    VZHLED: Tučné (Bold), Velké
+    VZHLED: Tučné, Velké, Svítící (Agresivní CSS)
     """
     return f"""
+        /* 1. Vzhled samotného tlačítka (okraje, pozadí) */
         button {{
             background: {bg_color} !important;
             border: none !important;
             box-shadow: inset 0 0 0 1px {glow_color}, 0 0 8px {glow_color}44 !important;
-            color: #ffffff !important;
             
             width: 100% !important;
             border-radius: 8px !important;
             padding: 12px 15px !important;
             text-align: left !important;
             margin-bottom: 8px !important;
-            white-space: normal !important;
-            height: auto !important;
-            min-height: 50px !important;
+            min-height: 55px !important; /* Vynutíme výšku */
             
             transition: box-shadow 0.2s ease !important;
-            
-            /* ZÁKLADNÍ NASTAVENÍ PRO KONTEJNER */
+        }}
+
+        /* 2. TEXT UVNITŘ - TOTO JE TO KLÍČOVÉ MÍSTO */
+        /* Cílíme na p, div i span uvnitř tlačítka a dáváme !important všemu */
+        button p, button span, button div {{
             font-family: 'Exo 2', sans-serif !important;
-            font-weight: 700 !important;
-            font-size: 1.1rem !important;
+            
+            /* VELIKOST A TLOUŠŤKA NATVRDO */
+            font-size: 18px !important;   /* Zvětšeno a fixováno v px */
+            font-weight: 700 !important;  /* Tučné */
+            
+            color: #ffffff !important;    /* Čistě bílá */
+            line-height: 1.3 !important;  
+            letter-spacing: 0.5px !important;
+            
+            /* Optický trik: Jemný stín textu ho udělá ještě tlustším */
+            text-shadow: 0 0 1px rgba(255,255,255,0.4) !important;
         }}
-        
-        /* SPECIFICKÉ CÍLENÍ NA TEXT UVNITŘ */
-        button p {{
-            font-weight: 700 !important;
-            font-size: 1.1rem !important;
-            color: #ffffff !important;
-            margin: 0 !important;
-        }}
-        
+
+        /* Hover efekt */
         button:hover {{
             box-shadow: inset 0 0 0 2px {glow_color}, 0 0 25px {glow_color} !important;
             background-color: {glow_color}22 !important;
@@ -153,7 +156,7 @@ def get_cyber_button_css(bg_color, glow_color):
             z-index: 99 !important;
         }}
     """
-
+    
 def get_transport_css(bg, color, border):
     """
     PRO: Doprava
