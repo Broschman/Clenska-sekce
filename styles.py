@@ -41,140 +41,188 @@ def load_css():
         }}
         h1 {{ font-size: 2.5rem !important; }}
 
-        /* Logo */
         img.header-logo {{
             height: 60px !important;
+            width: auto !important;
+            object-fit: contain !important;
+            margin-top: 5px;
             filter: drop-shadow(0 0 8px {NEON_BLUE});
             transition: transform 0.3s;
         }}
         img.header-logo:hover {{ transform: scale(1.1) rotate(5deg); }}
 
+        h1 span.gradient-text {{
+            background: linear-gradient(90deg, {NEON_GREEN}, {NEON_BLUE});
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 800;
+        }}
+
         .stApp {{
             background-color: {DARK_BG};
-            background-image: radial-gradient(circle at 50% 30%, rgba(0, 243, 255, 0.04) 0%, transparent 60%);
+            background-image: 
+                radial-gradient(circle at 50% 30%, rgba(0, 243, 255, 0.04) 0%, transparent 60%),
+                repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.02) 0px, rgba(255, 255, 255, 0.02) 1px, transparent 1px, transparent 40px),
+                repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.02) 0px, rgba(255, 255, 255, 0.02) 1px, transparent 1px, transparent 40px);
+            background-attachment: fixed;
         }}
 
-        /* === GLOBÁLNÍ TLAČÍTKA (STABILNÍ VERZE) === */
-        .stButton > button {{
-            background: rgba(255, 255, 255, 0.05);
-            color: {NEON_BLUE};
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            font-family: 'Exo 2', sans-serif !important;
-            font-weight: 700 !important; /* Vynucené tučné všude - to fungovalo */
-            transition: all 0.3s ease;
-            min-height: 45px;
-        }}
-        .stButton > button:hover {{
-            background: rgba(0, 243, 255, 0.1);
-            border-color: {NEON_BLUE};
-            box-shadow: 0 0 15px rgba(0, 243, 255, 0.3);
-            color: #fff !important;
-        }}
-
-        /* === FORMULÁŘE (OPRAVA BÍLÝCH POLÍ) === */
-        .stTextInput input, .stNumberInput input, .stDateInput input, .stTextArea textarea, .stSelectbox div[data-baseweb="select"] > div {{
-            background-color: rgba(0, 0, 0, 0.3) !important;
-            border: 1px solid rgba(255, 255, 255, 0.1) !important;
-            color: white !important;
-            border-radius: 6px !important;
-        }}
-        /* Focus */
-        .stTextInput:focus-within div[data-baseweb="input"], .stTextArea:focus-within textarea {{
-            border-color: {NEON_BLUE} !important;
-            box-shadow: 0 0 10px rgba(0, 243, 255, 0.2) !important;
-        }}
-
-        /* === TABULKY (ZEBRA STRIPING) === */
-        [data-testid="stDataFrame"] {{ border: none !important; }}
-        [data-testid="stDataFrame"] table {{ background: transparent !important; }}
-        
-        /* Hlavička */
-        [data-testid="stDataFrame"] table th {{
-            background-color: rgba(0, 243, 255, 0.1) !important;
-            color: {NEON_BLUE} !important;
-            border-bottom: 1px solid {NEON_BLUE} !important;
-        }}
-        /* Zebra */
-        [data-testid="stDataFrame"] table tr:nth-of-type(odd) {{ background: rgba(255, 255, 255, 0.02); }}
-        [data-testid="stDataFrame"] table tr:hover {{ background: rgba(255, 255, 255, 0.05); }}
-        [data-testid="stDataFrame"] table td {{ border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important; }}
-
-        /* Primary Button */
         button[kind="primary"] {{
             background: rgba(57, 255, 20, 0.1) !important;
             color: {NEON_GREEN} !important;
             border: 1px solid {NEON_GREEN} !important;
-            font-weight: 800 !important;
+            font-weight: 700 !important;
         }}
 
-        #MainMenu, footer, header, .stDeployButton, [data-testid="stToolbar"], [data-testid="stDecoration"] {{ display: none !important; }}
+        .today-box {{
+            background: rgba(255, 7, 58, 0.2); 
+            color: {NEON_RED}; 
+            border: 1px solid {NEON_RED};
+            display: inline-flex; align-items: center; justify-content: center;    
+            width: 30px; height: 30px; border-radius: 8px; font-weight: 800;
+            box-shadow: 0 0 15px rgba(255, 7, 58, 0.4);
+            margin: 0 auto 8px auto;    
+        }}
+        .day-number {{ color: #888; font-weight: 600; display: block; text-align: center; margin-bottom: 8px; }}
+
+        div[data-testid="stPopoverBody"] {{
+            background-color: rgba(14, 17, 23, 0.95) !important;
+            border: 1px solid rgba(255, 255, 255, 0.15) !important;
+            backdrop-filter: blur(20px);
+            border-radius: 12px !important;
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.8) !important;
+        }}
+
+        #MainMenu, footer, header, .stDeployButton {{visibility: hidden;}}
+        [data-testid="stToolbar"] {{visibility: hidden;}}
+        [data-testid="stDecoration"] {{display:none;}}
     </style>
     """, unsafe_allow_html=True)
 
-# --- FUNKCE PRO BARVIČKY (NEZBYTNÉ PRO APP.PY) ---
-# Tyto funkce vrací jen základní CSS pro barvu, zbytek řeší globální styl nahoře.
+# --- GENERÁTORY STYLŮ ---
 
 def get_cyber_button_css(bg_color, glow_color):
-    """Pouze nastaví barvu a glow pro konkrétní tlačítko."""
+    """
+    PRO: Kalendář, Dashboard
+    VZHLED: EXTRÉMNĚ TUČNÉ (Stroke Hack)
+    """
     return f"""
         button {{
             background: {bg_color} !important;
             border: none !important;
             box-shadow: inset 0 0 0 1px {glow_color}, 0 0 8px {glow_color}44 !important;
+            width: 100% !important;
+            border-radius: 8px !important;
+            padding: 12px 15px !important;
+            text-align: left !important;
+            margin-bottom: 8px !important;
+            min-height: 55px !important;
+            transition: box-shadow 0.2s ease !important;
         }}
+
+        /* AGRESIVNÍ TUČNOST */
+        button div[data-testid="stMarkdownContainer"] p, 
+        button p {{
+            font-family: 'Exo 2', sans-serif !important;
+            font-size: 18px !important;
+            color: #ffffff !important;
+            line-height: 1.3 !important;
+            font-weight: 700 !important;
+            
+            /* Zapneme obtažení - toto dělá tu tloušťku */
+            -webkit-text-stroke: 0.8px #ffffff !important;
+            paint-order: stroke fill !important;
+            
+            margin: 0 !important;
+            padding: 0 !important;
+        }}
+
         button:hover {{
+            box-shadow: inset 0 0 0 2px {glow_color}, 0 0 25px {glow_color} !important;
             background-color: {glow_color}22 !important;
-            box-shadow: inset 0 0 0 2px {glow_color}, 0 0 20px {glow_color} !important;
+            color: #fff !important;
+            z-index: 99 !important;
         }}
     """
 
 def get_transport_css(bg, color, border):
-    """Pouze nastaví barvu dopravy."""
+    """
+    PRO: Doprava
+    VZHLED: Tenké - MUSÍ VYNULOVAT "CYBER" EFEKTY
+    """
     return f"""
         button {{
             background-color: {bg} !important;
             color: {color} !important;
             border: {border} !important;
-            min-height: 30px !important;
+            border-radius: 6px !important;
             padding: 2px 8px !important;
+            height: auto !important;
+            min-height: 28px !important;
+            width: 100% !important;
+            transition: all 0.2s ease !important;
         }}
-        button:hover {{ filter: brightness(1.2); }}
+        
+        /* OBRANA PROTI PŘETÉKÁNÍ STYLŮ */
+        button div[data-testid="stMarkdownContainer"] p, 
+        button p {{
+            font-family: 'Exo 2', sans-serif !important;
+            font-weight: 300 !important;  /* Tenké */
+            font-size: 0.85rem !important; /* Malé */
+            color: {color} !important;
+            
+            /* !!! DŮLEŽITÉ: Vypínáme efekty z cyber tlačítek !!! */
+            -webkit-text-stroke: 0px transparent !important; /* Žádné obtažení */
+            text-shadow: none !important; /* Žádný stín */
+            
+            margin: 0 !important;
+            padding: 0 !important;
+            line-height: 1.2 !important;
+        }}
+
+        button:hover {{
+            filter: brightness(1.2);
+        }}
     """
 
 def get_delete_css():
-    """Pouze styl koše."""
+    """PRO: Koš"""
     return f"""
         button {{
-            background: rgba(255,255,255,0.05) !important;
-            border: 1px solid rgba(255,255,255,0.1) !important;
-            color: {NEON_RED} !important;
-            width: 40px !important; 
-            margin: 0 auto !important;
+            background-color: rgba(255, 255, 255, 0.05) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            border-radius: 6px !important;
+            color: #ff073a !important;
+            padding: 0 !important;
+            width: 40px !important;
+            height: 40px !important;
+            min-height: 40px !important;
             display: block !important;
+            margin: 0 auto !important;
         }}
+        
+        button > div {{
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+        }}
+        
         button:hover {{
-            background: rgba(255, 7, 58, 0.2) !important;
+            color: #ff5f1f !important;
+            background-color: rgba(255, 7, 58, 0.2) !important;
+            border-color: #ff073a !important;
+            transform: scale(1.05);
+            margin: 0 auto !important;
         }}
     """
 
-# --- POMOCNÉ FUNKCE ---
-def inject_mobile_warning(): 
-    st.markdown("""<style>@media only screen and (orientation: portrait) and (max-width: 900px) {#rotate-warning {display:flex !important;} .stApp {overflow:hidden;}}</style>""", unsafe_allow_html=True)
-
-def get_ics_button_html(b64_data, filename): 
-    return f"""<a href="data:text/calendar;base64,{b64_data}" download="{filename}.ics" style="text-decoration:none;"><div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 6px 0; text-align: center; cursor: pointer; color: #fff; transition: 0.3s;" onmouseover="this.style.borderColor='#00f3ff'; this.style.color='#00f3ff'; this.style.boxShadow='0 0 10px #00f3ff';" onmouseout="this.style.borderColor='rgba(255, 255, 255, 0.2)'; this.style.color='#fff'; this.style.boxShadow='none';">📅</div></a>"""
-
+def inject_mobile_warning(): st.markdown("""<style>@media only screen and (orientation: portrait) and (max-width: 900px) {#rotate-warning {display:flex !important;} .stApp {overflow:hidden;}}</style>""", unsafe_allow_html=True)
+def get_ics_button_html(b64_data, filename): return f"""<a href="data:text/calendar;base64,{b64_data}" download="{filename}.ics" style="text-decoration:none;"><div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 6px 0; text-align: center; cursor: pointer; color: #fff; transition: 0.3s;" onmouseover="this.style.borderColor='#00f3ff'; this.style.color='#00f3ff'; this.style.boxShadow='0 0 10px #00f3ff';" onmouseout="this.style.borderColor='rgba(255, 255, 255, 0.2)'; this.style.color='#fff'; this.style.boxShadow='none';">📅</div></a>"""
 def get_weather_card_html(w_icon, w_text, temp, rain, wind, sunset_html=""):
     border = NEON_BLUE if rain < 2 else NEON_RED
     return f"""<div style="margin-top:10px; margin-bottom:20px; padding:15px; background:linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01)); border:1px solid {border}; border-left:4px solid {border}; border-radius:10px; display:flex; align-items:center; color:white; box-shadow: 0 4px 15px rgba(0,0,0,0.2);"><div style="font-size:2rem; margin-right:15px; filter: drop-shadow(0 0 5px rgba(255,255,255,0.3));">{w_icon}</div><div style="flex-grow:1;"><div style="font-weight:bold; font-family:'Exo 2', sans-serif; color:{border}">{w_text}, {temp}°C</div><div style="font-size:0.85rem; color:#aaa; font-family:'Exo 2', sans-serif;">💧 {rain} mm • 💨 {wind} km/h</div></div>{sunset_html}</div>"""
-
-def get_footer_html(): 
-    return f"<div style='text-align: center; color: #6b7280; font-size: 0.8em; margin-top: 20px; font-family: \"Exo 2\", sans-serif;'>SYSTEM: <span style='color:{NEON_GREEN}'>ONLINE</span> • RBK 2026</div>"
-
-def badge(text, bg="#333", color="#fff"): 
-    return f"<span style='background-color: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #e5e7eb; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; margin-right: 6px; font-family: \"Exo 2\", sans-serif;'>{text}</span>"
-
+def get_footer_html(): return f"<div style='text-align: center; color: #6b7280; font-size: 0.8em; margin-top: 20px; font-family: \"Exo 2\", sans-serif;'>SYSTEM: <span style='color:{NEON_GREEN}'>ONLINE</span> • RBK 2026</div>"
+def badge(text, bg="#333", color="#fff"): return f"<span style='background-color: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #e5e7eb; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; margin-right: 6px; font-family: \"Exo 2\", sans-serif;'>{text}</span>"
 @st.cache_data(ttl=3600*24)
 def load_lottieurl(url):
     try: return requests.get(url).json()
