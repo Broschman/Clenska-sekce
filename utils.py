@@ -739,10 +739,11 @@ def vykreslit_detail_akce(akce, unique_key):
                      c2.markdown(f"**{row['jméno']}**")
                      c3.caption(row.get('poznámka', ''))
                      
-                     # Logika dopravy (tlačítka)
+                     # --- LOGIKA BAREV DOPRAVY ---
                      dopr = str(row.get('doprava', ''))
                      btn_label = dopr if dopr else "➕"
                      
+                     # Default barvy
                      btn_color, btn_bg, btn_border = "#ccc", "rgba(255,255,255,0.05)", "1px solid rgba(255,255,255,0.2)"
                      
                      if "Řidič" in dopr: 
@@ -754,89 +755,23 @@ def vykreslit_detail_akce(akce, unique_key):
                          btn_color, btn_bg, btn_border = "#ff073a", "rgba(255, 7, 58, 0.1)", "1px solid #ff073a"
                          btn_label = "🙋‍♂️ Chci"
 
-                     # Vykreslení tlačítka dopravy - ZJEMNĚNÍ FONTS
-                     with stylable_container(key=f"cont_btn_d_{unique_key}_{i}_fix", css_styles=f"""
-                        button {{
-                            background-color: {btn_bg} !important; 
-                            color: {btn_color} !important; 
-                            border: {btn_border} !important; 
-                            padding: 2px 5px !important;
-                            height: auto !important; 
-                            min-height: 28px !important;
-                            width: 100% !important;
-                            border-radius: 6px !important;
-                        }}
-                        
-                        /* !!! KLÍČOVÉ PŘEBÍJENÍ styles.py !!! */
-                        /* Cílíme přímo na text uvnitř tlačítka */
-                        button p {{
-                            font-weight: 400 !important;      /* Tenké písmo jako "Ano" */
-                            font-size: 0.85rem !important;    /* Menší velikost */
-                            font-family: 'Exo 2', sans-serif !important;
-                            line-height: 1.2 !important;
-                            margin: 0 !important;
-                            padding: 0 !important;
-                        }}
-
-                        button:hover {{
-                            border-radius: 6px !important;
-                            filter: brightness(1.2);
-                        }}
-                     """):
+                     # --- VYKRESLENÍ TLAČÍTKA DOPRAVY (Voláme funkci ze styles.py) ---
+                     # Tímto zajistíme, že jen toto tlačítko bude mít tenký font
+                     transport_css = styles.get_transport_css(btn_bg, btn_color, btn_border)
+                     
+                     with stylable_container(key=f"cont_btn_d_{unique_key}_{i}", css_styles=transport_css):
                          if c4.button(btn_label, key=f"btn_row_d_{unique_key}_{i}", use_container_width=True):
                              show_doprava_dialog(akce_id_str, akce.get('název', ''), akce['datum'].strftime('%d.%m.'), row['jméno'], None, None)
 
                      c5.write(row.get('ubytování', ''))
-                     
-                     # === TLAČÍTKO KOŠE (HARD FIX - MARGIN AUTO) ===
+
+                     # --- TLAČÍTKO KOŠE (Voláme funkci ze styles.py) ---
                      if not je_po_deadlinu:
-                         with stylable_container(key=f"del_btn_container_{unique_key}_{i}", css_styles="""
-                             button {
-                                 /* 1. Vizuální reset */
-                                 background-color: rgba(255, 255, 255, 0.05) !important;
-                                 border: 1px solid rgba(255, 255, 255, 0.1) !important;
-                                 color: #ff073a !important;
-                                 border-radius: 6px !important;
-                                 padding: 0 !important;
-                                 
-                                 /* 2. FIXNÍ VELIKOST (Čtverec) */
-                                 width: 40px !important;
-                                 height: 40px !important;
-                                 min-height: 40px !important;
-                                 
-                                 /* 3. CENTROVÁNÍ V RÁMCI SLOUPCE (Tady je to kouzlo) */
-                                 display: block !important;
-                                 margin-left: auto !important;
-                                 margin-right: auto !important;
-                                 
-                                 /* 4. Centrování obsahu uvnitř tlačítka */
-                                 display: flex !important;
-                                 justify-content: center !important;
-                                 align-items: center !important;
-                             }
-                             
-                             /* Hover efekt */
-                             button:hover {
-                                 color: #ff5f1f !important;
-                                 background-color: rgba(255, 7, 58, 0.2) !important;
-                                 border-color: #ff073a !important;
-                                 border-radius: 6px !important;
-                                 transform: scale(1.05);
-                                 /* Pojistka pozice při hoveru */
-                                 margin-left: auto !important;
-                                 margin-right: auto !important;
-                             }
-                             
-                             /* Pojistka pro vnitřní divy (aby neposouvaly ikonku) */
-                             button p, button div {
-                                 margin: 0 !important;
-                                 padding: 0 !important;
-                                 width: auto !important;
-                                 line-height: 1 !important;
-                             }
-                         """):
-                             # use_container_width=True dáváme pryč, protože chceme fixní čtverec
-                             if c6.button("🗑️", key=f"del_{unique_key}_{i}"):
+                         delete_css = styles.get_delete_css()
+                         
+                         with stylable_container(key=f"del_btn_container_{unique_key}_{i}", css_styles=delete_css):
+                             # use_container_width=False, protože šířku řešíme v CSS (fixní čtverec)
+                             if c6.button("🗑️", key=f"del_{unique_key}_{i}", use_container_width=False):
                                  st.session_state[delete_key_state] = row['jméno']
                                  st.rerun()
                                  
