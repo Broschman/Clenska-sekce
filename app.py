@@ -65,7 +65,6 @@ if not future_deadlines.empty:
     for i, (_, row) in enumerate(future_deadlines.iterrows()):
         days_left = (row['deadline'] - dnes).days
         
-        # Logika barev
         if days_left == 0:
             glow_c, bg_c, icon, time_msg = styles.NEON_RED, "rgba(255, 7, 58, 0.1)", "🚨", "DNES!"
         elif days_left <= 3:
@@ -74,51 +73,12 @@ if not future_deadlines.empty:
             glow_c, bg_c, icon, time_msg = styles.NEON_GREEN, "rgba(57, 255, 20, 0.1)", "📅", row['deadline'].strftime('%d.%m.')
 
         unique_key_dash = f"dash_{row['id']}"
+        
+        # ZDE POUŽIJEME FUNKCI ZE STYLES
+        dash_css = styles.get_cyber_button_css(bg_c, glow_c)
 
         with cols_d[i]:
-            with stylable_container(
-                key=f"dash_card_{i}",
-                css_styles=f"""
-                button {{
-                    background-color: {bg_c} !important;
-                    border: none !important;
-                    box-shadow: inset 0 0 0 1px {glow_c}, 0 0 10px {glow_c}44 !important;
-                    color: #fff !important;
-                    
-                    /* !!! ABSOLUTNÍ FIX TVARU !!! */
-                    border-radius: 12px !important;
-                    transform: none !important; /* Zákaz jakéhokoliv pohybu */
-                    margin: 0 !important;
-                    
-                    width: 100% !important;
-                    height: auto !important;
-                    min-height: 110px !important;
-                    white-space: pre-wrap !important;
-                    display: flex !important;
-                    flex-direction: column !important;
-                    justify-content: center !important;
-                    align-items: center !important;
-                    padding: 10px !important;
-                    font-family: 'Exo 2', sans-serif !important;
-                    
-                    /* Animujeme POUZE barvy, ne tvar ani pozici */
-                    transition: box-shadow 0.2s ease, background-color 0.2s ease !important;
-                }}
-                
-                button:hover {{
-                    /* Pouze rozsvítíme, nehýbeme s tím */
-                    box-shadow: inset 0 0 0 2px {glow_c}, 0 0 25px {glow_c} !important;
-                    background-color: {glow_c}22 !important;
-                    color: #fff !important;
-                    z-index: 100 !important;
-                    
-                    /* Znovu vynucení tvaru a zákazu pohybu */
-                    border-radius: 12px !important;
-                    transform: none !important;
-                }}
-                button p {{ font-family: 'Exo 2', sans-serif !important; letter-spacing: 1px; font-weight: 700; }}
-                """
-            ):
+            with stylable_container(key=f"dash_card_{i}", css_styles=dash_css):
                 label_text = f"{icon}\n{row['název']}\n{time_msg}"
                 with st.popover(label_text, use_container_width=True):
                     utils.vykreslit_detail_akce(row, unique_key_dash)
@@ -203,6 +163,8 @@ def show_calendar_section():
                     elif "trénink" in typ: style_key = "trenink"
                     elif je_zavod_obecne: style_key = "zavod"
                     
+                    # ... předchozí logika (typ, styly, ikony) ...
+                    
                     styly = styles.BARVY_AKCI.get(style_key, styles.BARVY_AKCI["default"])
                     glow_color = styly.get("glow", "#39ff14")
                     bg_color = styly.get("bg", "rgba(255,255,255,0.05)")
@@ -211,30 +173,11 @@ def show_calendar_section():
                     emoji = ikony.get(druh, "🏃")
                     label = f"{emoji} {akce['název'].split('-')[0].strip()}"
                     if je_po_deadlinu: label = "🔒 " + label
+                    
+                    # ZDE POUŽIJEME FUNKCI ZE STYLES (TUČNÉ PÍSMO)
+                    calendar_css = styles.get_cyber_button_css(bg_color, glow_color)
 
-                    with stylable_container(
-                        key=f"btn_c_{unique_key}",
-                        css_styles=f"""
-                        button {{
-                            background: {bg_color} !important; 
-                            border: none !important; 
-                            box-shadow: inset 0 0 0 1px {glow_color}, 0 0 8px {glow_color}44 !important;
-                            color: #e0e0e0 !important;
-                            width: 100%; border-radius: 8px; padding: 8px 10px !important; text-align: left; font-size: 0.85rem; font-weight: 600; 
-                            margin-bottom: 6px; white-space: normal !important; height: auto !important; min-height: 40px; 
-                            font-family: 'Exo 2', sans-serif !important;
-                            transition: all 0.2s ease !important;
-                        }} 
-                        /* ZDE JE FIX PRO KALENDÁŘ */
-                        button:hover {{
-                            box-shadow: inset 0 0 0 2px {glow_color}, 0 0 20px {glow_color} !important;
-                            color: #fff !important;
-                            z-index: 99 !important;
-                            transform: translateY(-2px) !important;
-                            border-radius: 8px !important; /* !!! */
-                        }}
-                        """
-                    ):                    
+                    with stylable_container(key=f"btn_c_{unique_key}", css_styles=calendar_css):
                         with st.popover(label, use_container_width=True):
                             utils.vykreslit_detail_akce(akce, unique_key)
 
@@ -294,40 +237,16 @@ if search_text or len(search_date_value) > 0:
             elif any(s in typ_udalosti for s in ["závod", "liga"]): style_key = "zavod"
 
             styly = styles.BARVY_AKCI.get(style_key, styles.BARVY_AKCI["default"])
+            # ... logika stylů ...
             glow_color = styly.get("glow", "#39ff14")
             bg_color = styly.get("bg", "rgba(255,255,255,0.05)")
+            
+            # ZDE POUŽIJEME FUNKCI ZE STYLES
+            search_css = styles.get_cyber_button_css(bg_color, glow_color)
 
-            ikony_mapa = { "les": "🌲", "krátká trať": "🌲", "sprint": "🏙️", "nočák": "🌗" }
-            emoji = ikony_mapa.get(str(akce.get('druh', '')).lower(), "🏃")
-            label = f"{emoji} {akce['datum'].strftime('%d.%m.')} | {akce['název']} ({akce['místo']})"
-            if je_po_deadlinu: label = "🔒 " + label
-
-            with stylable_container(
-                key=f"btn_search_{unique_key}",
-                css_styles=f"""
-                    button {{
-                        background: {bg_color} !important;
-                        color: #e0e0e0 !important;
-                        border: none !important;
-                        /* === PERMANENTNÍ SVÍCENÍ === */
-                        box-shadow: inset 0 0 0 1px {glow_color}, 0 0 8px {glow_color}44 !important;
-                        width: 100%; border-radius: 8px; padding: 12px 15px !important; text-align: left; font-weight: 600;
-                        margin-bottom: 8px;
-                        font-family: 'Exo 2', sans-serif !important;
-                        transition: all 0.3s ease !important;
-                    }}
-                    button:hover {{
-                        filter: brightness(1.2); transform: translateY(-2px);
-                        /* === ZESÍLENÍ === */
-                        box-shadow: inset 0 0 0 2px {glow_color}, 0 0 20px {glow_color} !important;
-                        color: #fff !important;
-                        z-index: 99 !important;
-                    }}
-                """
-            ):
+            with stylable_container(key=f"btn_search_{unique_key}", css_styles=search_css):
                 with st.popover(label, use_container_width=True):
                     utils.vykreslit_detail_akce(akce, unique_key)
-
 else:
     show_calendar_section()
 st.markdown("<div style='margin-bottom: 50px'></div>", unsafe_allow_html=True)
