@@ -25,10 +25,9 @@ BARVY_AKCI = {
 def load_css():
     st.markdown(f"""
     <style>
-        /* FONT FIX */
         @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;600;700;800;900&family=Rajdhani:wght@500;600;700&display=swap&subset=latin,latin-ext');
 
-        /* === GLOBÁLNÍ TEXTY === */
+        /* === GLOBÁLNÍ RESET === */
         body, p, h1, h2, h3, h4, h5, h6, li, a, label, input, textarea {{
             font-family: 'Exo 2', sans-serif !important;
             color: #e0e0e0;
@@ -42,7 +41,7 @@ def load_css():
         }}
         h1 {{ font-size: 2.5rem !important; }}
 
-        /* === LOGO A POZADÍ === */
+        /* Logo */
         img.header-logo {{
             height: 60px !important;
             filter: drop-shadow(0 0 8px {NEON_BLUE});
@@ -55,191 +54,111 @@ def load_css():
             background-image: radial-gradient(circle at 50% 30%, rgba(0, 243, 255, 0.04) 0%, transparent 60%);
         }}
 
-        /* === OPRAVA FORMULÁŘŮ (INPUTY) === */
-        /* Cílíme na všechny vstupy: Text, Number, Select, Date */
-        .stTextInput input, 
-        .stNumberInput input,
-        .stDateInput input,
-        .stTextArea textarea,
-        div[data-baseweb="select"] > div {{
+        /* === GLOBÁLNÍ TLAČÍTKA (STABILNÍ VERZE) === */
+        .stButton > button {{
+            background: rgba(255, 255, 255, 0.05);
+            color: {NEON_BLUE};
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            font-family: 'Exo 2', sans-serif !important;
+            font-weight: 700 !important; /* Vynucené tučné všude - to fungovalo */
+            transition: all 0.3s ease;
+            min-height: 45px;
+        }}
+        .stButton > button:hover {{
+            background: rgba(0, 243, 255, 0.1);
+            border-color: {NEON_BLUE};
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.3);
+            color: #fff !important;
+        }}
+
+        /* === FORMULÁŘE (OPRAVA BÍLÝCH POLÍ) === */
+        .stTextInput input, .stNumberInput input, .stDateInput input, .stTextArea textarea, .stSelectbox div[data-baseweb="select"] > div {{
             background-color: rgba(0, 0, 0, 0.3) !important;
             border: 1px solid rgba(255, 255, 255, 0.1) !important;
-            color: #ffffff !important;
+            color: white !important;
             border-radius: 6px !important;
         }}
-        
-        /* Focus efekt pro inputy (aby svítily, když se do nich píše) */
-        .stTextInput:focus-within div[data-baseweb="input"],
-        .stNumberInput:focus-within div[data-baseweb="input"],
-        .stTextArea:focus-within textarea,
-        div[data-baseweb="select"]:focus-within > div {{
+        /* Focus */
+        .stTextInput:focus-within div[data-baseweb="input"], .stTextArea:focus-within textarea {{
             border-color: {NEON_BLUE} !important;
             box-shadow: 0 0 10px rgba(0, 243, 255, 0.2) !important;
         }}
-        
-        /* Labely nad inputy */
-        .stTextInput label, .stNumberInput label, .stDateInput label, .stSelectbox label, .stTextArea label {{
-            color: {NEON_BLUE} !important;
-            font-weight: 600 !important;
-            font-size: 0.9rem !important;
-        }}
 
-        /* === TLAČÍTKO ODESLAT (FORM SUBMIT) === */
-        /* Toto tlačítko nelze snadno obalit naším kontejnerem, proto ho stylujeme globálně */
-        div[data-testid="stFormSubmitButton"] > button {{
-            background: rgba(57, 255, 20, 0.1) !important;
-            color: {NEON_GREEN} !important;
-            border: 1px solid {NEON_GREEN} !important;
-            font-weight: 700 !important;
-            width: 100% !important;
-            height: 50px !important;
-            font-size: 1.1rem !important;
-            border-radius: 8px !important;
-            transition: all 0.3s ease !important;
-        }}
-        div[data-testid="stFormSubmitButton"] > button:hover {{
-            background: rgba(57, 255, 20, 0.2) !important;
-            box-shadow: 0 0 15px rgba(57, 255, 20, 0.4) !important;
-        }}
-
-        /* === TABULKY A ZEBRA STRIPING (OPRAVA) === */
-        /* 1. Pro st.dataframe (pokud se nevykresluje jako canvas) */
-        [data-testid="stDataFrame"] {{
-            border: 1px solid rgba(255, 255, 255, 0.1) !important;
-            border-radius: 8px !important;
-        }}
+        /* === TABULKY (ZEBRA STRIPING) === */
+        [data-testid="stDataFrame"] {{ border: none !important; }}
+        [data-testid="stDataFrame"] table {{ background: transparent !important; }}
         
-        /* 2. Pro st.table (HTML tabulka) - Tady zebra funguje nejlépe */
-        [data-testid="stTable"] table {{
-            width: 100%;
-        }}
-        [data-testid="stTable"] thead tr th {{
+        /* Hlavička */
+        [data-testid="stDataFrame"] table th {{
             background-color: rgba(0, 243, 255, 0.1) !important;
             color: {NEON_BLUE} !important;
-            border-bottom: 2px solid {NEON_BLUE} !important;
-            font-family: 'Rajdhani', sans-serif !important;
-            font-size: 1.1rem !important;
+            border-bottom: 1px solid {NEON_BLUE} !important;
         }}
-        
-        /* Zebra - sudé řádky */
-        [data-testid="stTable"] tbody tr:nth-child(even),
-        [data-testid="stDataFrame"] div[role="rowgroup"] div[role="row"]:nth-child(even) {{
-            background-color: rgba(255, 255, 255, 0.03) !important;
-        }}
-        
-        /* Hover efekt na řádky */
-        [data-testid="stTable"] tbody tr:hover,
-        [data-testid="stDataFrame"] div[role="rowgroup"] div[role="row"]:hover {{
-            background-color: rgba(255, 255, 255, 0.08) !important;
-            cursor: default;
-        }}
+        /* Zebra */
+        [data-testid="stDataFrame"] table tr:nth-of-type(odd) {{ background: rgba(255, 255, 255, 0.02); }}
+        [data-testid="stDataFrame"] table tr:hover {{ background: rgba(255, 255, 255, 0.05); }}
+        [data-testid="stDataFrame"] table td {{ border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important; }}
 
-        /* === OSTATNÍ (SCROLLBARY, TOASTY) === */
-        ::-webkit-scrollbar {{ width: 8px; height: 8px; }}
-        ::-webkit-scrollbar-track {{ background: #0e1117; }}
-        ::-webkit-scrollbar-thumb {{ background: #333; border-radius: 4px; }}
-        ::-webkit-scrollbar-thumb:hover {{ background: {NEON_BLUE}; }}
-
-        /* Primary button (mimo formulář) */
+        /* Primary Button */
         button[kind="primary"] {{
             background: rgba(57, 255, 20, 0.1) !important;
             color: {NEON_GREEN} !important;
             border: 1px solid {NEON_GREEN} !important;
-            font-weight: 700 !important;
+            font-weight: 800 !important;
         }}
 
-        /* Skrytí defaultních elementů */
         #MainMenu, footer, header, .stDeployButton, [data-testid="stToolbar"], [data-testid="stDecoration"] {{ display: none !important; }}
     </style>
     """, unsafe_allow_html=True)
 
-# --- GENERÁTORY STYLŮ (IZOLOVANÉ) ---
+# --- FUNKCE PRO BARVIČKY (NEZBYTNÉ PRO APP.PY) ---
+# Tyto funkce vrací jen základní CSS pro barvu, zbytek řeší globální styl nahoře.
 
 def get_cyber_button_css(bg_color, glow_color):
-    """PRO: Kalendář, Dashboard - TUČNÉ"""
+    """Pouze nastaví barvu a glow pro konkrétní tlačítko."""
     return f"""
         button {{
             background: {bg_color} !important;
             border: none !important;
             box-shadow: inset 0 0 0 1px {glow_color}, 0 0 8px {glow_color}44 !important;
-            width: 100% !important;
-            border-radius: 8px !important;
-            padding: 12px 15px !important;
-            text-align: left !important;
-            margin-bottom: 8px !important;
-            min-height: 50px !important;
-            transition: all 0.2s ease !important;
-        }}
-        button p, button div {{
-            font-family: 'Exo 2', sans-serif !important;
-            font-weight: 700 !important;
-            font-size: 1.1rem !important;
-            color: #ffffff !important;
-            letter-spacing: 0.5px !important;
         }}
         button:hover {{
-            box-shadow: inset 0 0 0 2px {glow_color}, 0 0 25px {glow_color} !important;
             background-color: {glow_color}22 !important;
-            transform: translateY(-1px);
+            box-shadow: inset 0 0 0 2px {glow_color}, 0 0 20px {glow_color} !important;
         }}
     """
 
 def get_transport_css(bg, color, border):
-    """PRO: Doprava - TENKÉ"""
+    """Pouze nastaví barvu dopravy."""
     return f"""
         button {{
             background-color: {bg} !important;
             color: {color} !important;
             border: {border} !important;
-            border-radius: 6px !important;
-            padding: 2px 8px !important;
-            height: auto !important;
             min-height: 30px !important;
-            width: 100% !important;
-            transition: all 0.2s ease !important;
+            padding: 2px 8px !important;
         }}
-        button p, button div {{
-            font-family: 'Exo 2', sans-serif !important;
-            font-weight: 400 !important;
-            font-size: 0.85rem !important;
-            margin: 0 !important;
-            color: {color} !important;
-        }}
-        button:hover {{
-            filter: brightness(1.2);
-            border-radius: 6px !important;
-        }}
+        button:hover {{ filter: brightness(1.2); }}
     """
 
 def get_delete_css():
-    """PRO: Koš - Fixní čtverec"""
+    """Pouze styl koše."""
     return f"""
         button {{
-            background-color: rgba(255, 255, 255, 0.05) !important;
-            border: 1px solid rgba(255, 255, 255, 0.1) !important;
-            border-radius: 6px !important;
-            color: #ff073a !important;
-            padding: 0 !important;
-            width: 40px !important;
-            height: 40px !important;
-            min-height: 40px !important;
-            display: block !important;
+            background: rgba(255,255,255,0.05) !important;
+            border: 1px solid rgba(255,255,255,0.1) !important;
+            color: {NEON_RED} !important;
+            width: 40px !important; 
             margin: 0 auto !important;
-        }}
-        button > div {{
-            display: flex !important;
-            justify-content: center !important;
-            align-items: center !important;
+            display: block !important;
         }}
         button:hover {{
-            color: #ff5f1f !important;
-            background-color: rgba(255, 7, 58, 0.2) !important;
-            transform: scale(1.1);
+            background: rgba(255, 7, 58, 0.2) !important;
         }}
     """
 
 # --- POMOCNÉ FUNKCE ---
-
 def inject_mobile_warning(): 
     st.markdown("""<style>@media only screen and (orientation: portrait) and (max-width: 900px) {#rotate-warning {display:flex !important;} .stApp {overflow:hidden;}}</style>""", unsafe_allow_html=True)
 
@@ -260,5 +179,4 @@ def badge(text, bg="#333", color="#fff"):
 def load_lottieurl(url):
     try: return requests.get(url).json()
     except: return None
-
 lottie_success = load_lottieurl("https://assets9.lottiefiles.com/packages/lf20_jbrw3hcz.json")
