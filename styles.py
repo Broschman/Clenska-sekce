@@ -150,23 +150,29 @@ def get_cyber_button_css(bg_color, glow_color):
             margin-bottom: 8px !important;
             white-space: normal !important;
             height: auto !important;
-            min-height: 50px !important; /* Trochu vyšší pro větší text */
+            min-height: 50px !important;
             
             transition: box-shadow 0.2s ease !important;
         }}
         
-        /* !!! AGRESIVNÍ ZVĚTŠENÍ PÍSMA PRO VŠECHNO UVNITŘ !!! */
-        button p, button span, button div {{
+        /* !!! ZDE JE TA ZMĚNA - CÍLÍME PŘESNĚ NA TEXT !!! */
+        /* Streamlit balí text do stMarkdownContainer. Musíme zacílit ten. */
+        button div[data-testid="stMarkdownContainer"] p {{
             font-family: 'Exo 2', sans-serif !important;
-            font-weight: 700 !important;   /* Tučné */
-            font-size: 1.05rem !important; /* Větší než základ (bývalo 0.9rem) */
+            font-weight: 700 !important;    /* TUČNÉ */
+            font-size: 1.1rem !important;   /* VĚTŠÍ */
             letter-spacing: 0.5px !important;
             line-height: 1.4 !important;
-            color: #ffffff !important;     /* Jasně bílá pro lepší čitelnost */
+            color: #ffffff !important;      /* BÍLÁ */
+            text-shadow: 0 0 5px rgba(0,0,0,0.5) !important;
         }}
         
+        /* Pojistka pro případné jiné elementy */
+        button span, button div {{
+            font-weight: 700 !important;
+        }}
+
         button:hover {{
-            /* ZESÍLENÍ GLOW */
             box-shadow: inset 0 0 0 2px {glow_color}, 0 0 25px {glow_color} !important;
             background-color: {glow_color}22 !important;
             color: #fff !important;
