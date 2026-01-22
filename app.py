@@ -79,7 +79,8 @@ if not future_deadlines.empty:
 
         with cols_d[i]:
             with stylable_container(key=f"dash_card_{i}", css_styles=dash_css):
-                label_text = f"{icon}\n{row['název']}\n{time_msg}"
+                label_text = f"{icon} {row['název']}\n{time_msg}"
+                
                 with st.popover(label_text, use_container_width=True):
                     utils.vykreslit_detail_akce(row, unique_key_dash)
                     
