@@ -34,11 +34,7 @@ def load_css():
             color: #e0e0e0;
         }}
         
-        .stMarkdown, .stTextInput, .stTextArea, .stSelectbox, .stNumberInput {{
-            font-family: 'Exo 2', sans-serif !important;
-        }}
-
-        /* === NADPISY (Rajdhani) === */
+        /* Nadpisy */
         h1, h2, h3 {{
             font-family: 'Rajdhani', 'Exo 2', sans-serif !important;
             letter-spacing: 1px;
@@ -47,7 +43,7 @@ def load_css():
         }}
         h1 {{ font-size: 2.5rem !important; }}
 
-        /* === LOGO === */
+        /* Logo, Pozadí, Scrollbary - beze změn */
         img.header-logo {{
             height: 60px !important;
             width: auto !important;
@@ -65,7 +61,6 @@ def load_css():
             font-weight: 800;
         }}
 
-        /* === POZADÍ === */
         .stApp {{
             background-color: {DARK_BG};
             background-image: 
@@ -75,75 +70,36 @@ def load_css():
             background-attachment: fixed;
         }}
 
-        /* === GLOBÁLNÍ TLAČÍTKA (KALENDÁŘ, DASHBOARD, ADMIN) === */
-        /* Zde vynutíme VÝRAZNÝ TUČNÝ TEXT pro všechna běžná tlačítka */
+        /* === ZÁKLADNÍ STYLE PRO OSTATNÍ TLAČÍTKA (Formuláře, Search) === */
+        /* Toto je 'fallback' styl, aby tlačítka nebyla hnusná, když nemají speciální styl */
         .stButton > button {{
-            background: rgba(255, 255, 255, 0.05) !important;
-            backdrop-filter: blur(5px);
-            color: {NEON_BLUE} !important;
-            border: none !important;
-            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
-            border-radius: 6px !important;
-            
-            /* !!! TUČNÝ TEXT PRO HLAVNÍ TLAČÍTKA !!! */
-            font-weight: 700 !important; 
-            font-family: 'Exo 2', sans-serif !important;
-            letter-spacing: 0.5px !important;
-            
-            transition: all 0.3s ease !important;
-            font-size: 1rem !important; 
-            padding: 0.5rem 1rem !important;
-            min-height: 2.5rem !important;
-            line-height: 1.6 !important;
+            background: rgba(255, 255, 255, 0.05);
+            color: {NEON_BLUE};
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            font-weight: 600; /* Semi-bold pro běžná tlačítka */
+            transition: all 0.3s ease;
         }}
-        
-        /* HOVER STAV */
-        .stButton button:hover, 
-        div[data-testid="stButton"] button:hover,
-        button[kind="secondary"]:hover,
-        button[kind="primary"]:hover {{
-            box-shadow: inset 0 0 0 1px {NEON_BLUE}, 0 0 10px {NEON_BLUE} !important;
-            background-color: rgba(0, 243, 255, 0.1) !important;
-            transform: translateY(-2px);
-            border-radius: 6px !important; 
+        .stButton > button:hover {{
+            background: rgba(0, 243, 255, 0.1);
+            border-color: {NEON_BLUE};
         }}
 
         /* Primary tlačítko (Zapsat se) */
         button[kind="primary"] {{
             background: rgba(57, 255, 20, 0.1) !important;
             color: {NEON_GREEN} !important;
-            box-shadow: inset 0 0 0 1px {NEON_GREEN} !important;
-        }}
-        button[kind="primary"]:hover {{
-            box-shadow: inset 0 0 0 1px {NEON_GREEN}, 0 0 20px {NEON_GREEN} !important;
-            background-color: rgba(57, 255, 20, 0.2) !important;
-            border-radius: 6px !important;
+            border: 1px solid {NEON_GREEN} !important;
+            font-weight: 700 !important;
         }}
 
-        /* Inputy */
-        .stTextInput input, .stSelectbox div[data-baseweb="select"], .stNumberInput input, .stTextArea textarea {{
-            background-color: rgba(255, 255, 255, 0.05) !important;
-            color: white !important;
-            border: 1px solid rgba(255, 255, 255, 0.2) !important;
-        }}
-        .stTextInput input:focus, .stSelectbox div[data-baseweb="select"]:focus-within {{
-            border-color: {NEON_BLUE} !important;
-            box-shadow: 0 0 10px rgba(0, 243, 255, 0.2) !important;
-        }}
-
-        hr {{ border-top: 1px solid rgba(255,255,255,0.1) !important; }}
-        
         /* Kalendář box */
         .today-box {{
             background: rgba(255, 7, 58, 0.2); 
             color: {NEON_RED}; 
             border: 1px solid {NEON_RED};
-            display: inline-flex;        
-            align-items: center;         
-            justify-content: center;    
-            width: 30px; height: 30px;  
-            border-radius: 8px;          
-            font-weight: 800;
+            display: inline-flex; align-items: center; justify-content: center;    
+            width: 30px; height: 30px; border-radius: 8px; font-weight: 800;
             box-shadow: 0 0 15px rgba(255, 7, 58, 0.4);
             margin: 0 auto 8px auto;    
         }}
@@ -157,28 +113,12 @@ def load_css():
             box-shadow: 0 0 40px rgba(0, 0, 0, 0.8) !important;
         }}
 
-        /* === PLOVOUCÍ TLAČÍTKO - OPRAVA TVARU A ZDVOJENÉ ZÁVORKY === */
         .floating-container button {{
             background: linear-gradient(135deg, {NEON_BLUE}, #0056b3) !important;
             box-shadow: 0 0 20px {NEON_BLUE} !important;
             border-radius: 8px !important;
             padding: 10px 20px !important;
-            height: auto !important;
-            width: auto !important;
-        }}
-        .floating-container button:hover {{
-            transform: scale(1.05);
-            border-radius: 8px !important;
-            box-shadow: 0 0 30px {NEON_BLUE} !important;
-        }}
-
-        .footer-glow img {{
-            filter: drop-shadow(0 0 5px rgba(255,255,255,0.5));
-            transition: transform 0.3s;
-        }}
-        .footer-glow img:hover {{
-            transform: scale(1.05);
-            filter: drop-shadow(0 0 10px rgba(255,255,255,0.9));
+            height: auto !important; width: auto !important;
         }}
 
         #MainMenu, footer, header, .stDeployButton {{visibility: hidden;}}
@@ -187,15 +127,55 @@ def load_css():
     </style>
     """, unsafe_allow_html=True)
 
-# --- NOVÉ FUNKCE PRO GENERUJÍ CÍLENÉHO CSS (Vlož na konec styles.py) ---
+# --- GENERÁTORY STYLŮ (Tlačítko po tlačítku) ---
 
-# --- FUNKCE PRO SPECIFICKÁ TLAČÍTKA ---
+def get_cyber_button_css(bg_color, glow_color):
+    """
+    PRO: Kalendář, Dashboard, Hledání
+    VZHLED: Tučné, Svítící, Větší padding
+    """
+    return f"""
+        button {{
+            background: {bg_color} !important;
+            border: none !important;
+            
+            /* GLOW EFEKT */
+            box-shadow: inset 0 0 0 1px {glow_color}, 0 0 8px {glow_color}44 !important;
+            color: #e0e0e0 !important;
+            
+            /* TYPOGRAFIE - TUČNÁ */
+            font-family: 'Exo 2', sans-serif !important;
+            font-weight: 700 !important; 
+            font-size: 0.9rem !important;
+            
+            width: 100% !important;
+            border-radius: 8px !important;
+            padding: 12px 15px !important;
+            text-align: left !important;
+            margin-bottom: 8px !important;
+            white-space: normal !important;
+            height: auto !important;
+            min-height: 45px !important;
+            
+            transition: box-shadow 0.2s ease !important;
+        }}
+        
+        button:hover {{
+            /* ZESÍLENÍ GLOW - BEZ ZVĚTŠOVÁNÍ */
+            box-shadow: inset 0 0 0 2px {glow_color}, 0 0 25px {glow_color} !important;
+            background-color: {glow_color}22 !important;
+            color: #fff !important;
+            z-index: 99 !important;
+            border-radius: 8px !important;
+        }}
+        
+        button p {{ font-weight: 700 !important; }}
+    """
 
 def get_transport_css(bg, color, border):
     """
-    CSS PRO DOPRAVU:
-    - Jemný, tenký text (jako 'Ano')
-    - Menší velikost
+    PRO: Tlačítka dopravy v tabulce
+    VZHLED: Jemné, Tenké, Malé
     """
     return f"""
         button {{
@@ -210,15 +190,14 @@ def get_transport_css(bg, color, border):
             transition: all 0.2s ease !important;
         }}
         
-        /* Cílíme přímo na text uvnitř - ABY BYL JEMNÝ */
+        /* Cílíme přímo na text uvnitř - JEMNÝ */
         button p {{
             font-family: 'Exo 2', sans-serif !important;
-            font-weight: 400 !important;  /* <--- ZDE JE TA ZMĚNA NA TENKÉ */
+            font-weight: 400 !important;  /* TENKÉ PÍSMO */
             font-size: 0.85rem !important;
             line-height: 1.2 !important;
             margin: 0 !important;
             padding: 0 !important;
-            letter-spacing: 0px !important;
         }}
 
         button:hover {{
@@ -228,7 +207,10 @@ def get_transport_css(bg, color, border):
     """
 
 def get_delete_css():
-    """CSS PRO KOŠ: Fixní čtverec, vycentrovaný."""
+    """
+    PRO: Koš
+    VZHLED: Fixní čtverec, centr
+    """
     return f"""
         button {{
             background-color: rgba(255, 255, 255, 0.05) !important;
@@ -237,12 +219,10 @@ def get_delete_css():
             color: #ff073a !important;
             padding: 0 !important;
             
-            /* FIXNÍ ČTVEREC */
             width: 40px !important;
             height: 40px !important;
             min-height: 40px !important;
             
-            /* CENTROVÁNÍ V BUŇCE */
             display: block !important;
             margin: 0 auto !important;
         }}
@@ -264,7 +244,7 @@ def get_delete_css():
             margin: 0 auto !important;
         }}
     """
-    
+
 # --- OSTATNÍ FUNKCE (beze změny) ---
 def inject_mobile_warning(): st.markdown("""<style>@media only screen and (orientation: portrait) and (max-width: 900px) {#rotate-warning {display:flex !important;} .stApp {overflow:hidden;}}</style>""", unsafe_allow_html=True)
 def get_ics_button_html(b64_data, filename): return f"""<a href="data:text/calendar;base64,{b64_data}" download="{filename}.ics" style="text-decoration:none;"><div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 6px 0; text-align: center; cursor: pointer; color: #fff; transition: 0.3s;" onmouseover="this.style.borderColor='#00f3ff'; this.style.color='#00f3ff'; this.style.boxShadow='0 0 10px #00f3ff';" onmouseout="this.style.borderColor='rgba(255, 255, 255, 0.2)'; this.style.color='#fff'; this.style.boxShadow='none';">📅</div></a>"""
