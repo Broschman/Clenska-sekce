@@ -45,89 +45,102 @@ def load_css():
         /* === LOGO A POZADÍ === */
         img.header-logo {{
             height: 60px !important;
-            width: auto !important;
-            object-fit: contain !important;
-            margin-top: 5px;
             filter: drop-shadow(0 0 8px {NEON_BLUE});
             transition: transform 0.3s;
         }}
         img.header-logo:hover {{ transform: scale(1.1) rotate(5deg); }}
 
-        h1 span.gradient-text {{
-            background: linear-gradient(90deg, {NEON_GREEN}, {NEON_BLUE});
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            font-weight: 800;
-        }}
-
         .stApp {{
             background-color: {DARK_BG};
-            background-image: 
-                radial-gradient(circle at 50% 30%, rgba(0, 243, 255, 0.04) 0%, transparent 60%),
-                repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.02) 0px, rgba(255, 255, 255, 0.02) 1px, transparent 1px, transparent 40px),
-                repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.02) 0px, rgba(255, 255, 255, 0.02) 1px, transparent 1px, transparent 40px);
-            background-attachment: fixed;
+            background-image: radial-gradient(circle at 50% 30%, rgba(0, 243, 255, 0.04) 0%, transparent 60%);
         }}
 
-        /* === TABULKY A DATAFRAME (ZEBRA STRIPING) === */
-        [data-testid="stDataFrame"] {{
-            background: transparent !important;
-            border: none !important;
-        }}
-        [data-testid="stDataFrame"] table {{
-            background: transparent !important;
-        }}
-        /* Hlavička tabulky */
-        [data-testid="stDataFrame"] table th {{
-            background-color: rgba(0, 243, 255, 0.1) !important;
-            color: {NEON_BLUE} !important;
-            font-family: 'Rajdhani', sans-serif !important;
-            font-size: 1rem !important;
-            border-bottom: 1px solid {NEON_BLUE} !important;
-        }}
-        /* Zebra striping - liché řádky */
-        [data-testid="stDataFrame"] table tr:nth-of-type(odd) {{
-            background: rgba(255, 255, 255, 0.02);
-        }}
-        /* Hover efekt na řádky */
-        [data-testid="stDataFrame"] table tr:hover {{
-            background: rgba(255, 255, 255, 0.05);
-        }}
-        [data-testid="stDataFrame"] table td {{
-            color: #e0e0e0 !important;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
-        }}
-
-        /* === FORMULÁŘE A INPUTY === */
-        .stTextInput input, .stSelectbox div[data-baseweb="select"], .stTextArea textarea {{
+        /* === OPRAVA FORMULÁŘŮ (INPUTY) === */
+        /* Cílíme na všechny vstupy: Text, Number, Select, Date */
+        .stTextInput input, 
+        .stNumberInput input,
+        .stDateInput input,
+        .stTextArea textarea,
+        div[data-baseweb="select"] > div {{
             background-color: rgba(0, 0, 0, 0.3) !important;
             border: 1px solid rgba(255, 255, 255, 0.1) !important;
-            color: white !important;
+            color: #ffffff !important;
             border-radius: 6px !important;
         }}
-        .stTextInput input:focus, .stSelectbox div[data-baseweb="select"]:focus-within, .stTextArea textarea:focus {{
+        
+        /* Focus efekt pro inputy (aby svítily, když se do nich píše) */
+        .stTextInput:focus-within div[data-baseweb="input"],
+        .stNumberInput:focus-within div[data-baseweb="input"],
+        .stTextArea:focus-within textarea,
+        div[data-baseweb="select"]:focus-within > div {{
             border-color: {NEON_BLUE} !important;
             box-shadow: 0 0 10px rgba(0, 243, 255, 0.2) !important;
         }}
-
-        /* === SCROLLBARY (POSUVNÍKY) === */
-        ::-webkit-scrollbar {{
-            width: 8px;
-            height: 8px;
-        }}
-        ::-webkit-scrollbar-track {{
-            background: #0e1117; 
-        }}
-        ::-webkit-scrollbar-thumb {{
-            background: #333; 
-            border-radius: 4px;
-        }}
-        ::-webkit-scrollbar-thumb:hover {{
-            background: {NEON_BLUE}; 
+        
+        /* Labely nad inputy */
+        .stTextInput label, .stNumberInput label, .stDateInput label, .stSelectbox label, .stTextArea label {{
+            color: {NEON_BLUE} !important;
+            font-weight: 600 !important;
+            font-size: 0.9rem !important;
         }}
 
-        /* === OSTATNÍ KOMPONENTY === */
-        /* Primary button (Zapsat se) */
+        /* === TLAČÍTKO ODESLAT (FORM SUBMIT) === */
+        /* Toto tlačítko nelze snadno obalit naším kontejnerem, proto ho stylujeme globálně */
+        div[data-testid="stFormSubmitButton"] > button {{
+            background: rgba(57, 255, 20, 0.1) !important;
+            color: {NEON_GREEN} !important;
+            border: 1px solid {NEON_GREEN} !important;
+            font-weight: 700 !important;
+            width: 100% !important;
+            height: 50px !important;
+            font-size: 1.1rem !important;
+            border-radius: 8px !important;
+            transition: all 0.3s ease !important;
+        }}
+        div[data-testid="stFormSubmitButton"] > button:hover {{
+            background: rgba(57, 255, 20, 0.2) !important;
+            box-shadow: 0 0 15px rgba(57, 255, 20, 0.4) !important;
+        }}
+
+        /* === TABULKY A ZEBRA STRIPING (OPRAVA) === */
+        /* 1. Pro st.dataframe (pokud se nevykresluje jako canvas) */
+        [data-testid="stDataFrame"] {{
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            border-radius: 8px !important;
+        }}
+        
+        /* 2. Pro st.table (HTML tabulka) - Tady zebra funguje nejlépe */
+        [data-testid="stTable"] table {{
+            width: 100%;
+        }}
+        [data-testid="stTable"] thead tr th {{
+            background-color: rgba(0, 243, 255, 0.1) !important;
+            color: {NEON_BLUE} !important;
+            border-bottom: 2px solid {NEON_BLUE} !important;
+            font-family: 'Rajdhani', sans-serif !important;
+            font-size: 1.1rem !important;
+        }}
+        
+        /* Zebra - sudé řádky */
+        [data-testid="stTable"] tbody tr:nth-child(even),
+        [data-testid="stDataFrame"] div[role="rowgroup"] div[role="row"]:nth-child(even) {{
+            background-color: rgba(255, 255, 255, 0.03) !important;
+        }}
+        
+        /* Hover efekt na řádky */
+        [data-testid="stTable"] tbody tr:hover,
+        [data-testid="stDataFrame"] div[role="rowgroup"] div[role="row"]:hover {{
+            background-color: rgba(255, 255, 255, 0.08) !important;
+            cursor: default;
+        }}
+
+        /* === OSTATNÍ (SCROLLBARY, TOASTY) === */
+        ::-webkit-scrollbar {{ width: 8px; height: 8px; }}
+        ::-webkit-scrollbar-track {{ background: #0e1117; }}
+        ::-webkit-scrollbar-thumb {{ background: #333; border-radius: 4px; }}
+        ::-webkit-scrollbar-thumb:hover {{ background: {NEON_BLUE}; }}
+
+        /* Primary button (mimo formulář) */
         button[kind="primary"] {{
             background: rgba(57, 255, 20, 0.1) !important;
             color: {NEON_GREEN} !important;
@@ -135,47 +148,15 @@ def load_css():
             font-weight: 700 !important;
         }}
 
-        /* Kalendář box */
-        .today-box {{
-            background: rgba(255, 7, 58, 0.2); 
-            color: {NEON_RED}; 
-            border: 1px solid {NEON_RED};
-            display: inline-flex; align-items: center; justify-content: center;    
-            width: 30px; height: 30px; border-radius: 8px; font-weight: 800;
-            box-shadow: 0 0 15px rgba(255, 7, 58, 0.4);
-            margin: 0 auto 8px auto;    
-        }}
-        .day-number {{ color: #888; font-weight: 600; display: block; text-align: center; margin-bottom: 8px; }}
-
-        /* Popovery a Dialogy */
-        div[data-testid="stPopoverBody"], div[data-testid="stDialog"] {{
-            background-color: rgba(14, 17, 23, 0.98) !important;
-            border: 1px solid rgba(255, 255, 255, 0.15) !important;
-            backdrop-filter: blur(20px);
-            border-radius: 12px !important;
-            box-shadow: 0 0 40px rgba(0, 0, 0, 0.8) !important;
-        }}
-        
-        /* Toast notifikace */
-        div[data-testid="stToast"] {{
-            background-color: rgba(14, 17, 23, 0.95) !important;
-            border: 1px solid {NEON_GREEN} !important;
-            border-radius: 8px !important;
-            color: white !important;
-        }}
-
         /* Skrytí defaultních elementů */
         #MainMenu, footer, header, .stDeployButton, [data-testid="stToolbar"], [data-testid="stDecoration"] {{ display: none !important; }}
     </style>
     """, unsafe_allow_html=True)
 
-# --- GENERÁTORY STYLŮ PRO TLAČÍTKA (IZOLOVANÉ) ---
+# --- GENERÁTORY STYLŮ (IZOLOVANÉ) ---
 
 def get_cyber_button_css(bg_color, glow_color):
-    """
-    PRO: Kalendář, Dashboard
-    VZHLED: Tučné (Bold) a Velké
-    """
+    """PRO: Kalendář, Dashboard - TUČNÉ"""
     return f"""
         button {{
             background: {bg_color} !important;
@@ -189,11 +170,10 @@ def get_cyber_button_css(bg_color, glow_color):
             min-height: 50px !important;
             transition: all 0.2s ease !important;
         }}
-        /* Obsah tlačítka */
         button p, button div {{
             font-family: 'Exo 2', sans-serif !important;
-            font-weight: 700 !important;  /* TUČNÉ */
-            font-size: 1.1rem !important; /* VĚTŠÍ */
+            font-weight: 700 !important;
+            font-size: 1.1rem !important;
             color: #ffffff !important;
             letter-spacing: 0.5px !important;
         }}
@@ -205,10 +185,7 @@ def get_cyber_button_css(bg_color, glow_color):
     """
 
 def get_transport_css(bg, color, border):
-    """
-    PRO: Doprava
-    VZHLED: Jemné (Regular) a Malé
-    """
+    """PRO: Doprava - TENKÉ"""
     return f"""
         button {{
             background-color: {bg} !important;
@@ -221,11 +198,10 @@ def get_transport_css(bg, color, border):
             width: 100% !important;
             transition: all 0.2s ease !important;
         }}
-        /* Obsah tlačítka */
         button p, button div {{
             font-family: 'Exo 2', sans-serif !important;
-            font-weight: 400 !important;   /* NORMÁLNÍ/TENKÉ */
-            font-size: 0.85rem !important; /* MALÉ */
+            font-weight: 400 !important;
+            font-size: 0.85rem !important;
             margin: 0 !important;
             color: {color} !important;
         }}
@@ -262,7 +238,7 @@ def get_delete_css():
         }}
     """
 
-# --- OSTATNÍ POMOCNÉ FUNKCE ---
+# --- POMOCNÉ FUNKCE ---
 
 def inject_mobile_warning(): 
     st.markdown("""<style>@media only screen and (orientation: portrait) and (max-width: 900px) {#rotate-warning {display:flex !important;} .stApp {overflow:hidden;}}</style>""", unsafe_allow_html=True)
@@ -278,7 +254,6 @@ def get_footer_html():
     return f"<div style='text-align: center; color: #6b7280; font-size: 0.8em; margin-top: 20px; font-family: \"Exo 2\", sans-serif;'>SYSTEM: <span style='color:{NEON_GREEN}'>ONLINE</span> • RBK 2026</div>"
 
 def badge(text, bg="#333", color="#fff"): 
-    """Vytvoří malý štítek (badge) pro typ události."""
     return f"<span style='background-color: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #e5e7eb; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; margin-right: 6px; font-family: \"Exo 2\", sans-serif;'>{text}</span>"
 
 @st.cache_data(ttl=3600*24)
