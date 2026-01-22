@@ -761,22 +761,43 @@ def vykreslit_detail_akce(akce, unique_key):
                             background-color: {btn_bg} !important; 
                             color: {btn_color} !important; 
                             border: {btn_border} !important; 
-                            padding: 4px 8px !important;
-                            font-size: 0.9rem !important;
+                            
+                            /* === ÚPRAVA TEXTU ABY ODPOVÍDAL "Ano" === */
                             font-family: 'Exo 2', sans-serif !important;
+                            font-size: 0.8rem !important;   /* Menší písmo */
+                            font-weight: 400 !important;    /* Normální tloušťka (ne tučné) */
+                            line-height: 1.2 !important;    /* Menší rozestupy řádků */
+                            letter-spacing: 0px !important; /* Žádné rozvolňování */
+                            text-transform: none !important; /* Žádné vynucování kapitálek */
+                            
+                            padding: 4px 6px !important;
                             height: auto !important; 
                             min-height: 30px !important;
                             width: 100% !important;
-                            white-space: nowrap !important;
+                            white-space: normal !important; /* Povolíme zalamování, ale kontrolovaně */
                             border-radius: 6px !important;
+                            
+                            display: flex !important;
+                            align-items: center !important;
+                            justify-content: center !important;
+                            text-align: center !important;
                         }}
+                        
+                        /* Pojistka pro vnitřní text (Streamlit ho občas balí do <p>) */
+                        button p {{
+                            font-weight: 400 !important;
+                            font-size: 0.8rem !important;
+                            margin: 0 !important;
+                        }}
+
                         button:hover {{
                             border-radius: 6px !important;
+                            filter: brightness(1.2);
                         }}
                      """):
                          if c4.button(btn_label, key=f"btn_row_d_{unique_key}_{i}", use_container_width=True):
                              show_doprava_dialog(akce_id_str, akce.get('název', ''), akce['datum'].strftime('%d.%m.'), row['jméno'], None, None)
-
+                             
                      c5.write(row.get('ubytování', ''))
 
                      # === TLAČÍTKO KOŠE (HARD FIX - MARGIN AUTO) ===
