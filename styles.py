@@ -1,4 +1,3 @@
-
 import streamlit as st
 import requests
 
@@ -73,6 +72,10 @@ def load_css():
         }}
         
         /* ZDE BYLO GLOBÁLNÍ NASTAVENÍ TLAČÍTEK - JE PRYČ */
+        /* PŘIDÁNO: Globální vynucení tučného písma pro všechna tlačítka */
+        .stButton > button {{
+            font-weight: 700 !important;
+        }}
 
         /* Primary tlačítko (Zapsat se) - to necháme, je specifické */
         button[kind="primary"] {{
@@ -161,7 +164,7 @@ def get_cyber_button_css(bg_color, glow_color):
 def get_transport_css(bg, color, border):
     """
     PRO: Doprava
-    VZHLED: Tenké (Light), Malé
+    VZHLED: Tučné (Bold), Malé
     """
     return f"""
         button {{
@@ -177,13 +180,13 @@ def get_transport_css(bg, color, border):
             
             /* ZÁKLADNÍ NASTAVENÍ PRO KONTEJNER */
             font-family: 'Exo 2', sans-serif !important;
-            font-weight: 400 !important; /* Normal weight */
+            font-weight: 700 !important; /* ZMĚNĚNO NA TUČNÉ */
             font-size: 0.85rem !important;
         }}
         
         /* SPECIFICKÉ CÍLENÍ NA TEXT UVNITŘ */
         button p {{
-            font-weight: 400 !important;
+            font-weight: 700 !important; /* ZMĚNĚNO NA TUČNÉ */
             font-size: 0.85rem !important;
             margin: 0 !important;
         }}
@@ -207,6 +210,7 @@ def get_delete_css():
             min-height: 40px !important;
             display: block !important;
             margin: 0 auto !important;
+            font-weight: 700 !important; /* PŘIDÁNO TUČNÉ */
         }}
         
         button > div {{
