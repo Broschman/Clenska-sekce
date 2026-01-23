@@ -24,10 +24,6 @@ import chatbot
 
 print("--- ZAČÁTEK RERUNU ---")
 
-st.write("🔍 DEBUG SECRETS:")
-# Vypíše seznam klíčů, které Streamlit vidí (ale NEukáže hesla)
-st.write(st.secrets.keys())
-
 styles.load_css()
 styles.inject_mobile_warning()
 
