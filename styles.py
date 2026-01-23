@@ -41,15 +41,26 @@ def load_css():
             text-transform: uppercase;
             font-weight: 700 !important;
         }}
-        h1 {{ font-size: 2.5rem !important; }}
+        
+        /* === NOVÉ: CENTROVÁNÍ HLAVNÍHO NADPISU === */
+        h1 {{ 
+            font-size: 3rem !important; 
+            text-align: center !important; /* Centr */
+            margin-bottom: 20px !important;
+        }}
 
-        /* Logo */
+        /* === NOVÉ: CENTROVÁNÍ LOGA === */
         img.header-logo {{
-            height: 60px !important;
+            height: 80px !important; /* Trochu větší pro efekt */
             width: auto !important;
             object-fit: contain !important;
-            margin-top: 5px;
-            filter: drop-shadow(0 0 8px {NEON_BLUE});
+            margin-top: 10px;
+            
+            display: block !important;      /* Nutné pro margin auto */
+            margin-left: auto !important;   /* Centr vlevo */
+            margin-right: auto !important;  /* Centr vpravo */
+            
+            filter: drop-shadow(0 0 10px {NEON_BLUE});
             transition: transform 0.3s;
         }}
         img.header-logo:hover {{ transform: scale(1.1) rotate(5deg); }}
@@ -70,8 +81,7 @@ def load_css():
             background-attachment: fixed;
         }}
         
-        /* === GLOBÁLNÍ TLAČÍTKA (OPRAVA) === */
-        /* Nastavíme tučné písmo na kontejner, ale NENUTÍME font rodinu dětem (aby se nerozbily ikonky) */
+        /* === GLOBÁLNÍ TLAČÍTKA (STABILNÍ) === */
         .stButton > button {{
             font-family: 'Exo 2', sans-serif !important;
             font-weight: 700 !important;
@@ -127,21 +137,21 @@ def get_cyber_button_css(bg_color, glow_color):
             
             width: 100% !important;
             border-radius: 8px !important;
-            padding: 12px 5px !important; /* Menší padding po stranách, aby se tam vešlo víc textu */
+            padding: 12px 5px !important;
             
-            /* ZMĚNA: CENTROVÁNÍ KONTEJNERU */
+            /* CENTROVÁNÍ KONTEJNERU */
             text-align: center !important;
             display: flex !important;
             justify-content: center !important;
             align-items: center !important;
-            flex-direction: column !important; /* Důležité pro \n řádkování */
+            flex-direction: column !important;
             
             margin-bottom: 8px !important;
             
             /* POVOLENÍ ROZTAŽENÍ NA VÝŠKU */
             height: auto !important;       
             min-height: 60px !important;   
-            white-space: pre-wrap !important; /* Povolí \n */
+            white-space: pre-wrap !important; /* Povolí \\n */
             
             transition: box-shadow 0.2s ease !important;
         }}
@@ -153,7 +163,7 @@ def get_cyber_button_css(bg_color, glow_color):
             font-weight: 700 !important;
             color: #ffffff !important;
             
-            /* ZMĚNA: CENTROVÁNÍ SAMOTNÉHO TEXTU */
+            /* CENTROVÁNÍ TEXTU */
             text-align: center !important;
             width: 100% !important;
             
@@ -190,14 +200,14 @@ def get_transport_css(bg, color, border):
             
             /* Kontejner */
             font-family: 'Exo 2', sans-serif !important;
-            font-weight: 700 !important; /* Tučné */
+            font-weight: 700 !important;
             font-size: 0.85rem !important;
         }}
         
         /* Pouze text (P), ikonky (SPAN/DIV) necháme být */
         button p {{
             font-family: 'Exo 2', sans-serif !important;
-            font-weight: 700 !important; /* Tučné */
+            font-weight: 700 !important;
             font-size: 0.85rem !important;
             margin: 0 !important;
         }}
@@ -224,7 +234,6 @@ def get_delete_css():
             font-weight: 700 !important; 
         }}
         
-        /* Ikonka koše je obvykle emoji, tak ji vycentrujeme */
         button > div {{
             display: flex !important;
             justify-content: center !important;
