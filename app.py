@@ -257,10 +257,11 @@ st.markdown("<div style='margin-bottom: 50px'></div>", unsafe_allow_html=True)
 # === CYBER COACH (SIDEBAR) ===
 with st.sidebar:
     st.markdown("---")
-    # Tlačítko, které otevře bublinu
     with st.popover("🤖 OTEVŘÍT CYBER-COACHE", use_container_width=True):
-        chatbot.main()
-
+        # ZMĚNA: Posíláme mu 'df' (naši tabulku s akcemi)
+        # Předpokládám, že proměnná s tabulkou se v app.py jmenuje 'df' nebo 'data'
+        chatbot.main(df)
+        
 # --- 5. PLOVOUCÍ TLAČÍTKO ---
 st.markdown('<div class="floating-container">', unsafe_allow_html=True)
 with st.popover("💡 Nápad?"):
