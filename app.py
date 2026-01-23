@@ -19,6 +19,7 @@ import textwrap
 import styles
 import utils
 import data_manager
+import chatbot
 
 print("--- ZAČÁTEK RERUNU ---")
 
@@ -251,6 +252,13 @@ if search_text or len(search_date_value) > 0:
 else:
     show_calendar_section()
 st.markdown("<div style='margin-bottom: 50px'></div>", unsafe_allow_html=True)
+
+# === CYBER COACH (SIDEBAR) ===
+with st.sidebar:
+    st.markdown("---")
+    # Tlačítko, které otevře bublinu
+    with st.popover("🤖 OTEVŘÍT CYBER-COACHE", use_container_width=True):
+        chatbot.main()
 
 # --- 5. PLOVOUCÍ TLAČÍTKO ---
 st.markdown('<div class="floating-container">', unsafe_allow_html=True)
