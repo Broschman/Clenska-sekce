@@ -1,19 +1,12 @@
 import streamlit as st
 import google.generativeai as genai
 import os
+import pandas as pd
 
 # === KONFIGURACE ===
-AVATAR_PATH = "bot_avatar.png"  # Změň, pokud to máš ve složce (např. "assets/bot_avatar.png")
-SYSTEM_INSTRUCTION = """
-Jsi Cyber-Coach, elitní AI asistent pro orientační běžce. 
-Jsi stručný, motivující a používáš orienťácký slang (lampiony, postupy, ražení).
-Tvým úkolem je pomáhat uživateli s plánováním závodů, dopravou a tréninkem.
-Oslovuj uživatele 'šampione'.
-Když se něco povede, použij emoji 🔥 nebo 🌲.
-"""
+AVATAR_PATH = "bot_avatar.png"
 
 def init_gemini():
-    """Nastartuje spojení s Google API"""
     try:
         api_key = st.secrets["GOOGLE_API_KEY"]
         genai.configure(api_key=api_key)
@@ -23,54 +16,84 @@ def init_gemini():
         return False
 
 def get_avatar_image():
-    """Načte obrázek avatara, nebo vrátí emoji, pokud soubor chybí"""
     if os.path.exists(AVATAR_PATH):
         return AVATAR_PATH
-    return "🤖" # Fallback, kdyby obrázek neexistoval
+    return "🤖"
 
-def main():
-    # 1. Inicializace API
+def prepare_data_context(df):
+    """
+    Převede tabulku (DataFrame) na textový přehled pro AI.
+    Vybíráme jen důležité sloupce, ať ho nezahltíme zbytečnostmi.
+    """
+    if df is None or df.empty:
+        return "Zatím žádné akce v plánu."
+    
+    # Vybereme jen to podstatné pro konverzaci
+    # (Předpokládám, že sloupce se jmenují 'název', 'datum', 'typ', 'přihlášeni'...)
+    # Pokud se jmenují jinak, upravíme to.
+    readable_df = df.copy()
+    
+    # Převedeme datum na čitelný string
+    if 'datum' in readable_df.columns:
+        readable_df['datum'] = readable_df['datum'].apply(lambda x: x.strftime('%d.%m.%Y') if pd.notnull(x) else "Neznámo")
+    
+    # Vytvoříme textový souhrn (Markdown tabulka)
+    context_text = "TADY JE AKTUÁLNÍ SEZNAM AKCÍ V KLUBU:\n"
+    context_text += readable_df.to_markdown(index=False)
+    return context_text
+
+def main(df=None): # <--- ZMĚNA: Přijímáme DF jako argument
     if not init_gemini():
         return
 
-    # 2. Inicializace historie chatu (aby si pamatoval, co jste řešili)
+    # 1. Příprava kontextu (Data z tabulky)
+    data_context = prepare_data_context(df)
+    
+    # 2. Sestavení instrukcí (Systémová + Data)
+    FULL_SYSTEM_INSTRUCTION = f"""
+    Jsi Cyber-Coach, elitní AI asistent pro orientační běžce.
+    Jsi stručný, motivující a používáš orienťácký slang (lampiony, postupy, ražení).
+    Tvým úkolem je pomáhat uživateli s plánováním závodů, dopravou a tréninkem.
+    Oslovuj uživatele 'šampione'.
+    
+    {data_context}
+    
+    Když se uživatel zeptá na nějakou akci, najdi ji v tabulce výše.
+    Pokud uživatel chce něco, co není v tabulce, řekni, že o tom nevíš.
+    """
+
     if "messages" not in st.session_state:
         st.session_state.messages = [
-            {"role": "model", "content": "Zdar šampione! 🌲 Jsem připraven. Co pro tebe můžu udělat?"}
+            {"role": "model", "content": "Zdar šampione! 🌲 Vidím celou termínovku. Na co se chceš zeptat?"}
         ]
 
     # 3. Načtení modelu
     model = genai.GenerativeModel(
-        model_name="gemini-2.5-flash",  # <--- TOTO JE TVŮJ NOVÝ MOTOR 🚀
-        system_instruction=SYSTEM_INSTRUCTION
+        model_name="gemini-2.5-flash",
+        system_instruction=FULL_SYSTEM_INSTRUCTION
     )
 
-    # 4. Vykreslení historie chatu
     avatar_img = get_avatar_image()
     
+    # Vykreslení historie
     for msg in st.session_state.messages:
-        # Tady se rozhoduje o ikonce (User vs Bot)
         icon = avatar_img if msg["role"] == "model" else "👤"
         st.chat_message(msg["role"], avatar=icon).write(msg["content"])
 
-    # 5. Vstup od uživatele
+    # Chat input
     if prompt := st.chat_input("Zadej instrukce..."):
-        # Zobrazit dotaz uživatele hned
         st.chat_message("user", avatar="👤").write(prompt)
         st.session_state.messages.append({"role": "user", "content": prompt})
 
-        # Získat odpověď od modelu
         try:
-            # Vytvoříme chat session s historií
             chat = model.start_chat(history=[
                 {"role": m["role"], "parts": [m["content"]]} 
-                for m in st.session_state.messages[:-1] # Vše kromě poslední (tu posíláme teď)
+                for m in st.session_state.messages[:-1]
             ])
             
             response = chat.send_message(prompt)
             bot_reply = response.text
             
-            # Zobrazit odpověď
             st.chat_message("model", avatar=avatar_img).write(bot_reply)
             st.session_state.messages.append({"role": "model", "content": bot_reply})
             
