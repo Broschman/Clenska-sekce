@@ -41,9 +41,7 @@ def main():
 
     # 3. Načtení modelu
     model = genai.GenerativeModel(
-        # ZKUS TUTO VARIANTU (často funguje lépe):
-        model_name="gemini-1.5-flash-latest", 
-        # POKUD BY ANI TO NEŠLO, DEJ TAM OSVĚDČENOU KLASIKU: "gemini-pro"
+        model_name="gemini-2.5-flash",  # <--- TOTO JE TVŮJ NOVÝ MOTOR 🚀
         system_instruction=SYSTEM_INSTRUCTION
     )
 
