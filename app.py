@@ -16,6 +16,7 @@ import base64
 import os
 from io import BytesIO
 import textwrap
+import google.generativeai as genai
 import styles
 import utils
 import data_manager
