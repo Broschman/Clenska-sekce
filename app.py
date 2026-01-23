@@ -24,16 +24,6 @@ import chatbot
 
 print("--- ZAČÁTEK RERUNU ---")
 
-# === DEBUG: VÝPIS DOSTUPNÝCH MODELŮ ===
-try:
-    genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
-    st.write("🔍 DOSTUPNÉ MODELY:")
-    for m in genai.list_models():
-        if 'generateContent' in m.supported_generation_methods:
-            st.write(f"- `{m.name}`")
-except Exception as e:
-    st.error(f"Chyba při výpisu: {e}")
-
 styles.load_css()
 styles.inject_mobile_warning()
 
