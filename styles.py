@@ -25,7 +25,7 @@ BARVY_AKCI = {
 def load_css():
     st.markdown(f"""
     <style>
-        /* FONT FIX: Importujeme všechny váhy */
+        /* FONT FIX */
         @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;600;700;800;900&family=Rajdhani:wght@500;600;700&display=swap&subset=latin,latin-ext');
 
         /* === GLOBÁLNÍ RESET === */
@@ -42,23 +42,24 @@ def load_css():
             font-weight: 700 !important;
         }}
         
-        /* === NOVÉ: CENTROVÁNÍ HLAVNÍHO NADPISU === */
+        /* === HLAVNÍ NADPIS - CENTROVÁNÍ === */
         h1 {{ 
             font-size: 3rem !important; 
-            text-align: center !important; /* Centr */
+            text-align: center !important; /* Celý řádek (text i logo v něm) na střed */
             margin-bottom: 20px !important;
         }}
 
-        /* === NOVÉ: CENTROVÁNÍ LOGA === */
+        /* === LOGO - V ŘÁDKU VEDLE TEXTU === */
         img.header-logo {{
-            height: 80px !important; /* Trochu větší pro efekt */
+            height: 80px !important; 
             width: auto !important;
             object-fit: contain !important;
-            margin-top: 10px;
             
-            display: block !important;      /* Nutné pro margin auto */
-            margin-left: auto !important;   /* Centr vlevo */
-            margin-right: auto !important;  /* Centr vpravo */
+            /* TOTO JE KLÍČOVÁ ZMĚNA: */
+            display: inline-block !important;   /* Chová se jako písmeno, ne jako blok */
+            vertical-align: middle !important;  /* Srovná se na střed výšky textu */
+            margin-right: 20px !important;      /* Odstup od nadpisu */
+            margin-top: -10px !important;       /* Jemná korekce výšky */
             
             filter: drop-shadow(0 0 10px {NEON_BLUE});
             transition: transform 0.3s;
@@ -81,13 +82,13 @@ def load_css():
             background-attachment: fixed;
         }}
         
-        /* === GLOBÁLNÍ TLAČÍTKA (STABILNÍ) === */
+        /* === GLOBÁLNÍ TLAČÍTKA === */
         .stButton > button {{
             font-family: 'Exo 2', sans-serif !important;
             font-weight: 700 !important;
         }}
         
-        /* Primary tlačítko (Zapsat se) */
+        /* Primary tlačítko */
         button[kind="primary"] {{
             background: rgba(57, 255, 20, 0.1) !important;
             color: {NEON_GREEN} !important;
@@ -126,10 +127,9 @@ def load_css():
 def get_cyber_button_css(bg_color, glow_color):
     """
     PRO: Kalendář, Dashboard, Hledání
-    VZHLED: Tučné, Velké, Svítící + ZALAMOVÁNÍ + VYCENTROVÁNÍ
+    VZHLED: Tučné, Velké + ZALAMOVÁNÍ + VYCENTROVÁNÍ
     """
     return f"""
-        /* 1. Vzhled samotného tlačítka */
         button {{
             background: {bg_color} !important;
             border: none !important;
@@ -156,7 +156,6 @@ def get_cyber_button_css(bg_color, glow_color):
             transition: box-shadow 0.2s ease !important;
         }}
 
-        /* 2. TEXT UVNITŘ */
         button p {{
             font-family: 'Exo 2', sans-serif !important;
             font-size: 18px !important;
@@ -182,10 +181,7 @@ def get_cyber_button_css(bg_color, glow_color):
     """
     
 def get_transport_css(bg, color, border):
-    """
-    PRO: Doprava
-    VZHLED: Tučné (Bold), Malé
-    """
+    """PRO: Doprava"""
     return f"""
         button {{
             background-color: {bg} !important;
@@ -198,13 +194,11 @@ def get_transport_css(bg, color, border):
             width: 100% !important;
             transition: all 0.2s ease !important;
             
-            /* Kontejner */
             font-family: 'Exo 2', sans-serif !important;
             font-weight: 700 !important;
             font-size: 0.85rem !important;
         }}
         
-        /* Pouze text (P), ikonky (SPAN/DIV) necháme být */
         button p {{
             font-family: 'Exo 2', sans-serif !important;
             font-weight: 700 !important;
@@ -249,7 +243,7 @@ def get_delete_css():
         }}
     """
 
-# --- OSTATNÍ FUNKCE (beze změny) ---
+# --- OSTATNÍ FUNKCE ---
 def inject_mobile_warning(): st.markdown("""<style>@media only screen and (orientation: portrait) and (max-width: 900px) {#rotate-warning {display:flex !important;} .stApp {overflow:hidden;}}</style>""", unsafe_allow_html=True)
 def get_ics_button_html(b64_data, filename): return f"""<a href="data:text/calendar;base64,{b64_data}" download="{filename}.ics" style="text-decoration:none;"><div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 6px 0; text-align: center; cursor: pointer; color: #fff; transition: 0.3s;" onmouseover="this.style.borderColor='#00f3ff'; this.style.color='#00f3ff'; this.style.boxShadow='0 0 10px #00f3ff';" onmouseout="this.style.borderColor='rgba(255, 255, 255, 0.2)'; this.style.color='#fff'; this.style.boxShadow='none';">📅</div></a>"""
 def get_weather_card_html(w_icon, w_text, temp, rain, wind, sunset_html=""):
