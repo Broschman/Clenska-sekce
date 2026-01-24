@@ -1,101 +1,131 @@
 import streamlit as st
 import google.generativeai as genai
-import os
 import pandas as pd
+import data_manager  # Importujeme naše funkce
+from google.api_core import retry
 
 # === KONFIGURACE ===
-AVATAR_PATH = "bot_avatar.png"
+AVATAR_BOT = "bot_avatar.png" # Pokud máš
+AVATAR_USER = "👤"
 
 def init_gemini():
+    """Inicializace s API klíčem"""
     try:
         api_key = st.secrets["GOOGLE_API_KEY"]
         genai.configure(api_key=api_key)
         return True
     except Exception as e:
-        st.error(f"⚠️ Chybí API klíč v secrets! ({e})")
+        st.error(f"⚠️ Chybí API klíč! ({e})")
         return False
 
-def get_avatar_image():
-    if os.path.exists(AVATAR_PATH):
-        return AVATAR_PATH
-    return "🤖"
-
-def prepare_data_context(df):
+def prepare_context_summary(df):
     """
-    Převede tabulku (DataFrame) na textový přehled pro AI.
-    Vybíráme jen důležité sloupce, ať ho nezahltíme zbytečnostmi.
+    Vytvoří stručný přehled nejbližších akcí pro system prompt.
+    Neposíláme celou historii, jen budoucnost, abychom šetřili tokeny.
     """
     if df is None or df.empty:
-        return "Zatím žádné akce v plánu."
+        return "Zatím žádné akce."
     
-    # Vybereme jen to podstatné pro konverzaci
-    # (Předpokládám, že sloupce se jmenují 'název', 'datum', 'typ', 'přihlášeni'...)
-    # Pokud se jmenují jinak, upravíme to.
-    readable_df = df.copy()
+    # Filtr na budoucí akce (nechceme historii z roku 2024)
+    today = pd.to_datetime("today").date()
+    future_df = df[df['datum'] >= today].sort_values('datum').head(15) # Top 15 nejbližších
     
-    # Převedeme datum na čitelný string
-    if 'datum' in readable_df.columns:
-        readable_df['datum'] = readable_df['datum'].apply(lambda x: x.strftime('%d.%m.%Y') if pd.notnull(x) else "Neznámo")
-    
-    # Vytvoříme textový souhrn (Markdown tabulka)
-    context_text = "TADY JE AKTUÁLNÍ SEZNAM AKCÍ V KLUBU:\n"
-    context_text += readable_df.to_markdown(index=False)
-    return context_text
+    text = "TERMÍNOVKA (Nejbližší akce):\n"
+    for _, row in future_df.iterrows():
+        text += f"- ID: {row['id']} | {row['datum'].strftime('%d.%m.')} | {row['název']} | Místo: {row['místo']} | Typ: {row['typ']}\n"
+    return text
 
-def main(df=None): # <--- ZMĚNA: Přijímáme DF jako argument
+def main(df_akce):
     if not init_gemini():
         return
 
-    # 1. Příprava kontextu (Data z tabulky)
-    data_context = prepare_data_context(df)
+    st.markdown("### 🤖 Cyber-Coach v2.0")
+    st.caption("Jsem připraven na akci. Můžu tě přihlásit na závody!")
+
+    # 1. Definice Nástrojů (Tools)
+    # Tady říkáme Gemini: "Když potřebuješ přihlásit, použij tuhle funkci"
+    tools_list = [
+        data_manager.sign_up_user,
+        data_manager.get_event_info # Volitelné, pokud chceš dedikované hledání
+    ]
+
+    # 2. Kontext
+    data_context = prepare_context_summary(df_akce)
     
-    # 2. Sestavení instrukcí (Systémová + Data)
-    FULL_SYSTEM_INSTRUCTION = f"""
-    Jsi Cyber-Coach, elitní AI asistent pro orientační běžce.
-    Jsi stručný, motivující a používáš orienťácký slang (lampiony, postupy, ražení).
-    Tvým úkolem je pomáhat uživateli s plánováním závodů, dopravou a tréninkem.
-    Oslovuj uživatele 'šampione'.
+    system_instruction = f"""
+    Jsi Cyber-Coach, drsný ale nápomocný AI asistent pro orientační běžce.
+    Máš přístup k databázi akcí a funkcím pro správu týmu.
     
     {data_context}
     
-    Když se uživatel zeptá na nějakou akci, najdi ji v tabulce výše.
-    Pokud uživatel chce něco, co není v tabulce, řekni, že o tom nevíš.
+    PRAVIDLA:
+    1. Oslovuj uživatele 'šampione' nebo 'běžče'.
+    2. Když uživatel chce přihlásit sebe nebo někoho jiného, VŽDY použij nástroj `sign_up_user`.
+    3. Pokud chybí jméno nebo název akce pro přihlášení, zeptej se na ně.
+    4. Buď stručný. Používej orienťácký slang (lampiony, dohledávka, ražení).
     """
 
-    if "messages" not in st.session_state:
-        st.session_state.messages = [
-            {"role": "model", "content": "Zdar šampione! 🌲 Vidím celou termínovku. Na co se chceš zeptat?"}
-        ]
-
-    # 3. Načtení modelu
+    # 3. Model s Tools
     model = genai.GenerativeModel(
-        model_name="gemini-2.5-flash",
-        system_instruction=FULL_SYSTEM_INSTRUCTION
+        model_name="gemini-2.0-flash", # Doporučuji 2.0 Flash nebo 1.5 Flash pro rychlost/cenu
+        tools=tools_list,
+        system_instruction=system_instruction
     )
 
-    avatar_img = get_avatar_image()
-    
+    # 4. Chat History v Session State
+    if "chat_history" not in st.session_state:
+        st.session_state.chat_history = [
+            {"role": "model", "parts": ["Zdar šampione! 🌲 Vidím termínovku. Chceš někam přihlásit?"]}
+        ]
+
     # Vykreslení historie
-    for msg in st.session_state.messages:
-        icon = avatar_img if msg["role"] == "model" else "👤"
-        st.chat_message(msg["role"], avatar=icon).write(msg["content"])
+    for msg in st.session_state.chat_history:
+        role = "user" if msg["role"] == "user" else "model"
+        icon = AVATAR_USER if role == "user" else "🤖"
+        
+        # Problém: Gemini history ukládá objekty, Streamlit chce text. 
+        # Musíme vytáhnout text z 'parts'.
+        text_content = ""
+        if isinstance(msg["parts"], list):
+            for part in msg["parts"]:
+                if isinstance(part, str): text_content += part
+                elif hasattr(part, "text"): text_content += part.text
+        elif isinstance(msg["parts"], str):
+            text_content = msg["parts"]
+            
+        if text_content:
+            st.chat_message(role, avatar=icon).write(text_content)
 
-    # Chat input
-    if prompt := st.chat_input("Zadej instrukce..."):
-        st.chat_message("user", avatar="👤").write(prompt)
-        st.session_state.messages.append({"role": "user", "content": prompt})
+    # 5. Zpracování vstupu
+    if prompt := st.chat_input("Napiš instrukci (např: Přihlas mě na MČR)"):
+        # Uložit user message
+        st.session_state.chat_history.append({"role": "user", "parts": [prompt]})
+        st.chat_message("user", avatar=AVATAR_USER).write(prompt)
 
-        try:
-            chat = model.start_chat(history=[
-                {"role": m["role"], "parts": [m["content"]]} 
-                for m in st.session_state.messages[:-1]
-            ])
-            
-            response = chat.send_message(prompt)
-            bot_reply = response.text
-            
-            st.chat_message("model", avatar=avatar_img).write(bot_reply)
-            st.session_state.messages.append({"role": "model", "content": bot_reply})
-            
-        except Exception as e:
-            st.error(f"Chyba spojení s Matrixem: {e}")
+        # Start Chat Session
+        # Pozor: Pro function calling je lepší nechat 'automatic_function_calling' povolený
+        chat = model.start_chat(history=st.session_state.chat_history[:-1])
+        
+        with st.chat_message("model", avatar="🤖"):
+            with st.spinner("Processing computation..."):
+                try:
+                    # Odeslání zprávy (model si sám zavolá funkci, pokud potřebuje)
+                    response = chat.send_message(prompt)
+                    
+                    # Gemini library ve Streamlitu automaticky vykoná funkci lokálně, 
+                    # pokud je správně nakonfigurována, ale pro plnou kontrolu 
+                    # je někdy třeba manuální smyčka. Nicméně 'tools' parametr v GenerativeModel
+                    # by měl v Python SDK zajistit automatické provedení v rámci `send_message` (tzv. Turn-based logic),
+                    # POKUD je enable_automatic_function_calling=True (což je default).
+                    
+                    # Výstup textu
+                    bot_text = response.text
+                    st.write(bot_text)
+                    
+                    # Uložení do historie
+                    st.session_state.chat_history.append({"role": "model", "parts": [bot_text]})
+                    
+                except Exception as e:
+                    st.error(f"System Error: {e}")
+                    # Debug pro vývojáře
+                    # st.write(response.parts)
