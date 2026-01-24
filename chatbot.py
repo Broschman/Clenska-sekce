@@ -2,7 +2,8 @@ import streamlit as st
 import google.generativeai as genai
 import pandas as pd
 import data_manager 
-from google.api_core import retry
+import time
+from google.api_core import exceptions
 
 # === KONFIGURACE ===
 AVATAR_BOT = "🤖" 
@@ -11,7 +12,6 @@ AVATAR_USER = "👤"
 def init_gemini():
     """Inicializace s API klíčem"""
     try:
-        # Zkusíme načíst klíč ze secrets, pokud není, vyhodíme chybu
         if "GOOGLE_API_KEY" in st.secrets:
             api_key = st.secrets["GOOGLE_API_KEY"]
             genai.configure(api_key=api_key)
@@ -28,9 +28,8 @@ def prepare_context_summary(df):
     if df is None or df.empty:
         return "Zatím žádné plánované akce."
     
-    # Filtr na budoucí akce + seřazení
     today = pd.to_datetime("today").date()
-    # Převedeme datum na datetime pro porovnání, pokud ještě není
+    # Převedeme datum na datetime pro porovnání
     if not pd.api.types.is_datetime64_any_dtype(df['datum']):
         df['datum'] = pd.to_datetime(df['datum']).dt.date
         
@@ -38,7 +37,6 @@ def prepare_context_summary(df):
     
     text = "AKTUÁLNÍ TERMÍNOVKA (Context Data):\n"
     for _, row in future_df.iterrows():
-        # Formát: ID | Datum | Název | Místo
         d = row['datum'].strftime('%d.%m.') if hasattr(row['datum'], 'strftime') else str(row['datum'])
         text += f"- ID: {row['id']} | {d} | {row['název']} | {row['místo']}\n"
     return text
@@ -48,7 +46,7 @@ def main(df_akce):
         return
 
     st.markdown("### 🤖 Cyber-Coach")
-    st.caption("Jsem připraven. Napiš 'Přihlas mě na MČR' nebo 'Kdy je další závod?'")
+    st.caption("Jsem online. Napiš třeba 'Přihlas mě na MČR'.")
 
     # 1. Definice Nástrojů (Tools)
     tools_list = [
@@ -57,46 +55,40 @@ def main(df_akce):
         data_manager.get_event_info
     ]
 
-    # 2. Příprava kontextu dat
+    # 2. Kontext
     data_context = prepare_context_summary(df_akce)
     
     # 3. System Prompt
     system_instruction = f"""
     Jsi Cyber-Coach, asistent pro orientační běžce (RBK).
-    Máš přístup k těmto datům o závodech:
+    Máš přístup k těmto datům:
     {data_context}
     
-    INSTRUKCE PRO FUNCTION CALLING:
-    - Pokud uživatel chce PŘIHLÁSIT (sebe nebo někoho), použij nástroj `sign_up_user`.
-    - Pokud uživatel chce ODHLÁSIT, použij nástroj `sign_out_user`.
-    - Pokud chybí JMÉNO uživatele (např. napíše jen "přihlas mě"), ZEPTEJ SEHO NA JMÉNO, než zavoláš funkci.
-    - Pokud chybí NÁZEV AKCE, zeptej se.
-    
-    STYL KOMUNIKACE:
-    - Stručný, k věci, motivující.
-    - Oslovuj 'šampione', 'borče' nebo 'běžče'.
-    - Používej emoji (🌲, 🏃, 🧭).
+    INSTRUKCE:
+    - Pro PŘIHLÁŠENÍ použij `sign_up_user`.
+    - Pro ODHLÁŠENÍ použij `sign_out_user`.
+    - Pokud chybí JMÉNO, zeptej se na něj.
+    - Oslovuj 'šampione', buď stručný a používej emoji 🌲.
     """
 
-    # 4. Inicializace modelu
+    # 4. Inicializace modelu - PŘEPÍNÁME NA STABILNÍ VERZI 1.5
     model = genai.GenerativeModel(
-        model_name="gemini-1.5-flash", # Verze 1.5 Flash je rychlá a levná, ideální pro tools
+        model_name="gemini-1.5-flash", # ZMĚNA: 2.0 dělala problémy s limity
         tools=tools_list,
         system_instruction=system_instruction
     )
 
-    # 5. Historie v Session State
+    # 5. Historie
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = [
-            {"role": "model", "parts": ["Zdar šampione! 🌲 Kam to dneska bude? Vidím termínovku, stačí říct."]}
+            {"role": "model", "parts": ["Zdar šampione! 🌲 Jsem připraven. Co podnikneme?"]}
         ]
 
-    # 6. Vykreslení zpráv
+    # Vykreslení zpráv
     for msg in st.session_state.chat_history:
         role = "user" if msg["role"] == "user" else "model"
         icon = AVATAR_USER if role == "user" else AVATAR_BOT
         
-        # Extrakce textu z objektu Gemini (může být složitější při func calling)
         text_content = ""
         parts = msg.get("parts", [])
         if isinstance(parts, list):
@@ -109,27 +101,35 @@ def main(df_akce):
         if text_content:
             st.chat_message(role, avatar=icon).write(text_content)
 
-    # 7. Chat Input & Logic
+    # 6. Chat Input s RETRY logikou
     if prompt := st.chat_input("Tvůj pokyn..."):
-        # Zobrazení user message
         st.chat_message("user", avatar=AVATAR_USER).write(prompt)
         st.session_state.chat_history.append({"role": "user", "parts": [prompt]})
 
-        # Vytvoření chat session s historií
         chat = model.start_chat(history=st.session_state.chat_history[:-1])
         
         with st.chat_message("model", avatar=AVATAR_BOT):
-            with st.spinner("Pracuji..."):
-                try:
-                    # Odeslání zprávy - Gemini automaticky vyřeší Function Calling
-                    response = chat.send_message(prompt)
+            with st.spinner("Mákám na tom..."):
+                # Retry smyčka (max 3 pokusy)
+                max_retries = 3
+                for attempt in range(max_retries):
+                    try:
+                        response = chat.send_message(prompt)
+                        bot_text = response.text
+                        st.write(bot_text)
+                        st.session_state.chat_history.append({"role": "model", "parts": [bot_text]})
+                        break # Úspěch, vyskakujeme ze smyčky
                     
-                    # Získání odpovědi
-                    bot_text = response.text
-                    st.write(bot_text)
+                    except exceptions.ResourceExhausted:
+                        # Chyba 429 - Quota Exceeded
+                        wait_time = 5 * (attempt + 1)
+                        if attempt < max_retries - 1:
+                            st.warning(f"⚠️ Přehřívám se (Limit API). Chladím motory... ({wait_time}s)")
+                            time.sleep(wait_time)
+                            continue
+                        else:
+                            st.error("❌ Došly mi síly (Quota Exceeded). Zkus to za chvíli.")
                     
-                    # Uložení do historie
-                    st.session_state.chat_history.append({"role": "model", "parts": [bot_text]})
-                    
-                except Exception as e:
-                    st.error(f"Chyba komunikace: {str(e)}")
+                    except Exception as e:
+                        st.error(f"Chyba systému: {str(e)}")
+                        break
