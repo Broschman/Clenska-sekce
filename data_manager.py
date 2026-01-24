@@ -96,6 +96,50 @@ def get_event_info(query: str) -> str:
         output += f"📍 {row['název']} ({row['datum']}) v {row['místo']}\n"
     return output
 
+# --- PŘIDAT NA KONEC data_manager.py ---
+
+def sign_out_user(event_name_or_id: str, user_name: str) -> str:
+    """
+    Odhlásí uživatele z akce (smaže záznam z Google Sheets).
+    """
+    # 1. Identifikace akce (stejná logika jako u sign_up)
+    df_akce = load_akce()
+    target_event = df_akce[df_akce['id'] == str(event_name_or_id)]
+    
+    if target_event.empty:
+        mask = df_akce['název'].str.contains(str(event_name_or_id), case=False, na=False)
+        target_event = df_akce[mask]
+
+    if target_event.empty:
+        return f"❌ Akci '{event_name_or_id}' nemůžu najít. Zkus přesnější název."
+    
+    # Bereme první shodu
+    row_akce = target_event.iloc[0]
+    akce_id = str(row_akce['id'])
+    akce_nazev = row_akce['název']
+
+    # 2. Načtení přihlášek
+    df_prihlasky = load_prihlasky()
+    
+    if df_prihlasky.empty:
+         return f"ℹ️ Na akci '{akce_nazev}' nikdo není, takže tě nemůžu odhlásit."
+
+    # 3. Kontrola, jestli tam uživatel je
+    mask_user = (df_prihlasky['id_akce'] == akce_id) & (df_prihlasky['jméno'] == user_name)
+    
+    if not mask_user.any():
+        return f"ℹ️ Uživatel '{user_name}' na akci '{akce_nazev}' vůbec není."
+
+    # 4. Smazání (Filtrujeme vše KROMĚ daného uživatele na dané akci)
+    df_new = df_prihlasky[~mask_user]
+    
+    try:
+        conn = get_connection()
+        conn.update(worksheet="prihlasky", data=df_new)
+        return f"✅ Hotovo. Odhlásil jsem '{user_name}' z akce '{akce_nazev}'."
+    except Exception as e:
+        return f"❌ Chyba při mazání: {e}"
+
 # --- 1. AKCE (Cachujeme, aby kalendář neblikal) ---
 # @st.cache_data(ttl=3600) 
 def load_akce():
