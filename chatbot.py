@@ -2,22 +2,16 @@ import streamlit as st
 import google.generativeai as genai
 import pandas as pd
 import data_manager 
-import time
 from google.api_core import exceptions
+import time
 
 # === KONFIGURACE ===
 AVATAR_BOT = "🤖" 
 AVATAR_USER = "👤"
 
-# === SEZNAM MODELŮ (Podle toho, co jsi poslal, že je dostupné) ===
-# Seřazeno od nejnovějších/nejlehčích (pravděpodobně volných) po starší
-CANDIDATE_MODELS = [
-    "gemini-2.0-flash-lite-preview-02-05", # Lite verze (často free)
-    "gemini-2.5-flash",                   # Novinka 2.5
-    "gemini-2.0-flash-exp",               # Experimentální (často free)
-    "gemini-flash-latest",                # 1.5 Flash (Fallback)
-    "gemini-2.0-flash"                    # Klasika (asi plná, ale zkusíme nakonec)
-]
+# TOTO JE JEDINÝ MODEL, KTERÝ MÁ VELKÉ LIMITY (15 RPM)
+# Pokud ti to hodí chybu 404, ZNAMENÁ TO, ŽE MÁŠ STAROU KNIHOVNU (viz Krok 1)
+MODEL_NAME = "gemini-1.5-flash"
 
 def init_gemini():
     """Inicializace s API klíčem"""
@@ -33,59 +27,17 @@ def init_gemini():
         st.error(f"⚠️ Chyba inicializace Gemini: {e}")
         return False
 
-def get_working_model(system_instruction, tools_list):
-    """
-    Tato funkce provede OSTRÝ TEST generování.
-    Pokud model hodí chybu (Limit/404), okamžitě zkusí další.
-    """
-    # Pokud už máme vybraný model v session state, použijeme ho
-    if "valid_model_name" in st.session_state:
-        # I tady raději vytvoříme instanci znovu
-        return genai.GenerativeModel(
-            model_name=st.session_state.valid_model_name,
-            tools=tools_list,
-            system_instruction=system_instruction
-        )
-
-    st.toast("🔍 Hledám funkční model...", icon="🤖")
-    
-    for model_name in CANDIDATE_MODELS:
-        try:
-            # 1. Vytvoříme instanci
-            model = genai.GenerativeModel(
-                model_name=model_name,
-                tools=tools_list,
-                system_instruction=system_instruction
-            )
-            
-            # 2. OSTRÝ TEST: Zkusíme vygenerovat jedno slovo
-            # Toto odhalí Quota Exceeded hned teď, ne až při chatu
-            response = model.generate_content("Test")
-            
-            if response and response.text:
-                # Pokud to prošlo, máme vítěze!
-                st.session_state.valid_model_name = model_name
-                print(f"✅ VÍTĚZ: {model_name}")
-                st.toast(f"✅ Připojeno k: {model_name}", icon="🚀")
-                return model
-            
-        except Exception as e:
-            # Pokud chyba (Quota, 404, cokoliv), jdeme dál
-            print(f"❌ {model_name} selhal: {e}")
-            continue
-    
-    # Pokud selhalo všechno
-    st.error("❌ Všechny modely jsou momentálně přetížené nebo nedostupné. Zkus to za 5 minut.")
-    return None
-
 def prepare_context_summary(df):
     """Vytvoří stručný přehled budoucích akcí."""
     if df is None or df.empty:
         return "Zatím žádné plánované akce."
     
     today = pd.to_datetime("today").date()
+    # Robustní převod data
     if not pd.api.types.is_datetime64_any_dtype(df['datum']):
-        df['datum'] = pd.to_datetime(df['datum']).dt.date
+        df['datum'] = pd.to_datetime(df['datum'], errors='coerce').dt.date
+    else:
+        df['datum'] = df['datum'].dt.date
         
     future_df = df[df['datum'] >= today].sort_values('datum').head(20)
     
@@ -98,6 +50,9 @@ def prepare_context_summary(df):
 def main(df_akce):
     if not init_gemini():
         return
+
+    st.markdown("### 🤖 Cyber-Coach")
+    st.caption(f"Online (Stabilní v1.5).")
 
     # 1. Definice Nástrojů (Tools)
     tools_list = [
@@ -121,17 +76,17 @@ def main(df_akce):
     - Oslovuj 'šampione', buď stručný a používej emoji 🌲.
     """
 
-    # 3. Získání funkčního modelu (Auto-Discovery)
-    # Pokud model nenajdeme, funkce vypíše chybu a vrátí None
-    model = get_working_model(system_instruction, tools_list)
-    
-    if not model:
-        return 
-
-    # Zobrazíme info o modelu
-    used_model = st.session_state.get("valid_model_name", "Unknown")
-    st.markdown("### 🤖 Cyber-Coach")
-    st.caption(f"Online ({used_model}).")
+    # 3. Inicializace Modelu
+    try:
+        model = genai.GenerativeModel(
+            model_name=MODEL_NAME, 
+            tools=tools_list,
+            system_instruction=system_instruction
+        )
+    except Exception as e:
+        st.error(f"❌ Chyba modelu: {e}")
+        st.warning("TIP: Aktualizuj 'google-generativeai' v requirements.txt na verzi >=0.8.3")
+        return
 
     # 4. Historie
     if "chat_history" not in st.session_state:
@@ -174,11 +129,6 @@ def main(df_akce):
                     st.session_state.chat_history.append({"role": "model", "parts": [bot_text]})
         
         except exceptions.ResourceExhausted:
-             st.error("❌ Došel limit požadavků během konverzace. Zkus to za chvíli.")
-             # Reset modelu pro příští pokus
-             if "valid_model_name" in st.session_state:
-                 del st.session_state.valid_model_name
+             st.error("❌ Narazil jsi na limit (15 zpráv/min). Dej si chvilku pauzu.")
         except Exception as e:
              st.error(f"Chyba: {str(e)}")
-             if "valid_model_name" in st.session_state:
-                 del st.session_state.valid_model_name
