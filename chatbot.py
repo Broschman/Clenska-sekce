@@ -8,10 +8,7 @@ import time
 # === KONFIGURACE ===
 AVATAR_BOT = "🤖" 
 AVATAR_USER = "👤"
-
-# POUŽIJEME ALIAS Z TVÉHO SEZNAMU
-# Toto obchází chybu 404, protože tento název starší knihovna zná.
-MODEL_NAME = "gemini-flash-latest"
+MODEL_NAME = "gemini-flash-latest" # Stabilní verze
 
 def init_gemini():
     """Inicializace s API klíčem"""
@@ -33,7 +30,6 @@ def prepare_context_summary(df):
         return "Zatím žádné plánované akce."
     
     today = pd.to_datetime("today").date()
-    # Robustní převod data
     if not pd.api.types.is_datetime64_any_dtype(df['datum']):
         df['datum'] = pd.to_datetime(df['datum'], errors='coerce').dt.date
     else:
@@ -52,9 +48,9 @@ def main(df_akce):
         return
 
     st.markdown("### 🤖 Cyber-Coach")
-    st.caption(f"Online (Stabilní verze).")
+    st.caption(f"Online (v1.5/Latest).")
 
-    # 1. Definice Nástrojů (Tools)
+    # 1. Definice Nástrojů
     tools_list = [
         data_manager.sign_up_user,
         data_manager.sign_out_user,
@@ -76,8 +72,7 @@ def main(df_akce):
     - Oslovuj 'šampione', buď stručný a používej emoji 🌲.
     """
 
-    # 3. Inicializace Modelu (S RETRY LOGIKOU PŘI STARTU)
-    model = None
+    # 3. Inicializace Modelu
     try:
         model = genai.GenerativeModel(
             model_name=MODEL_NAME, 
@@ -85,17 +80,8 @@ def main(df_akce):
             system_instruction=system_instruction
         )
     except Exception as e:
-        # Pokud ani alias nefunguje, zkusíme tvrdý fallback na 'gemini-pro' (ten je všude)
-        st.warning(f"Alias {MODEL_NAME} selhal ({e}). Zkouším záložní 'gemini-pro'.")
-        try:
-            model = genai.GenerativeModel(
-                model_name="gemini-pro", 
-                tools=tools_list,
-                system_instruction=system_instruction
-            )
-        except:
-            st.error("❌ Kritická chyba: API odmítá všechny názvy modelů. Je nutné aktualizovat knihovnu v requirements.txt.")
-            return
+        st.error(f"❌ Chyba modelu: {e}")
+        return
 
     # 4. Historie
     if "chat_history" not in st.session_state:
@@ -103,7 +89,7 @@ def main(df_akce):
             {"role": "model", "parts": ["Zdar šampione! 🌲 Jsem připraven. Co podnikneme?"]}
         ]
 
-    # Vykreslení zpráv
+    # Vykreslení historie
     for msg in st.session_state.chat_history:
         role = "user" if msg["role"] == "user" else "model"
         icon = AVATAR_USER if role == "user" else AVATAR_BOT
@@ -114,6 +100,7 @@ def main(df_akce):
             for p in parts:
                 if isinstance(p, str): text_content += p
                 elif hasattr(p, "text"): text_content += p.text
+                # Ignorujeme function calls v historii, aby to nepadalo
         elif isinstance(parts, str):
             text_content = parts
             
@@ -125,20 +112,43 @@ def main(df_akce):
         st.chat_message("user", avatar=AVATAR_USER).write(prompt)
         st.session_state.chat_history.append({"role": "user", "parts": [prompt]})
 
-        if model:
-            try:
-                chat = model.start_chat(history=st.session_state.chat_history[:-1])
-                
-                with st.chat_message("model", avatar=AVATAR_BOT):
-                    with st.spinner("Mákám na tom..."):
-                        # Odeslání zprávy
-                        response = chat.send_message(prompt)
-                        bot_text = response.text
-                        
-                        st.write(bot_text)
-                        st.session_state.chat_history.append({"role": "model", "parts": [bot_text]})
+        try:
+            # Zapneme automatické volání funkcí
+            chat = model.start_chat(
+                history=st.session_state.chat_history[:-1],
+                enable_automatic_function_calling=True 
+            )
             
-            except exceptions.ResourceExhausted:
-                st.error("❌ Narazil jsi na limit zpráv. Dej si chvilku pauzu.")
-            except Exception as e:
-                st.error(f"Chyba: {str(e)}")
+            with st.chat_message("model", avatar=AVATAR_BOT):
+                with st.spinner("Mákám na tom..."):
+                    response = chat.send_message(prompt)
+                    
+                    # === ZÁCHRANNÁ SÍŤ PRO TEXT ===
+                    bot_text = ""
+                    try:
+                        # Pokusíme se získat text (výsledek)
+                        bot_text = response.text
+                    except ValueError:
+                        # Pokud to spadne, znamená to, že bot vrátil jen VOLÁNÍ FUNKCE, ale ne výsledek.
+                        # Vytáhneme info o tom, co chtěl udělat.
+                        debug_parts = []
+                        for part in response.parts:
+                            if fn := part.function_call:
+                                args = ", ".join(f"{k}='{v}'" for k, v in fn.args.items())
+                                debug_parts.append(f"🔧 **Volám funkci:** `{fn.name}({args})`")
+                                debug_parts.append("*(Automatické spuštění selhalo, zkontroluj logy nebo knihovnu)*")
+                            else:
+                                debug_parts.append(str(part))
+                        bot_text = "\n\n".join(debug_parts)
+                    
+                    if not bot_text: 
+                        bot_text = "⚠️ (Odpověď je prázdná)"
+
+                    st.markdown(bot_text)
+                    # Ukládáme jen textovou reprezentaci, abychom nerozbili historii
+                    st.session_state.chat_history.append({"role": "model", "parts": [bot_text]})
+        
+        except exceptions.ResourceExhausted:
+             st.error("❌ Limit API vyčerpán. Dej si pauzu.")
+        except Exception as e:
+             st.error(f"Chyba: {str(e)}")
