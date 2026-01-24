@@ -254,13 +254,14 @@ else:
     show_calendar_section()
 st.markdown("<div style='margin-bottom: 50px'></div>", unsafe_allow_html=True)
 
-# === CYBER COACH (SIDEBAR) ===
+# --- app.py (Sidebar sekce) ---
 with st.sidebar:
     st.markdown("---")
     with st.popover("🤖 OTEVŘÍT CYBER-COACHE", use_container_width=True):
-        # ZMĚNA: Posíláme mu 'df' (naši tabulku s akcemi)
-        # Předpokládám, že proměnná s tabulkou se v app.py jmenuje 'df' nebo 'data'
-        chatbot.main(df)
+        # OPRAVA: Načteme čerstvá data přímo pro bota
+        # (df neexistovalo, df_akce je ze začátku skriptu, my chceme aktuální)
+        current_akce = data_manager.load_akce()
+        chatbot.main(current_akce)
         
 # --- 5. PLOVOUCÍ TLAČÍTKO ---
 st.markdown('<div class="floating-container">', unsafe_allow_html=True)
