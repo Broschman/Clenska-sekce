@@ -18,13 +18,8 @@ from datetime import datetime
 
 def sign_up_user(event_name_or_id: str, user_name: str, note: str = "", transport: str = "") -> str:
     """
-    Funkce pro přihlášení uživatele na akci. Bot ji bude volat.
-    
-    Args:
-        event_name_or_id: ID akce nebo přibližný název.
-        user_name: Jméno člena (musí být přesné, nebo ho zkusíme najít).
-        note: Poznámka k přihlášce.
-        transport: Preferovaná doprava (text).
+    Funkce pro přihlášení uživatele na akci. 
+    NOVĚ: Kontroluje DEADLINE.
     """
     # 1. Načíst akce a najít tu správnou
     df_akce = load_akce()
@@ -32,9 +27,8 @@ def sign_up_user(event_name_or_id: str, user_name: str, note: str = "", transpor
     # Zkusíme najít podle ID
     target_event = df_akce[df_akce['id'] == str(event_name_or_id)]
     
-    # Pokud nenajdeme podle ID, zkusíme full-text v názvu (fuzzy search pro bota)
+    # Pokud nenajdeme podle ID, zkusíme full-text v názvu
     if target_event.empty:
-        # Hledáme case-insensitive
         mask = df_akce['název'].str.contains(str(event_name_or_id), case=False, na=False)
         target_event = df_akce[mask]
 
@@ -49,11 +43,23 @@ def sign_up_user(event_name_or_id: str, user_name: str, note: str = "", transpor
     row_akce = target_event.iloc[0]
     akce_id = str(row_akce['id'])
     akce_nazev = row_akce['název']
-
+    
+    # === DEADLINE CHECK (NOVÉ) ===
+    today = date.today()
+    deadline = row_akce.get('deadline')
+    
+    # Převedeme deadline na date object, pokud je to Timestamp
+    if isinstance(deadline, pd.Timestamp):
+        deadline = deadline.date()
+        
+    # Pokud je deadline nastaven a je už PO něm -> ZÁKAZ
+    if deadline and today > deadline:
+        d_str = deadline.strftime('%d.%m.')
+        return f"⛔ Smůla šampione! Přihlášky na '{akce_nazev}' už jsou uzavřené (Deadline byl {d_str})."
+    
     # 2. Načíst přihlášky a zkontrolovat duplicitu
     df_prihlasky = load_prihlasky()
     
-    # Check, jestli už tam není
     if not df_prihlasky.empty:
         is_there = ((df_prihlasky['id_akce'] == akce_id) & (df_prihlasky['jméno'] == user_name)).any()
         if is_there:
@@ -79,6 +85,62 @@ def sign_up_user(event_name_or_id: str, user_name: str, note: str = "", transpor
     except Exception as e:
         return f"❌ Chyba při zápisu: {e}"
 
+def sign_out_user(event_name_or_id: str, user_name: str) -> str:
+    """Odhlásí uživatele (Také by nemělo jít po deadlinu, ale často se to toleruje - nechám na tobě)."""
+    # 1. Identifikace akce
+    df_akce = load_akce()
+    target_event = df_akce[df_akce['id'] == str(event_name_or_id)]
+    
+    if target_event.empty:
+        mask = df_akce['název'].str.contains(str(event_name_or_id), case=False, na=False)
+        target_event = df_akce[mask]
+
+    if target_event.empty:
+        return f"❌ Akci '{event_name_or_id}' nemůžu najít."
+    
+    row_akce = target_event.iloc[0]
+    akce_id = str(row_akce['id'])
+    akce_nazev = row_akce['název']
+
+    # === DEADLINE CHECK PRO ODHLÁŠENÍ (Volitelné) ===
+    # Pokud chceš zakázat i odhlašování po termínu, odkomentuj toto:
+    """
+    today = date.today()
+    deadline = row_akce.get('deadline')
+    if isinstance(deadline, pd.Timestamp): deadline = deadline.date()
+    if deadline and today > deadline:
+         return f"⛔ Už je po deadlinu! Z '{akce_nazev}' se sám neodhlásíš. Napiš trenérovi."
+    """
+
+    # 2. Načtení a Smazání
+    df_prihlasky = load_prihlasky()
+    mask_user = (df_prihlasky['id_akce'] == akce_id) & (df_prihlasky['jméno'] == user_name)
+    
+    if not mask_user.any():
+        return f"ℹ️ Uživatel '{user_name}' na akci není."
+
+    df_new = df_prihlasky[~mask_user]
+    
+    try:
+        conn = get_connection()
+        conn.update(worksheet="prihlasky", data=df_new)
+        return f"✅ Hotovo. Odhlásil jsem '{user_name}' z akce '{akce_nazev}'."
+    except Exception as e:
+        return f"❌ Chyba při mazání: {e}"
+
+def get_event_info(query: str) -> str:
+    df = load_akce()
+    mask = df['název'].str.contains(query, case=False, na=False) | df['místo'].str.contains(query, case=False, na=False)
+    results = df[mask]
+    
+    if results.empty:
+        return "Žádnou takovou akci nevidím."
+    
+    output = ""
+    for _, row in results.iterrows():
+        d = row['datum'].strftime('%d.%m.') if hasattr(row['datum'], 'strftime') else str(row['datum'])
+        output += f"📍 {row['název']} ({d}) v {row['místo']}\n"
+    return output
 def get_event_info(query: str) -> str:
     """
     Najde informace o akci podle dotazu (pro bota, aby nemusel číst celý kontext, pokud je to složité).
@@ -95,51 +157,7 @@ def get_event_info(query: str) -> str:
     for _, row in results.iterrows():
         output += f"📍 {row['název']} ({row['datum']}) v {row['místo']}\n"
     return output
-
-# --- PŘIDAT NA KONEC data_manager.py ---
-
-def sign_out_user(event_name_or_id: str, user_name: str) -> str:
-    """
-    Odhlásí uživatele z akce (smaže záznam z Google Sheets).
-    """
-    # 1. Identifikace akce (stejná logika jako u sign_up)
-    df_akce = load_akce()
-    target_event = df_akce[df_akce['id'] == str(event_name_or_id)]
     
-    if target_event.empty:
-        mask = df_akce['název'].str.contains(str(event_name_or_id), case=False, na=False)
-        target_event = df_akce[mask]
-
-    if target_event.empty:
-        return f"❌ Akci '{event_name_or_id}' nemůžu najít. Zkus přesnější název."
-    
-    # Bereme první shodu
-    row_akce = target_event.iloc[0]
-    akce_id = str(row_akce['id'])
-    akce_nazev = row_akce['název']
-
-    # 2. Načtení přihlášek
-    df_prihlasky = load_prihlasky()
-    
-    if df_prihlasky.empty:
-         return f"ℹ️ Na akci '{akce_nazev}' nikdo není, takže tě nemůžu odhlásit."
-
-    # 3. Kontrola, jestli tam uživatel je
-    mask_user = (df_prihlasky['id_akce'] == akce_id) & (df_prihlasky['jméno'] == user_name)
-    
-    if not mask_user.any():
-        return f"ℹ️ Uživatel '{user_name}' na akci '{akce_nazev}' vůbec není."
-
-    # 4. Smazání (Filtrujeme vše KROMĚ daného uživatele na dané akci)
-    df_new = df_prihlasky[~mask_user]
-    
-    try:
-        conn = get_connection()
-        conn.update(worksheet="prihlasky", data=df_new)
-        return f"✅ Hotovo. Odhlásil jsem '{user_name}' z akce '{akce_nazev}'."
-    except Exception as e:
-        return f"❌ Chyba při mazání: {e}"
-
 # --- 1. AKCE (Cachujeme, aby kalendář neblikal) ---
 # @st.cache_data(ttl=3600) 
 def load_akce():
