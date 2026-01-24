@@ -9,6 +9,17 @@ from google.api_core import exceptions
 AVATAR_BOT = "🤖" 
 AVATAR_USER = "👤"
 
+# SEZNAM MODELŮ K OTESTOVÁNÍ (V POŘADÍ PRIORITY)
+# 1. Experimentální 2.0 (často zdarma bez limitů)
+# 2. Flash Latest (Alias pro 1.5 Flash - nejstabilnější)
+# 3. Flash Lite (Nejrychlejší)
+CANDIDATE_MODELS = [
+    "gemini-2.0-flash-exp",
+    "gemini-flash-latest",
+    "gemini-flash-lite-latest",
+    "gemini-1.5-flash-001"
+]
+
 def init_gemini():
     """Inicializace s API klíčem"""
     try:
@@ -23,8 +34,48 @@ def init_gemini():
         st.error(f"⚠️ Chyba inicializace Gemini: {e}")
         return False
 
+def get_working_model(system_instruction, tools_list):
+    """
+    Tato funkce projde seznam modelů a najde ten, který funguje (nemá limit 0).
+    """
+    # Pokud už máme vybraný model v session state, použijeme ho a nezdržujeme
+    if "valid_model_name" in st.session_state:
+        return genai.GenerativeModel(
+            model_name=st.session_state.valid_model_name,
+            tools=tools_list,
+            system_instruction=system_instruction
+        )
+
+    # Jinak testujeme
+    for model_name in CANDIDATE_MODELS:
+        try:
+            # Vytvoříme instanci
+            model = genai.GenerativeModel(
+                model_name=model_name,
+                tools=tools_list,
+                system_instruction=system_instruction
+            )
+            
+            # Rychlý test - pošleme "ping", abychom zjistili, jestli nás API pustí
+            # Stačí count_tokens, to je levné a rychlé
+            model.count_tokens("Test")
+            
+            # Pokud to nehavarovalo, máme vítěze!
+            st.session_state.valid_model_name = model_name
+            print(f"✅ Nalezen funkční model: {model_name}")
+            return model
+            
+        except Exception as e:
+            # Pokud chyba, zkusíme další
+            print(f"❌ Model {model_name} selhal: {e}")
+            continue
+    
+    # Pokud selhalo všechno
+    st.error("❌ Nepodařilo se najít žádný funkční model Gemini. Zkontroluj API klíč.")
+    return None
+
 def prepare_context_summary(df):
-    """Vytvoří stručný přehled budoucích akcí pro kontext modelu."""
+    """Vytvoří stručný přehled budoucích akcí."""
     if df is None or df.empty:
         return "Zatím žádné plánované akce."
     
@@ -45,8 +96,11 @@ def main(df_akce):
     if not init_gemini():
         return
 
-    st.markdown("### 🤖 Cyber-Coach")
-    st.caption("Jsem online (v2.0 Lite). Napiš třeba 'Přihlas mě na MČR'.")
+    # Pokud model ještě nebyl vybrán, ukážeme spinner, že hledáme
+    if "valid_model_name" not in st.session_state:
+        with st.spinner("🔄 Hledám dostupný AI model..."):
+             # Dummy volání pro inicializaci (logika je níže)
+             pass
 
     # 1. Definice Nástrojů (Tools)
     tools_list = [
@@ -55,10 +109,9 @@ def main(df_akce):
         data_manager.get_event_info
     ]
 
-    # 2. Kontext
+    # 2. Kontext a Prompt
     data_context = prepare_context_summary(df_akce)
     
-    # 3. System Prompt
     system_instruction = f"""
     Jsi Cyber-Coach, asistent pro orientační běžce (RBK).
     Máš přístup k těmto datům:
@@ -71,26 +124,18 @@ def main(df_akce):
     - Oslovuj 'šampione', buď stručný a používej emoji 🌲.
     """
 
-    # 4. Inicializace modelu - VOLÍME LITE PREVIEW ZE SEZNAMU
-    # Toto je model z tvého seznamu, který je "lehčí" a má jiné limity než ten hlavní.
-    target_model = "gemini-2.0-flash-lite-preview-02-05"
+    # 3. Získání funkčního modelu (Auto-Discovery)
+    model = get_working_model(system_instruction, tools_list)
     
-    try:
-        model = genai.GenerativeModel(
-            model_name=target_model, 
-            tools=tools_list,
-            system_instruction=system_instruction
-        )
-    except Exception as e:
-        st.error(f"Chyba modelu {target_model}: {e}. Zkouším fallback.")
-        # Fallback na experimentální verzi, kdyby preview nešla
-        model = genai.GenerativeModel(
-            model_name="gemini-2.0-flash-exp", 
-            tools=tools_list,
-            system_instruction=system_instruction
-        )
+    if not model:
+        return # Konec, nenašli jsme model
 
-    # 5. Historie
+    # Zobrazíme uživateli, na čem běžíme (pro info)
+    used_model = st.session_state.get("valid_model_name", "Unknown")
+    st.markdown("### 🤖 Cyber-Coach")
+    st.caption(f"Online ({used_model}). Napiš třeba 'Přihlas mě na MČR'.")
+
+    # 4. Historie
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = [
             {"role": "model", "parts": ["Zdar šampione! 🌲 Jsem připraven. Co podnikneme?"]}
@@ -113,35 +158,28 @@ def main(df_akce):
         if text_content:
             st.chat_message(role, avatar=icon).write(text_content)
 
-    # 6. Chat Input s RETRY logikou
+    # 5. Chat Input
     if prompt := st.chat_input("Tvůj pokyn..."):
         st.chat_message("user", avatar=AVATAR_USER).write(prompt)
         st.session_state.chat_history.append({"role": "user", "parts": [prompt]})
 
-        chat = model.start_chat(history=st.session_state.chat_history[:-1])
+        try:
+            chat = model.start_chat(history=st.session_state.chat_history[:-1])
+            
+            with st.chat_message("model", avatar=AVATAR_BOT):
+                with st.spinner("Mákám na tom..."):
+                    # Odeslání zprávy
+                    response = chat.send_message(prompt)
+                    bot_text = response.text
+                    
+                    st.write(bot_text)
+                    st.session_state.chat_history.append({"role": "model", "parts": [bot_text]})
         
-        with st.chat_message("model", avatar=AVATAR_BOT):
-            with st.spinner("Mákám na tom..."):
-                # Retry smyčka (max 3 pokusy)
-                max_retries = 3
-                for attempt in range(max_retries):
-                    try:
-                        response = chat.send_message(prompt)
-                        bot_text = response.text
-                        st.write(bot_text)
-                        st.session_state.chat_history.append({"role": "model", "parts": [bot_text]})
-                        break # Úspěch, vyskakujeme ze smyčky
-                    
-                    except exceptions.ResourceExhausted:
-                        # Chyba 429 - Quota Exceeded
-                        wait_time = 4 * (attempt + 1)
-                        if attempt < max_retries - 1:
-                            st.warning(f"⚠️ Limit API. Zkouším to znovu za {wait_time}s...")
-                            time.sleep(wait_time)
-                            continue
-                        else:
-                            st.error("❌ Došly mi síly. Zkus to za chvíli.")
-                    
-                    except Exception as e:
-                        st.error(f"Chyba systému: {str(e)}")
-                        break
+        except exceptions.ResourceExhausted:
+             st.error("❌ Došel limit požadavků (Quota Exceeded). Zkus to za chvíli.")
+        except Exception as e:
+             st.error(f"Chyba: {str(e)}")
+             # Pokud došlo k chybě modelu, resetujeme výběr, aby se příště zkusil najít jiný
+             if "valid_model_name" in st.session_state:
+                 del st.session_state.valid_model_name
+                 st.rerun()
