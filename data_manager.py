@@ -13,6 +13,89 @@ URL_AUTA = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:c
 def get_connection():
     return st.connection("gsheets", type=GSheetsConnection)
 
+# --- PŘIDEJ DO data_manager.py ---
+from datetime import datetime
+
+def sign_up_user(event_name_or_id: str, user_name: str, note: str = "", transport: str = "") -> str:
+    """
+    Funkce pro přihlášení uživatele na akci. Bot ji bude volat.
+    
+    Args:
+        event_name_or_id: ID akce nebo přibližný název.
+        user_name: Jméno člena (musí být přesné, nebo ho zkusíme najít).
+        note: Poznámka k přihlášce.
+        transport: Preferovaná doprava (text).
+    """
+    # 1. Načíst akce a najít tu správnou
+    df_akce = load_akce()
+    
+    # Zkusíme najít podle ID
+    target_event = df_akce[df_akce['id'] == str(event_name_or_id)]
+    
+    # Pokud nenajdeme podle ID, zkusíme full-text v názvu (fuzzy search pro bota)
+    if target_event.empty:
+        # Hledáme case-insensitive
+        mask = df_akce['název'].str.contains(str(event_name_or_id), case=False, na=False)
+        target_event = df_akce[mask]
+
+    if target_event.empty:
+        return f"❌ Akci '{event_name_or_id}' jsem nenašel. Zkus být přesnější."
+    
+    if len(target_event) > 1:
+        found_names = ", ".join(target_event['název'].tolist())
+        return f"⚠️ Našel jsem více akcí: {found_names}. Upřesni to prosím."
+
+    # Máme jednu akci
+    row_akce = target_event.iloc[0]
+    akce_id = str(row_akce['id'])
+    akce_nazev = row_akce['název']
+
+    # 2. Načíst přihlášky a zkontrolovat duplicitu
+    df_prihlasky = load_prihlasky()
+    
+    # Check, jestli už tam není
+    if not df_prihlasky.empty:
+        is_there = ((df_prihlasky['id_akce'] == akce_id) & (df_prihlasky['jméno'] == user_name)).any()
+        if is_there:
+            return f"ℹ️ {user_name} už je na akci '{akce_nazev}' přihlášený."
+
+    # 3. Zápis do DB
+    conn = get_connection()
+    novy_zaznam = pd.DataFrame([{
+        "id_akce": akce_id, 
+        "název": akce_nazev, 
+        "jméno": user_name,
+        "poznámka": note, 
+        "doprava": transport, 
+        "ubytování": "",
+        "čas zápisu": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "id_auto": ""
+    }])
+    
+    try:
+        updated_df = pd.concat([df_prihlasky, novy_zaznam], ignore_index=True)
+        conn.update(worksheet="prihlasky", data=updated_df)
+        return f"✅ Hotovo! Přihlásil jsem '{user_name}' na '{akce_nazev}'."
+    except Exception as e:
+        return f"❌ Chyba při zápisu: {e}"
+
+def get_event_info(query: str) -> str:
+    """
+    Najde informace o akci podle dotazu (pro bota, aby nemusel číst celý kontext, pokud je to složité).
+    """
+    df = load_akce()
+    # Jednoduchý filtr
+    mask = df['název'].str.contains(query, case=False, na=False) | df['místo'].str.contains(query, case=False, na=False)
+    results = df[mask]
+    
+    if results.empty:
+        return "Žádnou takovou akci nevidím."
+    
+    output = ""
+    for _, row in results.iterrows():
+        output += f"📍 {row['název']} ({row['datum']}) v {row['místo']}\n"
+    return output
+
 # --- 1. AKCE (Cachujeme, aby kalendář neblikal) ---
 # @st.cache_data(ttl=3600) 
 def load_akce():
