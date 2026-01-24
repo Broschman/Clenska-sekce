@@ -46,7 +46,7 @@ def main(df_akce):
         return
 
     st.markdown("### 🤖 Cyber-Coach")
-    st.caption("Jsem online (v1.5). Napiš třeba 'Přihlas mě na MČR'.")
+    st.caption("Jsem online (v2.0 Lite). Napiš třeba 'Přihlas mě na MČR'.")
 
     # 1. Definice Nástrojů (Tools)
     tools_list = [
@@ -71,13 +71,24 @@ def main(df_akce):
     - Oslovuj 'šampione', buď stručný a používej emoji 🌲.
     """
 
-    # 4. Inicializace modelu - TADY JE TA ZMĚNA
-    # Musí tu být "gemini-1.5-flash", ne "gemini-2.0-flash"
-    model = genai.GenerativeModel(
-        model_name="gemini-1.5-flash", 
-        tools=tools_list,
-        system_instruction=system_instruction
-    )
+    # 4. Inicializace modelu - VOLÍME LITE PREVIEW ZE SEZNAMU
+    # Toto je model z tvého seznamu, který je "lehčí" a má jiné limity než ten hlavní.
+    target_model = "gemini-2.0-flash-lite-preview-02-05"
+    
+    try:
+        model = genai.GenerativeModel(
+            model_name=target_model, 
+            tools=tools_list,
+            system_instruction=system_instruction
+        )
+    except Exception as e:
+        st.error(f"Chyba modelu {target_model}: {e}. Zkouším fallback.")
+        # Fallback na experimentální verzi, kdyby preview nešla
+        model = genai.GenerativeModel(
+            model_name="gemini-2.0-flash-exp", 
+            tools=tools_list,
+            system_instruction=system_instruction
+        )
 
     # 5. Historie
     if "chat_history" not in st.session_state:
@@ -129,7 +140,7 @@ def main(df_akce):
                             time.sleep(wait_time)
                             continue
                         else:
-                            st.error("❌ Došly mi síly (Google Quota). Zkus to za minutu.")
+                            st.error("❌ Došly mi síly. Zkus to za chvíli.")
                     
                     except Exception as e:
                         st.error(f"Chyba systému: {str(e)}")
