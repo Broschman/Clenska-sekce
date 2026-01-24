@@ -46,7 +46,7 @@ def main(df_akce):
         return
 
     st.markdown("### 🤖 Cyber-Coach")
-    st.caption("Jsem online. Napiš třeba 'Přihlas mě na MČR'.")
+    st.caption("Jsem online (v1.5). Napiš třeba 'Přihlas mě na MČR'.")
 
     # 1. Definice Nástrojů (Tools)
     tools_list = [
@@ -71,9 +71,10 @@ def main(df_akce):
     - Oslovuj 'šampione', buď stručný a používej emoji 🌲.
     """
 
-    # 4. Inicializace modelu - PŘEPÍNÁME NA STABILNÍ VERZI 1.5
+    # 4. Inicializace modelu - TADY JE TA ZMĚNA
+    # Musí tu být "gemini-1.5-flash", ne "gemini-2.0-flash"
     model = genai.GenerativeModel(
-        model_name="gemini-1.5-flash", # ZMĚNA: 2.0 dělala problémy s limity
+        model_name="gemini-1.5-flash", 
         tools=tools_list,
         system_instruction=system_instruction
     )
@@ -122,13 +123,13 @@ def main(df_akce):
                     
                     except exceptions.ResourceExhausted:
                         # Chyba 429 - Quota Exceeded
-                        wait_time = 5 * (attempt + 1)
+                        wait_time = 4 * (attempt + 1)
                         if attempt < max_retries - 1:
-                            st.warning(f"⚠️ Přehřívám se (Limit API). Chladím motory... ({wait_time}s)")
+                            st.warning(f"⚠️ Limit API. Zkouším to znovu za {wait_time}s...")
                             time.sleep(wait_time)
                             continue
                         else:
-                            st.error("❌ Došly mi síly (Quota Exceeded). Zkus to za chvíli.")
+                            st.error("❌ Došly mi síly (Google Quota). Zkus to za minutu.")
                     
                     except Exception as e:
                         st.error(f"Chyba systému: {str(e)}")
