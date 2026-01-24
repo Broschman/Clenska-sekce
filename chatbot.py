@@ -9,9 +9,9 @@ import time
 AVATAR_BOT = "🤖" 
 AVATAR_USER = "👤"
 
-# TOTO JE JEDINÝ MODEL, KTERÝ MÁ VELKÉ LIMITY (15 RPM)
-# Pokud ti to hodí chybu 404, ZNAMENÁ TO, ŽE MÁŠ STAROU KNIHOVNU (viz Krok 1)
-MODEL_NAME = "gemini-1.5-flash"
+# POUŽIJEME ALIAS Z TVÉHO SEZNAMU
+# Toto obchází chybu 404, protože tento název starší knihovna zná.
+MODEL_NAME = "gemini-flash-latest"
 
 def init_gemini():
     """Inicializace s API klíčem"""
@@ -52,7 +52,7 @@ def main(df_akce):
         return
 
     st.markdown("### 🤖 Cyber-Coach")
-    st.caption(f"Online (Stabilní v1.5).")
+    st.caption(f"Online (Stabilní verze).")
 
     # 1. Definice Nástrojů (Tools)
     tools_list = [
@@ -76,7 +76,8 @@ def main(df_akce):
     - Oslovuj 'šampione', buď stručný a používej emoji 🌲.
     """
 
-    # 3. Inicializace Modelu
+    # 3. Inicializace Modelu (S RETRY LOGIKOU PŘI STARTU)
+    model = None
     try:
         model = genai.GenerativeModel(
             model_name=MODEL_NAME, 
@@ -84,9 +85,17 @@ def main(df_akce):
             system_instruction=system_instruction
         )
     except Exception as e:
-        st.error(f"❌ Chyba modelu: {e}")
-        st.warning("TIP: Aktualizuj 'google-generativeai' v requirements.txt na verzi >=0.8.3")
-        return
+        # Pokud ani alias nefunguje, zkusíme tvrdý fallback na 'gemini-pro' (ten je všude)
+        st.warning(f"Alias {MODEL_NAME} selhal ({e}). Zkouším záložní 'gemini-pro'.")
+        try:
+            model = genai.GenerativeModel(
+                model_name="gemini-pro", 
+                tools=tools_list,
+                system_instruction=system_instruction
+            )
+        except:
+            st.error("❌ Kritická chyba: API odmítá všechny názvy modelů. Je nutné aktualizovat knihovnu v requirements.txt.")
+            return
 
     # 4. Historie
     if "chat_history" not in st.session_state:
@@ -116,19 +125,20 @@ def main(df_akce):
         st.chat_message("user", avatar=AVATAR_USER).write(prompt)
         st.session_state.chat_history.append({"role": "user", "parts": [prompt]})
 
-        try:
-            chat = model.start_chat(history=st.session_state.chat_history[:-1])
+        if model:
+            try:
+                chat = model.start_chat(history=st.session_state.chat_history[:-1])
+                
+                with st.chat_message("model", avatar=AVATAR_BOT):
+                    with st.spinner("Mákám na tom..."):
+                        # Odeslání zprávy
+                        response = chat.send_message(prompt)
+                        bot_text = response.text
+                        
+                        st.write(bot_text)
+                        st.session_state.chat_history.append({"role": "model", "parts": [bot_text]})
             
-            with st.chat_message("model", avatar=AVATAR_BOT):
-                with st.spinner("Mákám na tom..."):
-                    # Odeslání zprávy
-                    response = chat.send_message(prompt)
-                    bot_text = response.text
-                    
-                    st.write(bot_text)
-                    st.session_state.chat_history.append({"role": "model", "parts": [bot_text]})
-        
-        except exceptions.ResourceExhausted:
-             st.error("❌ Narazil jsi na limit (15 zpráv/min). Dej si chvilku pauzu.")
-        except Exception as e:
-             st.error(f"Chyba: {str(e)}")
+            except exceptions.ResourceExhausted:
+                st.error("❌ Narazil jsi na limit zpráv. Dej si chvilku pauzu.")
+            except Exception as e:
+                st.error(f"Chyba: {str(e)}")
