@@ -245,60 +245,17 @@ def get_delete_css():
 
 def get_floating_chat_css():
     """
-    CSS pro plovoucí tlačítko chatbota.
-    FIX: Používá '& button', aby styl neovlivnil ostatní tlačítka v aplikaci.
+    CSS pouze pro pozicování kontejneru.
+    Neobsahuje žádné styly pro button, aby nerozbil zbytek aplikace.
+    Tlačítko bude mít standardní vzhled Streamlitu, ale bude vpravo dole.
     """
     return f"""
-        /* 1. Pozicování samotného kontejneru (obal) */
         {{
             position: fixed;
             bottom: 30px;
             right: 30px;
             z-index: 99999;
             width: auto;
-        }}
-
-        /* 2. Styl tlačítka POUZE UVNITŘ tohoto kontejneru */
-        & button {{
-            width: 70px !important;
-            height: 70px !important;
-            border-radius: 50% !important;
-            
-            /* Neonový vzhled */
-            background-color: rgba(14, 17, 23, 0.9) !important;
-            border: 2px solid {NEON_BLUE} !important;
-            box-shadow: 0 0 15px {NEON_BLUE}, inset 0 0 10px {NEON_BLUE}22 !important;
-            
-            color: {NEON_BLUE} !important;
-            font-size: 30px !important;
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
-            
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            padding: 0 !important;
-        }}
-
-        /* 3. Hover efekt */
-        & button:hover {{
-            background-color: {NEON_BLUE} !important;
-            color: #000 !important;
-            box-shadow: 0 0 30px {NEON_BLUE}, 0 0 60px {NEON_BLUE} !important;
-            transform: scale(1.15) rotate(-5deg);
-            border-color: #fff !important;
-        }}
-        
-        /* 4. Aktivní stav */
-        & button:active, & button:focus {{
-            border-color: {NEON_GREEN} !important;
-            box-shadow: 0 0 20px {NEON_GREEN} !important;
-            color: {NEON_GREEN} !important;
-            outline: none !important;
-        }}
-        
-        /* 5. Skrytí tooltipu (popover šipky), pokud nějaká je */
-        & div[data-testid="stPopover"] > div {{
-            border-radius: 50% !important;
         }}
     """
 
