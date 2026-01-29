@@ -1,4 +1,4 @@
-eimport streamlit as st
+import streamlit as st
 import requests
 
 # === 1. BARVY (Paleta Cyber-ROG) ===
