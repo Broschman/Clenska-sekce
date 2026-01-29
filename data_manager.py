@@ -18,59 +18,74 @@ from datetime import datetime
 
 def sign_up_user(event_name_or_id: str, user_name: str, note: str = "", transport: str = "") -> str:
     """
-    Funkce pro přihlášení uživatele na akci. 
-    NOVĚ: Kontroluje DEADLINE.
+    Funkce pro přihlášení.
+    VYLEPŠENÍ:
+    1. Kontrola Deadlinu.
+    2. Inteligentní oprava jména podle databáze (Pepa -> Pepu -> Pepa Vopršálek).
+    3. Automatická Velká Písmena.
     """
-    # 1. Načíst akce a najít tu správnou
-    df_akce = load_akce()
+    # 1. OPRAVA JMÉNA (Autocorrect)
+    # Nejdřív základní formátování: odstranit mezery, velká písmena
+    clean_name = str(user_name).strip().title()
+    final_name = clean_name
     
-    # Zkusíme najít podle ID
+    # Načteme známá jména
+    known_names = load_jmena()
+    
+    if known_names:
+        # Zkusíme najít nejpodobnější jméno v DB (řeší překlepy i skloňování)
+        # cutoff=0.6 znamená, že shoda musí být aspoň 60%
+        matches = difflib.get_close_matches(clean_name, known_names, n=1, cutoff=0.6)
+        
+        if matches:
+            final_name = matches[0] # Našli jsme shodu! (např. "Pepa Vopršálek")
+        else:
+            # Pokud nenašel přesnou shodu, zkusíme alespoň najít, jestli uživatel nezadal jen "Pepa"
+            # a v DB je "Pepa Vopršálek"
+            partial_matches = [name for name in known_names if clean_name in name]
+            if len(partial_matches) == 1:
+                final_name = partial_matches[0]
+
+    # 2. Hledání akce (Logika zůstává)
+    df_akce = load_akce()
     target_event = df_akce[df_akce['id'] == str(event_name_or_id)]
     
-    # Pokud nenajdeme podle ID, zkusíme full-text v názvu
     if target_event.empty:
         mask = df_akce['název'].str.contains(str(event_name_or_id), case=False, na=False)
         target_event = df_akce[mask]
 
     if target_event.empty:
-        return f"❌ Akci '{event_name_or_id}' jsem nenašel. Zkus být přesnější."
+        return f"❌ Akci '{event_name_or_id}' jsem nenašel."
     
     if len(target_event) > 1:
-        found_names = ", ".join(target_event['název'].tolist())
-        return f"⚠️ Našel jsem více akcí: {found_names}. Upřesni to prosím."
+        names = ", ".join(target_event['název'].tolist())
+        return f"⚠️ Našel jsem více akcí: {names}. Buď konkrétnější."
 
-    # Máme jednu akci
     row_akce = target_event.iloc[0]
     akce_id = str(row_akce['id'])
     akce_nazev = row_akce['název']
-    
-    # === DEADLINE CHECK (NOVÉ) ===
+
+    # 3. Deadline Check
     today = date.today()
     deadline = row_akce.get('deadline')
+    if isinstance(deadline, pd.Timestamp): deadline = deadline.date()
     
-    # Převedeme deadline na date object, pokud je to Timestamp
-    if isinstance(deadline, pd.Timestamp):
-        deadline = deadline.date()
-        
-    # Pokud je deadline nastaven a je už PO něm -> ZÁKAZ
     if deadline and today > deadline:
-        d_str = deadline.strftime('%d.%m.')
-        return f"⛔ Smůla šampione! Přihlášky na '{akce_nazev}' už jsou uzavřené (Deadline byl {d_str})."
-    
-    # 2. Načíst přihlášky a zkontrolovat duplicitu
-    df_prihlasky = load_prihlasky()
-    
-    if not df_prihlasky.empty:
-        is_there = ((df_prihlasky['id_akce'] == akce_id) & (df_prihlasky['jméno'] == user_name)).any()
-        if is_there:
-            return f"ℹ️ {user_name} už je na akci '{akce_nazev}' přihlášený."
+        return f"⛔ Pozdě! Deadline pro '{akce_nazev}' byl {deadline.strftime('%d.%m.')}."
 
-    # 3. Zápis do DB
+    # 4. Kontrola duplicit
+    df_prihlasky = load_prihlasky()
+    if not df_prihlasky.empty:
+        is_there = ((df_prihlasky['id_akce'] == akce_id) & (df_prihlasky['jméno'] == final_name)).any()
+        if is_there:
+            return f"ℹ️ {final_name} už je na akci '{akce_nazev}'."
+
+    # 5. Zápis
     conn = get_connection()
     novy_zaznam = pd.DataFrame([{
         "id_akce": akce_id, 
         "název": akce_nazev, 
-        "jméno": user_name,
+        "jméno": final_name,  # Používáme opravené jméno
         "poznámka": note, 
         "doprava": transport, 
         "ubytování": "",
@@ -81,9 +96,17 @@ def sign_up_user(event_name_or_id: str, user_name: str, note: str = "", transpor
     try:
         updated_df = pd.concat([df_prihlasky, novy_zaznam], ignore_index=True)
         conn.update(worksheet="prihlasky", data=updated_df)
-        return f"✅ Hotovo! Přihlásil jsem '{user_name}' na '{akce_nazev}'."
+        
+        # Pokud jméno nebylo v DB, přidáme ho tam (aby příště fungoval našeptávač)
+        if final_name not in known_names:
+             try:
+                j_df = conn.read(worksheet="jmena")
+                conn.update(worksheet="jmena", data=pd.concat([j_df, pd.DataFrame([{"jméno": final_name}])], ignore_index=True))
+             except: pass
+             
+        return f"✅ Hotovo! Přihlásil jsem '{final_name}' na '{akce_nazev}'."
     except Exception as e:
-        return f"❌ Chyba při zápisu: {e}"
+        return f"❌ Chyba zápisu: {e}"
         
 def sign_out_user(event_name_or_id: str, user_name: str) -> str:
     """Odhlásí uživatele (Také by nemělo jít po deadlinu, ale často se to toleruje - nechám na tobě)."""
