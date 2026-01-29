@@ -253,15 +253,6 @@ if search_text or len(search_date_value) > 0:
 else:
     show_calendar_section()
 st.markdown("<div style='margin-bottom: 50px'></div>", unsafe_allow_html=True)
-
-# --- app.py (Sidebar sekce) ---
-with st.sidebar:
-    st.markdown("---")
-    with st.popover("🤖 OTEVŘÍT CYBER-COACHE", use_container_width=True):
-        # OPRAVA: Načteme čerstvá data přímo pro bota
-        # (df neexistovalo, df_akce je ze začátku skriptu, my chceme aktuální)
-        current_akce = data_manager.load_akce()
-        chatbot.main(current_akce)
         
 # --- 5. PLOVOUCÍ TLAČÍTKO ---
 st.markdown('<div class="floating-container">', unsafe_allow_html=True)
@@ -297,3 +288,34 @@ with stylable_container(key="footer_logos", css_styles="img {height: 50px !impor
         r1.image("logo3.jpg", width="stretch"); r2.image("logo4.jpg", width="stretch")
 st.markdown('</div>', unsafe_allow_html=True)
 st.markdown("<div style='margin-bottom: 20px'></div>", unsafe_allow_html=True)
+
+# ==============================================================================
+# 6. FLOATING CYBER-COACH (Pravý dolní roh)
+# ==============================================================================
+# Načteme CSS styl
+chat_css = styles.get_floating_chat_css()
+
+# Použijeme stylable_container pro fixní pozici
+# Poznámka: Aby tohle fungovalo, musíš mít import: from streamlit_extras.stylable_container import stylable_container
+with stylable_container(key="floating_bot_container", css_styles=chat_css):
+    
+    # Ikonka robota v tlačítku
+    with st.popover("🤖", help="Otevřít Cyber-Coache"):
+        
+        # Tady načteme data a spustíme bota uvnitř bubliny
+        # Data načítáme tady, aby byla vždy čerstvá při otevření
+        try:
+            import data_manager
+            # Načteme data (pro jistotu znovu, ať vidí změny)
+            df_akce_pro_bota = data_manager.load_akce()
+            
+            # Spustíme logiku chatbota
+            chatbot.main(df_akce_pro_bota)
+            
+        except Exception as e:
+            st.error(f"Bot Error: {e}")
+
+# Poznámka: Pokud máš v app.py už sekci "5. PLOVOUCÍ TLAČÍTKO" (Nápad?), 
+# může se překrývat. Doporučuji to staré tlačítko buď dát pryč, 
+# nebo mu v CSS změnit pozici (např. 'bottom: 110px' místo 30px), 
+# aby byly nad sebou.
