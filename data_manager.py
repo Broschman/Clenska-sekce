@@ -84,7 +84,7 @@ def sign_up_user(event_name_or_id: str, user_name: str, note: str = "", transpor
         return f"✅ Hotovo! Přihlásil jsem '{user_name}' na '{akce_nazev}'."
     except Exception as e:
         return f"❌ Chyba při zápisu: {e}"
-
+        
 def sign_out_user(event_name_or_id: str, user_name: str) -> str:
     """Odhlásí uživatele (Také by nemělo jít po deadlinu, ale často se to toleruje - nechám na tobě)."""
     # 1. Identifikace akce
