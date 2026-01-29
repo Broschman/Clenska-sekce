@@ -246,19 +246,18 @@ def get_delete_css():
 def get_floating_chat_css():
     """
     CSS pouze pro pozicování kontejneru.
-    Neobsahuje žádné styly pro button, aby nerozbil zbytek aplikace.
-    Tlačítko bude mít standardní vzhled Streamlitu, ale bude vpravo dole.
+    Posunuto výš (bottom: 90px), aby to nepřekrývalo 'Manage app'.
     """
     return f"""
         {{
             position: fixed;
-            bottom: 30px;
+            bottom: 90px;
             right: 30px;
             z-index: 99999;
             width: auto;
         }}
     """
-
+    
 # --- OSTATNÍ FUNKCE ---
 def inject_mobile_warning(): st.markdown("""<style>@media only screen and (orientation: portrait) and (max-width: 900px) {#rotate-warning {display:flex !important;} .stApp {overflow:hidden;}}</style>""", unsafe_allow_html=True)
 def get_ics_button_html(b64_data, filename): return f"""<a href="data:text/calendar;base64,{b64_data}" download="{filename}.ics" style="text-decoration:none;"><div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 6px 0; text-align: center; cursor: pointer; color: #fff; transition: 0.3s;" onmouseover="this.style.borderColor='#00f3ff'; this.style.color='#00f3ff'; this.style.boxShadow='0 0 10px #00f3ff';" onmouseout="this.style.borderColor='rgba(255, 255, 255, 0.2)'; this.style.color='#fff'; this.style.boxShadow='none';">📅</div></a>"""
