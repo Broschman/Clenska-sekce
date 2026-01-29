@@ -2,6 +2,7 @@ import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import timedelta, date
+import difflib
 
 # ... Konstanty (ID, URL) zůstávají stejné ...
 SHEET_ID = "1LaojGRVAGtWmfQZ4DfDXDyiZs1TO7Fck4HRgT8Pyook"
