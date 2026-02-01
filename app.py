@@ -372,30 +372,64 @@ def vykreslit_detail_akce(akce, unique_key):
                     c2.markdown(f"**{row['jméno']}**")
                     c3.caption(row.get('poznámka', ''))
                     
-                    # === NOVÁ LOGIKA PRO DOPRAVU (C4) ===
+                    # === NOVÁ LOGIKA PRO DOPRAVU (C4 - Tlačítko s textem) ===
                     with c4:
-                        doprava_text = str(row.get('doprava', ''))
-                        if not doprava_text or doprava_text == "nan": 
-                            doprava_text = ""
+                        raw_doprava = str(row.get('doprava', ''))
                         
-                        # Rozdělíme buňku na Text (80%) a Tlačítko (20%)
-                        dc_text, dc_btn = st.columns([0.75, 0.25])
+                        # 1. Analýza textu a určení stylu
+                        if not raw_doprava or raw_doprava == "nan":
+                            label = "➕"
+                            tooltip = "Nastavit dopravu"
+                            # Šedé, dashed border (vypadá jako placeholder)
+                            styl_btn = "background-color: white; border: 1px dashed #9CA3AF; color: #6B7280;" 
                         
-                        # Text dopravy (zmenšený font)
-                        dc_text.markdown(f"<span style='font-size:0.85em'>{doprava_text}</span>", unsafe_allow_html=True)
+                        elif "Řidič" in raw_doprava:
+                            label = "🚙 Řidič"
+                            tooltip = "Nabízím auto"
+                            # Zelená (Driver)
+                            styl_btn = "background-color: #DCFCE7; border: 1px solid #16A34A; color: #166534;" 
                         
-                        # Tlačítko pro úpravu (ikonka ozubeného kola nebo tužky)
-                        # Použijeme stylable container pro malé, nenápadné tlačítko
-                        with stylable_container(
-                            key=f"edit_btn_c_{unique_key}_{i}", 
-                            css_styles="button {padding: 0px 5px !important; height: 28px !important; border: 1px solid #D1D5DB; background: white; color: #4B5563; border-radius: 4px;}"
-                        ):
-                            if dc_btn.button("⚙️", key=f"ed_dopr_{unique_key}_{i}", help="Upravit dopravu"):
+                        elif "Spolujízda" in raw_doprava or "Jedu s" in raw_doprava:
+                            # Odstraníme "Spolujízda:" a necháme jen jméno řidiče
+                            clean_name = raw_doprava.replace("Spolujízda:", "").replace("Spolujízda", "").strip()
+                            label = f"➡️ {clean_name}" # Šipka naznačuje "jedu s"
+                            tooltip = raw_doprava
+                            # Modrá (Passenger)
+                            styl_btn = "background-color: #DBEAFE; border: 1px solid #2563EB; color: #1E40AF;" 
+                        
+                        elif "Chci" in raw_doprava or "Hledám" in raw_doprava:
+                            label = "🙋‍♂️ Hledám"
+                            tooltip = "Chci odvoz"
+                            # Oranžová (Waiting)
+                            styl_btn = "background-color: #FEF3C7; border: 1px solid #D97706; color: #92400E;" 
+                        
+                        else:
+                            # Fallback pro jiné texty
+                            label = raw_doprava
+                            tooltip = raw_doprava
+                            styl_btn = "background-color: white; border: 1px solid #E5E7EB; color: #374151;"
+
+                        # 2. Vykreslení tlačítka
+                        # Pomocí CSS vynutíme, aby tlačítko vyplnilo celou šířku sloupce a mělo správnou barvu
+                        css = f"""
+                        button {{
+                            width: 100%; 
+                            padding: 2px 5px !important; 
+                            font-size: 0.8rem !important; 
+                            height: auto !important; 
+                            min-height: 28px; 
+                            border-radius: 6px;
+                            {styl_btn}
+                        }}
+                        """
+                        
+                        with stylable_container(key=f"btn_dopr_c_{unique_key}_{i}", css_styles=css):
+                            if st.button(label, key=f"btn_dopr_{unique_key}_{i}", help=tooltip):
                                 show_doprava_dialog(
                                     akce_id=akce_id_str,
                                     nazev_akce=akce['název'],
                                     datum_akce=akce['datum'].strftime('%d.%m.'),
-                                    pre_jmeno=row['jméno'] # Předvyplníme jméno z řádku
+                                    pre_jmeno=row['jméno']
                                 )
 
                     c5.write(row.get('ubytování', ''))
