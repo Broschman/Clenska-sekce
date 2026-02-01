@@ -339,13 +339,13 @@ def vykreslit_detail_akce(akce, unique_key):
         for i, (idx, row) in enumerate(lidi.iterrows()):
             bg = "#F3F4F6" if i % 2 == 0 else "white"
             
-            # 🔧 FIX: display: block (default) a width: 100% zajistí roztažení.
-            # Větší padding (10px nahoře/dole) udělá ten řádek vyšší a hezčí.
+            # 🔧 FIX: Zvětšil jsem padding na 15px (bylo 10px).
+            # Teď bude řádek o dost vyšší a vzdušnější.
             css_row = f"""
                 {{
                     background-color: {bg}; 
                     border-radius: 8px; 
-                    padding: 10px 15px; 
+                    padding: 15px 15px; 
                     margin-bottom: 4px;
                     width: 100%;
                 }}
@@ -377,7 +377,7 @@ def vykreslit_detail_akce(akce, unique_key):
                 
                 else:
                     # --- BĚŽNÝ ŘÁDEK ---
-                    # vertical_alignment="center" zde udělá tu magii zarovnání na střed
+                    # vertical_alignment="center" zajistí, že obsah bude uprostřed té zvýšené výšky
                     c1, c2, c3, c4, c5, c6 = st.columns(ratio, vertical_alignment="center")
                     
                     c1.write(f"{i+1}.")
