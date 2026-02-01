@@ -1,4 +1,3 @@
-
 import streamlit as st
 import requests
 import re
@@ -624,7 +623,7 @@ def vykreslit_detail_akce(akce, unique_key):
             st.markdown(styles.get_ics_button_html(b64, akce.get("název", "")), unsafe_allow_html=True)
         
         # Badge používá nový styl z styles.py automaticky
-        st.markdown(styles.badge(typ_udalosti.upper()), unsafe_allow_html=True)
+        st.markdown(styles.badge(typ_udalosti, bg="#e5e7eb", color="#374151"), unsafe_allow_html=True)
         
         datum_txt = akce['datum'].strftime('%d.%m.%Y')
         st.markdown(f"<div style='margin-top:20px; color:#aaa'>📍 <b>Místo:</b> {misto}<br>🗓️ <b>Datum:</b> {datum_txt}</div>", unsafe_allow_html=True)
@@ -757,18 +756,21 @@ def vykreslit_detail_akce(akce, unique_key):
                      dopr = str(row.get('doprava', ''))
                      btn_label = dopr if dopr else "➕"
                      
-                     # Default barvy
-                     btn_color, btn_bg, btn_border = "#ccc", "rgba(255,255,255,0.05)", "1px solid rgba(255,255,255,0.2)"
+                     # Default (Bílá s šedým rámečkem)
+                     btn_bg, btn_color, btn_border = "#ffffff", "#374151", "1px solid #d1d5db"
                      
                      if "Řidič" in dopr: 
-                         btn_color, btn_bg, btn_border = "#39ff14", "rgba(57, 255, 20, 0.1)", "1px solid #39ff14"
+                         # Zelená (jemnější)
+                         btn_bg, btn_color, btn_border = "#dcfce7", "#166534", "1px solid #86efac"
                      elif "Spolujízda" in dopr or "Jedu s" in dopr: 
-                         btn_color, btn_bg, btn_border = "#00f3ff", "rgba(0, 243, 255, 0.1)", "1px solid #00f3ff"
+                         # Modrá (jemnější)
+                         btn_bg, btn_color, btn_border = "#dbeafe", "#1e40af", "1px solid #93c5fd"
                          btn_label = dopr.replace("Spolujízda: ", "🚙 ").replace("Jedu s: ", "🚙 ")
                      elif "Chci" in dopr: 
-                         btn_color, btn_bg, btn_border = "#ff073a", "rgba(255, 7, 58, 0.1)", "1px solid #ff073a"
+                         # Červená/Oranžová
+                         btn_bg, btn_color, btn_border = "#fee2e2", "#991b1b", "1px solid #fca5a5"
                          btn_label = "🙋‍♂️ Chci"
-
+                         
                      # --- VYKRESLENÍ TLAČÍTKA DOPRAVY (Voláme funkci ze styles.py) ---
                      # Tímto zajistíme, že jen toto tlačítko bude mít tenký font
                      transport_css = styles.get_transport_css(btn_bg, btn_color, btn_border)
