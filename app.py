@@ -68,16 +68,19 @@ if not future_deadlines.empty:
         days_left = (row['deadline'] - dnes).days
         
         if days_left == 0:
-            glow_c, bg_c, icon, time_msg = styles.NEON_RED, "rgba(255, 7, 58, 0.1)", "🚨", "DNES!"
+            dash_style = {"bg": "#DC2626", "color": "white", "border": "none", "shadow": "0 4px 10px rgba(220, 38, 38, 0.3)"}
+            icon, time_msg = "🚨", "DNES!"
         elif days_left <= 3:
-            glow_c, bg_c, icon, time_msg = styles.NEON_ORANGE, "rgba(255, 95, 31, 0.1)", "⚠️", f"Za {days_left} dny"
+            dash_style = {"bg": "#EA580C", "color": "white", "border": "none", "shadow": "0 4px 10px rgba(234, 88, 12, 0.3)"}
+            icon, time_msg = "⚠️", f"Za {days_left} dny"
         else:
-            glow_c, bg_c, icon, time_msg = styles.NEON_GREEN, "rgba(57, 255, 20, 0.1)", "📅", row['deadline'].strftime('%d.%m.')
+            dash_style = {"bg": "#16A34A", "color": "white", "border": "none", "shadow": "0 4px 10px rgba(22, 163, 74, 0.3)"}
+            icon, time_msg = "📅", row['deadline'].strftime('%d.%m.')
 
         unique_key_dash = f"dash_{row['id']}"
         
-        # ZDE POUŽIJEME FUNKCI ZE STYLES
-        dash_css = styles.get_cyber_button_css(bg_c, glow_c)
+        # NOVÉ VOLÁNÍ CSS
+        dash_css = styles.get_event_button_css(dash_style)
 
         with cols_d[i]:
             with stylable_container(key=f"dash_card_{i}", css_styles=dash_css):
