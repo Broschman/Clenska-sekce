@@ -340,13 +340,18 @@ def vykreslit_detail_akce(akce, unique_key):
             # --- ZEBRA STRIPING LOGIKA ---
             bg = "#F3F4F6" if i % 2 == 0 else "white"
             
-            # 🔧 FIX: Vyhodil jsem 'display: flex' a přidal větší padding (12px), 
-            # aby se šedý proužek roztáhl dolů a obalil i to tlačítko.
+            # 🔧 FIX: Vrátil jsem 'display: flex' (aby se kontejner roztáhl)
+            # a hlavně přidal složené závorky {{ }}, aby to Streamlit pochopil.
             css_row = f"""
-                background-color: {bg}; 
-                border-radius: 8px; 
-                padding: 12px 5px; 
-                margin-bottom: 4px;
+                {{
+                    background-color: {bg}; 
+                    border-radius: 8px; 
+                    padding: 8px 5px; 
+                    margin-bottom: 4px;
+                    display: flex; 
+                    align-items: center;
+                    min-height: 50px; /* Pojistka, aby byl řádek dost vysoký */
+                }}
             """
             
             with stylable_container(key=f"r_{unique_key}_{i}", css_styles=css_row):
@@ -376,7 +381,7 @@ def vykreslit_detail_akce(akce, unique_key):
                 
                 else:
                     # BĚŽNÝ ŘÁDEK
-                    # Vertical alignment 'center' zajistí, že text i tlačítko budou uprostřed výšky řádku
+                    # Vertical alignment center zajistí, že je vše hezky v lince
                     c1, c2, c3, c4, c5, c6 = st.columns(ratio, vertical_alignment="center")
                     
                     c1.write(f"{i+1}.")
@@ -391,7 +396,7 @@ def vykreslit_detail_akce(akce, unique_key):
                         if not raw_doprava or raw_doprava == "nan":
                             label = "➕"
                             tooltip = "Nastavit dopravu"
-                            # Průhledné pozadí, aby byla vidět zebra (šedá/bílá)
+                            # Průhledné pozadí, aby prosvítala zebra
                             styl_btn = "background-color: transparent; border: 1px dashed #9CA3AF; color: #6B7280;" 
                         
                         elif "Řidič" in raw_doprava:
@@ -416,8 +421,7 @@ def vykreslit_detail_akce(akce, unique_key):
                             styl_btn = "background-color: white; border: 1px solid #E5E7EB; color: #374151;"
 
                         # 2. CSS Tlačítka
-                        # Margin 0 je důležitý, aby tlačítko neroztahovalo řádek zbytečně moc
-                        css = f"""
+                        css_btn = f"""
                         button {{
                             width: 100%; 
                             padding: 4px 5px !important; 
@@ -429,9 +433,9 @@ def vykreslit_detail_akce(akce, unique_key):
                         }}
                         """
                         
-                        with stylable_container(key=f"btn_dopr_c_{unique_key}_{i}", css_styles=css):
+                        with stylable_container(key=f"btn_dopr_c_{unique_key}_{i}", css_styles=css_btn):
                             if st.button(label, key=f"btn_dopr_{unique_key}_{i}", help=tooltip):
-                                utils.show_doprava_dialog(
+                                show_doprava_dialog(
                                     akce_id=akce_id_str,
                                     nazev_akce=akce['název'],
                                     datum_akce=akce['datum'].strftime('%d.%m.'),
