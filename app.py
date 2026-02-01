@@ -276,8 +276,8 @@ def vykreslit_detail_akce(akce, unique_key):
                         else:
                             st.warning("Nejdřív vyber nebo napiš jméno, abych věděl, pro koho tu dopravu řešíme.")
                                     
-                                    # 6. Okamžitá aktualizace lokální tabulky
-                                    lidi = pd.concat([lidi, novy_zaznam], ignore_index=True)
+                            # 6. Okamžitá aktualizace lokální tabulky
+                            lidi = pd.concat([lidi, novy_zaznam], ignore_index=True)
 
                             except Exception as e: 
                                 st.error(f"Chyba zápisu: {e}")
