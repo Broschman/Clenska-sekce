@@ -1,20 +1,25 @@
 import streamlit as st
 import requests
 
-# === 1. DEFINICE BAREV (KOMPATIBILITA) ===
-# Tyto proměnné app.py vyžaduje. Mapujeme je na normální barvy pro Light Mode.
-NEON_GREEN = "#16A34A"  # Green-600
-NEON_BLUE = "#2563EB"   # Blue-600
-NEON_RED = "#DC2626"    # Red-600
-NEON_ORANGE = "#EA580C" # Orange-600
-DARK_BG = "#FFFFFF"     # Bílá místo tmavé
+# === 1. DEFINICE BAREV ===
 
-# Barvy pro tlačítka v tabulce (použité v utils.py)
+# Proměnné pro app.py (Kompatibilita)
+NEON_GREEN = "#16A34A"  # Sytá zelená
+NEON_BLUE = "#2563EB"   # Sytá modrá
+NEON_RED = "#DC2626"    # Sytá červená
+NEON_ORANGE = "#EA580C" # Sytá oranžová
+DARK_BG = "#FFFFFF"     # Bílé pozadí
+
+# Barvy pro tlačítka v tabulce (Syté barvy + Bílý text)
 COLORS = {
-    "green_bg": "#dcfce7", "green_text": "#166534",
-    "blue_bg": "#dbeafe", "blue_text": "#1e40af",
-    "red_bg": "#fee2e2", "red_text": "#991b1b",
-    "gray_bg": "#f3f4f6", "gray_text": "#374151"
+    # Řidič: Zelené pozadí, Bílý text
+    "driver_bg": "#16A34A", "driver_text": "#FFFFFF",
+    # Pasažér: Modré pozadí, Bílý text
+    "passenger_bg": "#2563EB", "passenger_text": "#FFFFFF",
+    # Chci odvoz: Červené pozadí, Bílý text
+    "waiting_bg": "#DC2626", "waiting_text": "#FFFFFF",
+    # Neutrální: Šedé pozadí, Černý text
+    "gray_bg": "#F3F4F6", "gray_text": "#1F2937"
 }
 
 # Definice barev pro akce (Kalendář)
@@ -39,10 +44,10 @@ def load_css():
 
         html, body, [class*="css"] {
             font-family: 'Inter', sans-serif;
-            color: #1f2937; /* Tmavě šedá pro hlavní text */
+            color: #1f2937; /* Hlavní text stránky: Tmavě šedá/Černá */
         }
         
-        /* Odkazy */
+        /* Odkazy (jen odkazy v textu, ne v tlačítkách) */
         a { color: #2563EB !important; text-decoration: none; }
         a:hover { text-decoration: underline; }
 
@@ -90,10 +95,15 @@ def load_css():
 # === 3. CSS GENERÁTORY ===
 
 def get_cyber_button_css(bg_color, glow_color):
-    """CSS pro hlavní tlačítka v kalendáři"""
-    # Detekce bílého pozadí -> tmavý text
+    """
+    Logika: 
+    - Bílé pozadí -> Černý text.
+    - Barevné pozadí -> Bílý text.
+    """
+    # Detekce bílého pozadí
     is_white = "#FFFFFF" in bg_color or "#ffffff" in bg_color
-    text_col = "#374151" if is_white else "#FFFFFF"
+    
+    text_col = "#1F2937" if is_white else "#FFFFFF"  # Černá vs Bílá
     border = "1px solid #E5E7EB" if is_white else "none"
     
     return f"""
@@ -108,12 +118,23 @@ def get_cyber_button_css(bg_color, glow_color):
             width: 100% !important;
             transition: all 0.2s !important;
         }}
-        button p {{ color: {text_col} !important; font-weight: 600 !important; font-size: 15px !important; }}
-        button:hover {{ transform: translateY(-1px); box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important; opacity: 0.9; }}
+        /* Vynutíme barvu i pro vnitřní text (p), aby nebyl modrý */
+        button p {{ 
+            color: {text_col} !important; 
+            font-weight: 600 !important; 
+            font-size: 15px !important; 
+        }}
+        button:hover {{ 
+            transform: translateY(-1px); 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.15) !important; 
+            opacity: 0.95; 
+        }}
     """
 
 def get_transport_css(bg, color, border):
-    """CSS pro malá tlačítka dopravy"""
+    """
+    CSS pro malá tlačítka dopravy.
+    """
     return f"""
         button {{
             background-color: {bg} !important;
@@ -127,7 +148,7 @@ def get_transport_css(bg, color, border):
             box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
         }}
         button p {{ margin: 0 !important; font-weight: 600 !important; color: {color} !important; }}
-        button:hover {{ filter: brightness(0.95); }}
+        button:hover {{ filter: brightness(1.1); }}
     """
 
 def get_delete_css():
