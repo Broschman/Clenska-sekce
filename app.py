@@ -340,13 +340,17 @@ def vykreslit_detail_akce(akce, unique_key):
             # --- ZEBRA STRIPING LOGIKA ---
             bg = "#F3F4F6" if i % 2 == 0 else "white"
             
-            # Kontejner celého řádku s barvou pozadí
-            with stylable_container(
-                key=f"r_{unique_key}_{i}", 
-                css_styles=f"{{background-color: {bg}; border-radius: 6px; padding: 8px 5px; margin-bottom: 2px; min-height: 45px; display: flex; align-items: center;}}"
-            ):
+            # 🔧 FIX: Vyhodil jsem 'display: flex' a přidal větší padding (12px), 
+            # aby se šedý proužek roztáhl dolů a obalil i to tlačítko.
+            css_row = f"""
+                background-color: {bg}; 
+                border-radius: 8px; 
+                padding: 12px 5px; 
+                margin-bottom: 4px;
+            """
+            
+            with stylable_container(key=f"r_{unique_key}_{i}", css_styles=css_row):
                 
-                # Zjištění, zda je řádek v režimu mazání
                 je_k_smazani = (delete_key_state in st.session_state) and (st.session_state[delete_key_state] == row['jméno'])
                 
                 if je_k_smazani:
@@ -360,10 +364,7 @@ def vykreslit_detail_akce(akce, unique_key):
                             df_curr = conn.read(worksheet="prihlasky", ttl=0)
                             df_curr['id_akce'] = df_curr['id_akce'].astype(str).str.replace(r'\.0$', '', regex=True)
                             conn.update(worksheet="prihlasky", data=df_curr[~((df_curr['id_akce'] == akce_id_str) & (df_curr['jméno'] == row['jméno']))])
-                            
-                            # Smazání auta řidiče (pokud existuje)
                             data_manager.handle_driver_removal(conn, akce_id_str, row['jméno'])
-                            
                             del st.session_state[delete_key_state]
                             st.toast("🗑️ Smazáno.")
                             time.sleep(1)
@@ -374,14 +375,15 @@ def vykreslit_detail_akce(akce, unique_key):
                         st.rerun()
                 
                 else:
-                    # BĚŽNÝ ŘÁDEK S DATY
+                    # BĚŽNÝ ŘÁDEK
+                    # Vertical alignment 'center' zajistí, že text i tlačítko budou uprostřed výšky řádku
                     c1, c2, c3, c4, c5, c6 = st.columns(ratio, vertical_alignment="center")
                     
                     c1.write(f"{i+1}.")
                     c2.markdown(f"**{row['jméno']}**")
                     c3.caption(row.get('poznámka', ''))
                     
-                    # === SROVNANÁ LOGIKA DOPRAVY (Tlačítka) ===
+                    # === DOPRAVA (Tlačítka) ===
                     with c4:
                         raw_doprava = str(row.get('doprava', ''))
                         
@@ -389,7 +391,7 @@ def vykreslit_detail_akce(akce, unique_key):
                         if not raw_doprava or raw_doprava == "nan":
                             label = "➕"
                             tooltip = "Nastavit dopravu"
-                            # Transparentní pozadí, aby prosvítala zebra!
+                            # Průhledné pozadí, aby byla vidět zebra (šedá/bílá)
                             styl_btn = "background-color: transparent; border: 1px dashed #9CA3AF; color: #6B7280;" 
                         
                         elif "Řidič" in raw_doprava:
@@ -413,23 +415,23 @@ def vykreslit_detail_akce(akce, unique_key):
                             tooltip = raw_doprava
                             styl_btn = "background-color: white; border: 1px solid #E5E7EB; color: #374151;"
 
-                        # 2. CSS s marginem (aby byla vidět zebra okolo tlačítka)
+                        # 2. CSS Tlačítka
+                        # Margin 0 je důležitý, aby tlačítko neroztahovalo řádek zbytečně moc
                         css = f"""
                         button {{
                             width: 100%; 
-                            padding: 2px 5px !important; 
+                            padding: 4px 5px !important; 
                             font-size: 0.8rem !important; 
-                            height: auto !important; 
-                            min-height: 28px; 
+                            min-height: 32px; 
                             border-radius: 6px;
-                            margin: 2px 0; 
+                            margin: 0px !important; 
                             {styl_btn}
                         }}
                         """
                         
                         with stylable_container(key=f"btn_dopr_c_{unique_key}_{i}", css_styles=css):
                             if st.button(label, key=f"btn_dopr_{unique_key}_{i}", help=tooltip):
-                                utils.show_doprava_dialog(
+                                show_doprava_dialog(
                                     akce_id=akce_id_str,
                                     nazev_akce=akce['název'],
                                     datum_akce=akce['datum'].strftime('%d.%m.'),
