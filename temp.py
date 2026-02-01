@@ -37,10 +37,12 @@ def get_coords_from_place(place_name):
         
 # === POMOCNÉ FUNKCE ===
 def get_base64_image(image_path):
-    import os
-    if not os.path.exists(image_path): return None
-    with open(image_path, "rb") as img_file: return base64.b64encode(img_file.read()).decode()
-
+    """Načte obrázek a převede ho na base64 string pro HTML."""
+    if not os.path.exists(image_path):
+        return None
+    with open(image_path, "rb") as img_file:
+        return base64.b64encode(img_file.read()).decode()
+        
 def generate_ics(akce):
     """Generování kalendáře (zkráceno pro přehlednost)."""
     fmt = "%Y%m%d"
