@@ -795,11 +795,11 @@ def vykreslit_detail_akce(akce, unique_key):
         st.markdown("<hr style='margin: 5px 0 10px 0; border-top: 1px solid rgba(255,255,255,0.1);'>", unsafe_allow_html=True)
         
         for i, (_, row) in enumerate(lidi.iterrows()):
-         # 1. ZEBRA STRIPING - Světle šedá vs. Bílá (místo transparentní)
+         # Pozadí řádku: Střídání bílá / velmi světle šedá
          bg = "#f9fafb" if i % 2 == 0 else "#ffffff" 
          pad = "10px 5px 25px 5px !important" if i % 2 == 0 else "0px 5px 10px 5px !important"
          
-         # CSS kontejneru řádku - Písmo tmavé (#1f2937)
+         # Tmavý text v řádku
          row_css = f"{{background-color: {bg}; border-radius: 6px; padding: {pad}; margin-bottom: 2px; display: flex; align-items: center; min-height: 40px; color: #1f2937; border: 1px solid {bg};}}"
 
          with stylable_container(key=f"r_{unique_key}_{i}", css_styles=row_css):
@@ -807,7 +807,6 @@ def vykreslit_detail_akce(akce, unique_key):
              je_k_smazani = (delete_key_state in st.session_state) and (st.session_state[delete_key_state] == row['jméno'])
              
              if je_k_smazani:
-                 # ... (logika mazání zůstává stejná, jen warning bude vidět lépe)
                  col_warn, col_yes, col_no = st.columns([3, 1, 1], vertical_alignment="center")
                  col_warn.warning(f"Smazat: **{row['jméno']}**?", icon="⚠️")
                  with stylable_container(key=f"btn_yes_c_{i}", css_styles="button {background-color: #fee2e2 !important; border: 1px solid #ef4444 !important; color: #991b1b !important;}"):
@@ -826,28 +825,33 @@ def vykreslit_detail_akce(akce, unique_key):
                  
                  c1.write(f"{i+1}.")
                  c2.markdown(f"**{row['jméno']}**")
-                 # Caption trochu ztmavíme, ať je čitelný
                  c3.markdown(f"<span style='color: #6b7280; font-size: 0.85em;'>{row.get('poznámka', '')}</span>", unsafe_allow_html=True)
                  
                  dopr = str(row.get('doprava', ''))
                  btn_label = dopr if dopr else "➕"
                  
-                 # 2. LOGIKA BAREV TLAČÍTEK - PŘIZPŮSOBENÁ PRO LIGHT MODE
-                 # Používáme barvy definované v styles.py (COLORS) nebo hex kódy přímo
-                 
-                 # Default (Šedá)
-                 btn_color, btn_bg, btn_border = "#374151", "#f3f4f6", "1px solid #e5e7eb"
+                 # === LOGIKA BAREV (HIGH CONTRAST) ===
+                 # Default (Šedá / Černá)
+                 btn_color = styles.COLORS["gray_text"]
+                 btn_bg = styles.COLORS["gray_bg"]
+                 btn_border = "1px solid #e5e7eb"
                  
                  if "Řidič" in dopr: 
-                     # Zelená (Driver) - Tmavě zelené písmo na světle zeleném pozadí
-                     btn_color, btn_bg, btn_border = "#166534", "#dcfce7", "1px solid #dcfce7"
+                     # Zelená (Sytá) + Bílá
+                     btn_color = styles.COLORS["driver_text"] # Bílá
+                     btn_bg = styles.COLORS["driver_bg"]     # Sytá zelená
+                     btn_border = f"1px solid {btn_bg}"
                  elif "Spolujízda" in dopr or "Jedu s" in dopr: 
-                     # Modrá (Passenger)
-                     btn_color, btn_bg, btn_border = "#1e40af", "#dbeafe", "1px solid #dbeafe"
+                     # Modrá (Sytá) + Bílá
+                     btn_color = styles.COLORS["passenger_text"] # Bílá
+                     btn_bg = styles.COLORS["passenger_bg"]     # Sytá modrá
+                     btn_border = f"1px solid {btn_bg}"
                      btn_label = dopr.replace("Spolujízda: ", "🚙 ").replace("Jedu s: ", "🚙 ")
                  elif "Chci" in dopr: 
-                     # Červená (Waiting)
-                     btn_color, btn_bg, btn_border = "#991b1b", "#fee2e2", "1px solid #fee2e2"
+                     # Červená (Sytá) + Bílá
+                     btn_color = styles.COLORS["waiting_text"] # Bílá
+                     btn_bg = styles.COLORS["waiting_bg"]     # Sytá červená
+                     btn_border = f"1px solid {btn_bg}"
                      btn_label = "🙋‍♂️ Chci"
 
                  transport_css = styles.get_transport_css(btn_bg, btn_color, btn_border)
