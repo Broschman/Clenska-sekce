@@ -339,18 +339,18 @@ def vykreslit_detail_akce(akce, unique_key):
         for i, (idx, row) in enumerate(lidi.iterrows()):
             bg = "#F3F4F6" if i % 2 == 0 else "white"
             
-            # 🔧 FIX: Zjednodušené CSS. Žádný flex, jen blok s barvou a paddingem.
-            # Díky tomu se sloupce uvnitř roztáhnou přirozeně od kraje ke kraji.
+            # 🔧 FIX: display: block (default) a width: 100% zajistí roztažení.
+            # Větší padding (10px nahoře/dole) udělá ten řádek vyšší a hezčí.
             css_row = f"""
                 {{
                     background-color: {bg}; 
                     border-radius: 8px; 
-                    padding: 4px 8px; /* Trochu vzduchu nahoře/dole a po stranách */
-                    margin-bottom: 2px;
+                    padding: 10px 15px; 
+                    margin-bottom: 4px;
+                    width: 100%;
                 }}
             """
             
-            # Tento kontejner obalí CELÝ řádek (všechny sloupce) jednou barvou
             with stylable_container(key=f"r_{unique_key}_{i}", css_styles=css_row):
                 
                 # --- LOGIKA MAZÁNÍ ---
@@ -377,7 +377,7 @@ def vykreslit_detail_akce(akce, unique_key):
                 
                 else:
                     # --- BĚŽNÝ ŘÁDEK ---
-                    # vertical_alignment="center" zajistí, že tlačítka nebudou "viset" nahoře ani dole
+                    # vertical_alignment="center" zde udělá tu magii zarovnání na střed
                     c1, c2, c3, c4, c5, c6 = st.columns(ratio, vertical_alignment="center")
                     
                     c1.write(f"{i+1}.")
@@ -392,7 +392,6 @@ def vykreslit_detail_akce(akce, unique_key):
                         if not raw_doprava or raw_doprava == "nan":
                             label = "➕"
                             tooltip = "Nastavit dopravu"
-                            # Tady dáme bílou (nebo průhlednou), ale s rámečkem
                             styl_btn = "background-color: rgba(255,255,255,0.5); border: 1px dashed #9CA3AF; color: #6B7280;" 
                         
                         elif "Řidič" in raw_doprava:
@@ -416,7 +415,7 @@ def vykreslit_detail_akce(akce, unique_key):
                             tooltip = raw_doprava
                             styl_btn = "background-color: white; border: 1px solid #E5E7EB; color: #374151;"
 
-                        # 2. CSS pro tlačítko (aby se roztáhlo a vypadalo hezky)
+                        # 2. CSS pro tlačítko
                         css_btn = f"""
                         button {{
                             width: 100%; 
@@ -425,7 +424,7 @@ def vykreslit_detail_akce(akce, unique_key):
                             min-height: 32px; 
                             border-radius: 6px;
                             margin: 0px !important; 
-                            white-space: nowrap; /* Zabrání zalamování textu v tlačítku */
+                            white-space: nowrap;
                             overflow: hidden;
                             text-overflow: ellipsis;
                             {styl_btn}
@@ -444,7 +443,6 @@ def vykreslit_detail_akce(akce, unique_key):
                     c5.write(row.get('ubytování', ''))
                     
                     if not je_po_deadlinu:
-                         # Tlačítko koše - musíme zajistit, aby nemělo divné marginy
                          with stylable_container(key=f"delc_{unique_key}_{i}", css_styles="button {margin:0 !important; padding:0 !important; height:auto !important; border:none; background:transparent; color: #EF4444; box-shadow: none !important;}"):
                             if c6.button("🗑️", key=f"d_{unique_key}_{i}"): 
                                 st.session_state[delete_key_state] = row['jméno']
