@@ -1,3 +1,4 @@
+
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 from streamlit_extras.stylable_container import stylable_container
@@ -68,19 +69,16 @@ if not future_deadlines.empty:
         days_left = (row['deadline'] - dnes).days
         
         if days_left == 0:
-            dash_style = {"bg": "#DC2626", "color": "white", "border": "none", "shadow": "0 4px 10px rgba(220, 38, 38, 0.3)"}
-            icon, time_msg = "🚨", "DNES!"
+            glow_c, bg_c, icon, time_msg = styles.NEON_RED, "rgba(255, 7, 58, 0.1)", "🚨", "DNES!"
         elif days_left <= 3:
-            dash_style = {"bg": "#EA580C", "color": "white", "border": "none", "shadow": "0 4px 10px rgba(234, 88, 12, 0.3)"}
-            icon, time_msg = "⚠️", f"Za {days_left} dny"
+            glow_c, bg_c, icon, time_msg = styles.NEON_ORANGE, "rgba(255, 95, 31, 0.1)", "⚠️", f"Za {days_left} dny"
         else:
-            dash_style = {"bg": "#16A34A", "color": "white", "border": "none", "shadow": "0 4px 10px rgba(22, 163, 74, 0.3)"}
-            icon, time_msg = "📅", row['deadline'].strftime('%d.%m.')
+            glow_c, bg_c, icon, time_msg = styles.NEON_GREEN, "rgba(57, 255, 20, 0.1)", "📅", row['deadline'].strftime('%d.%m.')
 
         unique_key_dash = f"dash_{row['id']}"
         
-        # NOVÉ VOLÁNÍ CSS
-        dash_css = styles.get_event_button_css(dash_style)
+        # ZDE POUŽIJEME FUNKCI ZE STYLES
+        dash_css = styles.get_cyber_button_css(bg_c, glow_c)
 
         with cols_d[i]:
             with stylable_container(key=f"dash_card_{i}", css_styles=dash_css):
@@ -95,24 +93,13 @@ if not future_deadlines.empty:
 def show_calendar_section():
     if 'vybrany_datum' not in st.session_state: st.session_state.vybrany_datum = date.today()
 
-    # Načteme styl pro navigaci
-    nav_css = styles.get_nav_button_css()
-
     col_nav1, col_nav2, col_nav3 = st.columns([2, 5, 2], vertical_alignment="center")
-    
     with col_nav1:
-        # Obalíme tlačítko do nav_css kontejneru
-        with stylable_container(key="nav_prev", css_styles=nav_css):
-            if st.button("⬅️ Předchozí", use_container_width=True):
-                st.session_state.vybrany_datum = (st.session_state.vybrany_datum.replace(day=1) - timedelta(days=1)).replace(day=1)
-                st.rerun()
-
+        if st.button("⬅️ Předchozí", use_container_width=True):
+            st.session_state.vybrany_datum = (st.session_state.vybrany_datum.replace(day=1) - timedelta(days=1)).replace(day=1)
     with col_nav3:
-        # Obalíme tlačítko do nav_css kontejneru
-        with stylable_container(key="nav_next", css_styles=nav_css):
-            if st.button("Další ➡️", use_container_width=True):
-                st.session_state.vybrany_datum = (st.session_state.vybrany_datum.replace(day=28) + timedelta(days=4)).replace(day=1)
-                st.rerun()
+        if st.button("Další ➡️", use_container_width=True):
+            st.session_state.vybrany_datum = (st.session_state.vybrany_datum.replace(day=28) + timedelta(days=4)).replace(day=1)
 
     year, month = st.session_state.vybrany_datum.year, st.session_state.vybrany_datum.month
     ceske_mesice = ["", "Leden", "Únor", "Březen", "Duben", "Květen", "Červen", "Červenec", "Srpen", "Září", "Říjen", "Listopad", "Prosinec"]
@@ -169,8 +156,6 @@ def show_calendar_section():
                     
                     zavodni_slova = ["závod", "mčr", "žebříček", "liga", "mistrovství", "štafety", "ža", "žb"]
                     je_zavod_obecne = any(s in typ for s in zavodni_slova)
-                    
-                    # Určení klíče stylu
                     style_key = "default"
                     if "mčr" in typ: style_key = "mcr"
                     elif "ža" in typ: style_key = "za"
@@ -182,27 +167,24 @@ def show_calendar_section():
                     elif "trénink" in typ: style_key = "trenink"
                     elif je_zavod_obecne: style_key = "zavod"
                     
-                    # === NOVÁ LOGIKA STYLŮ (CLEAN MODE) ===
-                    # 1. Načteme základní styl z palety
-                    style_dict = styles.BARVY_AKCI.get(style_key, styles.BARVY_AKCI["default"])
+                    # ... předchozí logika (typ, styly, ikony) ...
+                    
+                    styly = styles.BARVY_AKCI.get(style_key, styles.BARVY_AKCI["default"])
+                    glow_color = styly.get("glow", "#39ff14")
+                    bg_color = styly.get("bg", "rgba(255,255,255,0.05)")
 
-                    # 2. Ikony
                     ikony = { "les": "🌲", "sprint": "🏙️", "nočák": "🌗" }
                     emoji = ikony.get(druh, "🏃")
                     label = f"{emoji} {akce['název'].split('-')[0].strip()}"
+                    if je_po_deadlinu: label = "🔒 " + label
                     
-                    # 3. Úprava pro prošlé deadliny (zšednutí)
-                    if je_po_deadlinu: 
-                        label = "🔒 " + label
-                        style_dict = {"bg": "#F3F4F6", "color": "#9CA3AF", "border": "1px solid #E5E7EB", "shadow": "none"}
-                    
-                    # 4. Generování CSS pomocí nové funkce
-                    calendar_css = styles.get_event_button_css(style_dict)
+                    # ZDE POUŽIJEME FUNKCI ZE STYLES (TUČNÉ PÍSMO)
+                    calendar_css = styles.get_cyber_button_css(bg_color, glow_color)
 
                     with stylable_container(key=f"btn_c_{unique_key}", css_styles=calendar_css):
                         with st.popover(label, use_container_width=True):
                             utils.vykreslit_detail_akce(akce, unique_key)
-                            
+
 # ==============================================================================
 # 2. HLEDÁNÍ
 # ==============================================================================
@@ -246,9 +228,6 @@ if search_text or len(search_date_value) > 0:
             unique_key = f"search_{akce_id_str}"
             je_po_deadlinu = dnes > akce['deadline']
             
-            # Label
-            label = f"{akce['název']} ({akce['datum'].strftime('%d.%m.')})"
-
             typ_udalosti = str(akce.get('typ', '')).lower()
             style_key = "default"
             if "mčr" in typ_udalosti: style_key = "mcr"
@@ -261,15 +240,13 @@ if search_text or len(search_date_value) > 0:
             elif "trénink" in typ_udalosti: style_key = "trenink"
             elif any(s in typ_udalosti for s in ["závod", "liga"]): style_key = "zavod"
 
-            # === NOVÁ LOGIKA STYLŮ (CLEAN MODE) ===
-            style_dict = styles.BARVY_AKCI.get(style_key, styles.BARVY_AKCI["default"])
+            styly = styles.BARVY_AKCI.get(style_key, styles.BARVY_AKCI["default"])
+            # ... logika stylů ...
+            glow_color = styly.get("glow", "#39ff14")
+            bg_color = styly.get("bg", "rgba(255,255,255,0.05)")
             
-            if je_po_deadlinu:
-                label = "🔒 " + label
-                style_dict = {"bg": "#F3F4F6", "color": "#9CA3AF", "border": "1px solid #E5E7EB", "shadow": "none"}
-            
-            # Generování CSS
-            search_css = styles.get_event_button_css(style_dict)
+            # ZDE POUŽIJEME FUNKCI ZE STYLES
+            search_css = styles.get_cyber_button_css(bg_color, glow_color)
 
             with stylable_container(key=f"btn_search_{unique_key}", css_styles=search_css):
                 with st.popover(label, use_container_width=True):
@@ -319,9 +296,10 @@ st.markdown("<div style='margin-bottom: 20px'></div>", unsafe_allow_html=True)
 # ==============================================================================
 # 6. FLOATING CYBER-COACH (Pravý dolní roh) - DOČASNĚ VYPNUTO
 # ==============================================================================
+"""
+# TENTO KÓD JE ZAKOMENTOVANÝ A NEBUDE SE SPOUŠTĚT
+# AŽ HO BUDEŠ CHTÍT ZAPNOUT, SMAŽ TY TŘI UVOZOVKY NA ZAČÁTKU A NA KONCI
 
-# Přidali jsme "_ =" ... tím říkáme Pythonu "ulož to do šuplíku" a Streamlit to nevypíše.
-_ = """
 chat_css = styles.get_floating_chat_css()
 
 with stylable_container(key="floating_bot_container", css_styles=chat_css):
