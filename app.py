@@ -387,7 +387,7 @@ def vykreslit_detail_akce(akce, unique_key):
                         # Tlačítko pro úpravu (ikonka ozubeného kola nebo tužky)
                         # Použijeme stylable container pro malé, nenápadné tlačítko
                         with stylable_container(
-                            key=f"edit_btn_c_{i}", 
+                            key=f"edit_btn_c_{unique_key}_{i}", 
                             css_styles="button {padding: 0px 5px !important; height: 28px !important; border: 1px solid #D1D5DB; background: white; color: #4B5563; border-radius: 4px;}"
                         ):
                             if dc_btn.button("⚙️", key=f"ed_dopr_{unique_key}_{i}", help="Upravit dopravu"):
