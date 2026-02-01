@@ -177,19 +177,34 @@ def vykreslit_detail_akce(akce, unique_key):
                     st.markdown("""<div style="background-color: #FEF2F2; border: 1px solid #FCA5A5; color: #B91C1C; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-weight: bold; font-size: 0.9em; display: flex; align-items: center;"><span style="font-size: 1.2em; margin-right: 8px;">⚠️</span>Je nutné se přihlásit i v ORISu!</div>""", unsafe_allow_html=True)
 
                 form_key = f"form_{unique_key}"
-                with st.form(key=form_key, clear_on_submit=True):
-                    if kategorie_txt and kategorie_txt.lower() != "všichni": st.warning(f"Doporučení: **{kategorie_txt}**")
+                with st.form(key=form_key, clear_on_submit=False): # POZOR: clear_on_submit dej na False, jinak se jméno smaže než se otevře dialog!
+                    if kategorie_txt and kategorie_txt.lower() != "všichni": 
+                        st.warning(f"Doporučení: **{kategorie_txt}**")
+                    
+                    # Inputy
                     vybrane_jmeno = st.selectbox("Jméno", options=seznam_jmen, index=None, placeholder="Vyber ze seznamu...")
                     nove_jmeno = st.text_input("Nebo nové jméno")
                     poznamka_input = st.text_input("Poznámka")
+                    
                     c_check1, c_check2 = st.columns(2)
                     doprava_input = c_check1.checkbox("🚗 Sháním odvoz")
                     ubytovani_input = False
-                    if "trénink" not in typ_udalosti: ubytovani_input = c_check2.checkbox("🛏️ Společné ubytko")
+                    if "trénink" not in typ_udalosti: 
+                        ubytovani_input = c_check2.checkbox("🛏️ Společné ubytko")
+                    
                     st.markdown("<br>", unsafe_allow_html=True)
                     
-                    with stylable_container(key=f"submit_btn_{unique_key}", css_styles="button {background-color: #16A34A !important; color: white !important; border: none !important; transform: translateY(-10px) !important;}"):
-                        odeslat_btn = st.form_submit_button("Zapsat se")
+                    # --- TADY JE TA ZMĚNA ---
+                    # Dáme dvě tlačítka vedle sebe pomocí sloupců
+                    c_btn_zapis, c_btn_doprava = st.columns([1, 1], gap="small")
+                    
+                    with c_btn_zapis:
+                        # Hlavní tlačítko pro zápis
+                        odeslat_btn = st.form_submit_button("Zapsat se", type="primary", use_container_width=True)
+                        
+                    with c_btn_doprava:
+                        # Tlačítko pro dopravu (taky submit button, aby přečetl data z formu)
+                        doprava_btn = st.form_submit_button("🚗 Řešit dopravu", use_container_width=True)
                     
                     if odeslat_btn:
                         finalni_jmeno = nove_jmeno.strip() if nove_jmeno else vybrane_jmeno
@@ -238,6 +253,26 @@ def vykreslit_detail_akce(akce, unique_key):
                                         time.sleep(1)
                                     
                                     st.toast(f"✅ {finalni_jmeno} zapsán(a)!")
+                                    # Na konci můžeš formulář vyčistit manuálně nebo přes rerun
+                                    time.sleep(1)
+                                    st.rerun()
+                               else:
+                                    st.warning("Musíš vyplnit jméno!")
+                        
+                            elif doprava_btn:
+                                # 2. Klikl na DOPRAVU -> Neukládáme přihlášku, jen otevíráme dialog
+                                if finalni_jmeno:
+                                    # Zavoláme dialog a předáme mu jméno z formuláře
+                                    show_doprava_dialog(
+                                        akce_id=akce_id_str,
+                                        nazev_akce=akce['název'],
+                                        datum_akce=akce['datum'].strftime('%d.%m.'),
+                                        pre_jmeno=finalni_jmeno,
+                                        in_poznamka=poznamka_input,
+                                        in_ubytovani=ubytovani_input
+                                    )
+                                else:
+                                    st.warning("Nejdřív vyber nebo napiš jméno, abych věděl, pro koho tu dopravu řešíme.")
                                     
                                     # 6. Okamžitá aktualizace lokální tabulky
                                     lidi = pd.concat([lidi, novy_zaznam], ignore_index=True)
