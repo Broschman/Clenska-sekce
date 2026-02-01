@@ -4,13 +4,13 @@ import requests
 # === 1. DEFINICE BAREV ===
 
 # Proměnné pro app.py (Kompatibilita)
-NEON_GREEN = "#16A34A"  # Sytá zelená
-NEON_BLUE = "#2563EB"   # Sytá modrá
-NEON_RED = "#DC2626"    # Sytá červená
-NEON_ORANGE = "#EA580C" # Sytá oranžová
-DARK_BG = "#FFFFFF"     # Bílé pozadí
+NEON_GREEN = "#16A34A"
+NEON_BLUE = "#2563EB"
+NEON_RED = "#DC2626"
+NEON_ORANGE = "#EA580C"
+DARK_BG = "#FFFFFF"
 
-# Barvy pro tlačítka v tabulce (Syté barvy + Bílý text)
+# Barvy pro tlačítka v tabulce (utils.py)
 COLORS = {
     # Řidič: Zelené pozadí, Bílý text
     "driver_bg": "#16A34A", "driver_text": "#FFFFFF",
@@ -18,7 +18,7 @@ COLORS = {
     "passenger_bg": "#2563EB", "passenger_text": "#FFFFFF",
     # Chci odvoz: Červené pozadí, Bílý text
     "waiting_bg": "#DC2626", "waiting_text": "#FFFFFF",
-    # Neutrální: Šedé pozadí, Černý text
+    # Neutrální: Šedé pozadí, ČERNÝ TEXT (!)
     "gray_bg": "#F3F4F6", "gray_text": "#1F2937"
 }
 
@@ -44,25 +44,20 @@ def load_css():
 
         html, body, [class*="css"] {
             font-family: 'Inter', sans-serif;
-            color: #1f2937; /* Hlavní text stránky: Tmavě šedá/Černá */
+            color: #1f2937; /* Defaultní černá */
         }
         
-        /* Odkazy (jen odkazy v textu, ne v tlačítkách) */
         a { color: #2563EB !important; text-decoration: none; }
         a:hover { text-decoration: underline; }
 
-        /* Nadpisy */
         h1, h2, h3, h4 { color: #111827 !important; font-weight: 700 !important; }
         
-        /* UI Elementy */
         .stButton > button { font-weight: 600 !important; border-radius: 8px !important; }
         
-        /* === SKRYTÍ STREAMLIT UI === */
         #MainMenu, footer, header, .stDeployButton, [data-testid="stToolbar"], [data-testid="stDecoration"] {
             display: none !important; visibility: hidden !important;
         }
 
-        /* HEADER DESIGN */
         h1 span.gradient-text {
             background: -webkit-linear-gradient(45deg, #166534, #15803d);
             -webkit-background-clip: text;
@@ -72,7 +67,6 @@ def load_css():
         h1 img.header-logo { height: 60px; width: auto; transition: transform 0.3s; }
         h1 img.header-logo:hover { transform: scale(1.1) rotate(5deg); }
 
-        /* POPOVER */
         div[data-testid="stPopoverBody"] {
             width: 800px !important; max-width: 95vw !important; max-height: 85vh !important;
             border-radius: 12px !important; padding: 25px !important;
@@ -80,10 +74,8 @@ def load_css():
             border: 1px solid #e5e7eb !important;
         }
 
-        /* Floating Button */
         .floating-container { position: fixed; bottom: 30px; right: 30px; z-index: 9999; }
 
-        /* Today Box */
         .today-box {
             background: #DC2626; color: white; padding: 4px 12px; border-radius: 20px;
             font-weight: 700; box-shadow: 0 4px 10px rgba(220, 38, 38, 0.4); display: inline-block;
@@ -96,29 +88,44 @@ def load_css():
 
 def get_cyber_button_css(bg_color, glow_color):
     """
-    Logika: 
-    - Bílé pozadí -> Černý text.
-    - Barevné pozadí -> Bílý text.
+    CSS pro tlačítka v kalendáři a dashboardu.
     """
-    # Detekce bílého pozadí
-    is_white = "#FFFFFF" in bg_color or "#ffffff" in bg_color
+    bg_lower = str(bg_color).lower()
     
-    text_col = "#1F2937" if is_white else "#FFFFFF"  # Černá vs Bílá
-    border = "1px solid #E5E7EB" if is_white else "none"
+    # Seznam barev, které jsou tmavé/syté a vyžadují BÍLÝ text
+    dark_bg_triggers = [
+        "gradient", # MČR
+        "#dc2626", "#ef4444", # Červená
+        "#ea580c", "#d97706", # Oranžová
+        "#2563eb", "#3b82f6", # Modrá
+        "#16a34a", "#22c55e", # Zelená
+        "#4b5563",            # Tmavě šedá
+        "#9333ea",            # Fialová
+        "#0d9488"             # Tyrkysová
+    ]
     
+    # Zjištění, zda máme použít bílý text
+    use_white_text = any(trigger in bg_lower for trigger in dark_bg_triggers)
+
+    # Nastavení barev
+    text_col = "#FFFFFF" if use_white_text else "#1F2937" # Bílá vs Tmavě šedá
+    border = "none" if use_white_text else "1px solid #E5E7EB"
+    
+    # Stín: Standardní pro bílá tlačítka, žádný pro barevná (mají plochý design)
+    shadow = "0 1px 2px rgba(0,0,0,0.05)" if not use_white_text else "none"
+
     return f"""
         button {{
             background: {bg_color} !important;
             color: {text_col} !important;
             border: {border} !important;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+            box-shadow: {shadow} !important;
             border-radius: 8px !important;
             padding: 8px 10px !important;
             min-height: 50px !important;
             width: 100% !important;
             transition: all 0.2s !important;
         }}
-        /* Vynutíme barvu i pro vnitřní text (p), aby nebyl modrý */
         button p {{ 
             color: {text_col} !important; 
             font-weight: 600 !important; 
@@ -126,20 +133,20 @@ def get_cyber_button_css(bg_color, glow_color):
         }}
         button:hover {{ 
             transform: translateY(-1px); 
-            box-shadow: 0 4px 6px rgba(0,0,0,0.15) !important; 
-            opacity: 0.95; 
+            opacity: 0.9;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
         }}
     """
 
 def get_transport_css(bg, color, border):
     """
-    CSS pro malá tlačítka dopravy.
+    CSS pro malá tlačítka dopravy. Zde barvu textu řídí přímo utils.py.
     """
     return f"""
         button {{
             background-color: {bg} !important;
             color: {color} !important;
-            border: 1px solid {bg} !important;
+            border: {border} !important;
             border-radius: 6px !important;
             padding: 4px 12px !important;
             min-height: 32px !important;
@@ -148,11 +155,10 @@ def get_transport_css(bg, color, border):
             box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
         }}
         button p {{ margin: 0 !important; font-weight: 600 !important; color: {color} !important; }}
-        button:hover {{ filter: brightness(1.1); }}
+        button:hover {{ filter: brightness(1.05); }}
     """
 
 def get_delete_css():
-    """CSS pro koš"""
     return """
         button {
             background: transparent !important; border: 1px solid #fee2e2 !important; color: #ef4444 !important;
