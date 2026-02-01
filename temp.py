@@ -9,6 +9,32 @@ import base64
 from io import BytesIO
 import re
 
+@st.cache_data(ttl=3600*24) # Uložíme si to na 24 hodin
+def get_coords_from_place(place_name):
+    """Zjistí souřadnice podle názvu místa (Geocoding přes Nominatim)."""
+    if not place_name or len(place_name) < 3:
+        return None, None
+        
+    try:
+        # User-Agent je povinný pro Nominatim (identifikace aplikace)
+        headers = {'User-Agent': 'RBK_Kalendar_App/1.0'}
+        url = "https://nominatim.openstreetmap.org/search"
+        params = {
+            "q": place_name,
+            "format": "json",
+            "limit": 1,
+            "countrycodes": "cz" # Preferujeme Česko
+        }
+        
+        r = requests.get(url, params=params, headers=headers, timeout=2)
+        data = r.json()
+        
+        if data:
+            return float(data[0]['lat']), float(data[0]['lon'])
+        return None, None
+    except:
+        return None, None
+        
 # === POMOCNÉ FUNKCE ===
 def get_base64_image(image_path):
     import os
