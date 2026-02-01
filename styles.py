@@ -10,7 +10,7 @@ NEON_RED = "#DC2626"
 NEON_ORANGE = "#EA580C"
 DARK_BG = "#FFFFFF"
 
-# Barvy pro tlačítka v tabulce (utils.py)
+# Barvy pro tlačítka v tabulce (utils.py) - SYTÉ BARVY
 COLORS = {
     # Řidič: Zelené pozadí, Bílý text
     "driver_bg": "#16A34A", "driver_text": "#FFFFFF",
@@ -18,7 +18,7 @@ COLORS = {
     "passenger_bg": "#2563EB", "passenger_text": "#FFFFFF",
     # Chci odvoz: Červené pozadí, Bílý text
     "waiting_bg": "#DC2626", "waiting_text": "#FFFFFF",
-    # Neutrální: Šedé pozadí, ČERNÝ TEXT (!)
+    # Neutrální: Šedé pozadí, ČERNÝ TEXT
     "gray_bg": "#F3F4F6", "gray_text": "#1F2937"
 }
 
@@ -42,43 +42,55 @@ def load_css():
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
+        /* === RESET UI === */
         html, body, [class*="css"] {
             font-family: 'Inter', sans-serif;
             color: #1f2937; /* Defaultní černá */
+            background-color: #FFFFFF;
         }
         
+        /* Odkazy */
         a { color: #2563EB !important; text-decoration: none; }
         a:hover { text-decoration: underline; }
 
+        /* Nadpisy */
         h1, h2, h3, h4 { color: #111827 !important; font-weight: 700 !important; }
         
-        /* === GLOBÁLNÍ TLAČÍTKA (Navigace měsíců) === */
+        /* === GLOBÁLNÍ TLAČÍTKA (Navigace měsíců, Zavřít, atd.) === */
+        /* Toto zajistí, že všechna "obyčejná" tlačítka mají ČERNÝ text */
         .stButton > button {
-            background-color: #ffffff !important;
-            color: #1f2937 !important;      /* TADY JE TA ČERNÁ */
+            background-color: #FFFFFF !important;
+            color: #1f2937 !important;      
             border: 1px solid #e5e7eb !important;
             font-weight: 600 !important;
             border-radius: 8px !important;
             box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
+            transition: all 0.2s !important;
         }
+        /* Hover efekt - zmodrá */
         .stButton > button:hover {
             border-color: #2563EB !important;
             color: #2563EB !important;
-            background-color: #f9fafb !important;
+            background-color: #eff6ff !important;
         }
-        
-        /* Primary tlačítka (např. v dashboardu nebo formulářích) */
+
+        /* Primary tlačítka (Formuláře) - Modrá s bílým textem */
         button[kind="primary"] {
             background-color: #2563EB !important;
             color: white !important;
             border: 1px solid #2563EB !important;
         }
-
+        button[kind="primary"]:hover {
+            background-color: #1d4ed8 !important;
+            color: white !important;
+        }
+        
         /* === SKRYTÍ STREAMLIT UI === */
         #MainMenu, footer, header, .stDeployButton, [data-testid="stToolbar"], [data-testid="stDecoration"] {
             display: none !important; visibility: hidden !important;
         }
 
+        /* HEADER DESIGN */
         h1 span.gradient-text {
             background: -webkit-linear-gradient(45deg, #166534, #15803d);
             -webkit-background-clip: text;
@@ -88,11 +100,20 @@ def load_css():
         h1 img.header-logo { height: 60px; width: auto; transition: transform 0.3s; }
         h1 img.header-logo:hover { transform: scale(1.1) rotate(5deg); }
 
+        /* POPOVER */
         div[data-testid="stPopoverBody"] {
             width: 800px !important; max-width: 95vw !important; max-height: 85vh !important;
             border-radius: 12px !important; padding: 25px !important;
             box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
             border: 1px solid #e5e7eb !important;
+            background-color: #FFFFFF !important;
+        }
+        
+        /* Inputy - ohraničení */
+        .stTextInput input, .stSelectbox div[data-baseweb="select"] {
+            border: 1px solid #d1d5db !important;
+            border-radius: 8px !important;
+            color: #1f2937 !important;
         }
 
         .floating-container { position: fixed; bottom: 30px; right: 30px; z-index: 9999; }
@@ -104,6 +125,7 @@ def load_css():
         .day-number { font-size: 1.1em; font-weight: 700; color: #6B7280; display: block; text-align: center; }
     </style>
     """, unsafe_allow_html=True)
+
 # === 3. CSS GENERÁTORY ===
 
 def get_cyber_button_css(bg_color, glow_color):
@@ -130,8 +152,6 @@ def get_cyber_button_css(bg_color, glow_color):
     # Nastavení barev
     text_col = "#FFFFFF" if use_white_text else "#1F2937" # Bílá vs Tmavě šedá
     border = "none" if use_white_text else "1px solid #E5E7EB"
-    
-    # Stín: Standardní pro bílá tlačítka, žádný pro barevná (mají plochý design)
     shadow = "0 1px 2px rgba(0,0,0,0.05)" if not use_white_text else "none"
 
     return f"""
@@ -146,6 +166,7 @@ def get_cyber_button_css(bg_color, glow_color):
             width: 100% !important;
             transition: all 0.2s !important;
         }}
+        /* Vynutíme barvu i pro vnitřní text (p), aby nebyl modrý */
         button p {{ 
             color: {text_col} !important; 
             font-weight: 600 !important; 
@@ -160,7 +181,7 @@ def get_cyber_button_css(bg_color, glow_color):
 
 def get_transport_css(bg, color, border):
     """
-    CSS pro malá tlačítka dopravy. Zde barvu textu řídí přímo utils.py.
+    CSS pro malá tlačítka dopravy. Barvu řídí utils.py.
     """
     return f"""
         button {{
