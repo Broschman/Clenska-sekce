@@ -95,13 +95,24 @@ if not future_deadlines.empty:
 def show_calendar_section():
     if 'vybrany_datum' not in st.session_state: st.session_state.vybrany_datum = date.today()
 
+    # Načteme styl pro navigaci
+    nav_css = styles.get_nav_button_css()
+
     col_nav1, col_nav2, col_nav3 = st.columns([2, 5, 2], vertical_alignment="center")
+    
     with col_nav1:
-        if st.button("⬅️ Předchozí", use_container_width=True):
-            st.session_state.vybrany_datum = (st.session_state.vybrany_datum.replace(day=1) - timedelta(days=1)).replace(day=1)
+        # Obalíme tlačítko do nav_css kontejneru
+        with stylable_container(key="nav_prev", css_styles=nav_css):
+            if st.button("⬅️ Předchozí", use_container_width=True):
+                st.session_state.vybrany_datum = (st.session_state.vybrany_datum.replace(day=1) - timedelta(days=1)).replace(day=1)
+                st.rerun()
+
     with col_nav3:
-        if st.button("Další ➡️", use_container_width=True):
-            st.session_state.vybrany_datum = (st.session_state.vybrany_datum.replace(day=28) + timedelta(days=4)).replace(day=1)
+        # Obalíme tlačítko do nav_css kontejneru
+        with stylable_container(key="nav_next", css_styles=nav_css):
+            if st.button("Další ➡️", use_container_width=True):
+                st.session_state.vybrany_datum = (st.session_state.vybrany_datum.replace(day=28) + timedelta(days=4)).replace(day=1)
+                st.rerun()
 
     year, month = st.session_state.vybrany_datum.year, st.session_state.vybrany_datum.month
     ceske_mesice = ["", "Leden", "Únor", "Březen", "Duben", "Květen", "Červen", "Červenec", "Srpen", "Září", "Říjen", "Listopad", "Prosinec"]
