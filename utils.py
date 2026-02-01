@@ -572,7 +572,7 @@ def handle_driver_removal(conn, akce_id, driver_name):
 def vykreslit_detail_akce(akce, unique_key):
     """
     Vykreslí detail akce (Futuristický Dark Mode Design).
-    NOVĚ: Deadline ubytování.
+    NOVĚ: Chytré zobrazení deadlinů (jeden řádek vs. dva sloupce).
     """
     conn = data_manager.get_connection()
     seznam_jmen = data_manager.load_jmena()
@@ -591,7 +591,6 @@ def vykreslit_detail_akce(akce, unique_key):
 
     akce_id_str = str(akce.get('id', '')).replace('.0', '')
     typ_udalosti = str(akce.get('typ', '')).lower().strip()
-    druh_akce = str(akce.get('druh', '')).lower().strip()
     
     zavodni_slova = ["závod", "mčr", "žebříček", "liga", "mistrovství", "štafety", "ža", "žb"]
     je_zavod_obecne = any(s in typ_udalosti for s in zavodni_slova)
@@ -621,9 +620,10 @@ def vykreslit_detail_akce(akce, unique_key):
         je_po_deadlinu_ubyt = dnes > deadline_ubyt
         deadline_ubyt_str = deadline_ubyt.strftime('%d.%m.%Y')
 
-    # Má smysl řešit ubytování? (Buď je to vícedenní, nebo to není jen trénink, nebo má explicitní deadline)
+    # Má smysl řešit ubytování? 
     ma_ubytovani = "soustředění" in typ_udalosti or "mčr" in typ_udalosti or akce['datum'] != akce['datum_do']
 
+    # --- LIST LIDI ---
     lidi = pd.DataFrame()
     if akce_id_str:
         df_full = data_manager.load_prihlasky()
@@ -652,21 +652,33 @@ def vykreslit_detail_akce(akce, unique_key):
         popis = akce.get('popis')
         if pd.notna(popis): st.info(popis, icon="ℹ️")
         
-        # --- ZOBRAZENÍ DEADLINŮ ---
-        c_d1, c_d2 = st.columns(2)
-        with c_d1:
-            if je_po_deadlinu: 
-                st.error(f"⛔ Deadline přihlášek:\n{deadline_str}")
-            else: 
-                st.success(f"📅 Deadline přihlášek:\n{deadline_str}")
-        
-        # Zobrazit deadline ubytování jen pokud to dává smysl
-        if ma_ubytovani:
+        # --- ZOBRAZENÍ DEADLINŮ (UPDATED) ---
+        # Zobrazíme ubytovací deadline jen pokud:
+        # 1. Akce má ubytování
+        # 2. A deadline ubytování se LIŠÍ od hlavního (jinak je to redundantní)
+        zobrazit_ubyt_deadline = ma_ubytovani and (deadline_ubyt != deadline_val)
+
+        if zobrazit_ubyt_deadline:
+            # Dva sloupce vedle sebe
+            c_d1, c_d2 = st.columns(2)
+            with c_d1:
+                if je_po_deadlinu: 
+                    st.error(f"⛔ Deadline přihlášek:\n{deadline_str}")
+                else: 
+                    st.success(f"📅 Deadline přihlášek:\n{deadline_str}")
+            
             with c_d2:
                 if je_po_deadlinu_ubyt:
                      st.warning(f"🛏️ Deadline ubytování:\n{deadline_ubyt_str} (Uzavřeno)")
                 else:
                      st.info(f"🛏️ Deadline ubytování:\n{deadline_ubyt_str}")
+        else:
+            # Pouze jeden deadline přes celou šířku
+            if je_po_deadlinu: 
+                st.error(f"⛔ Deadline přihlášek: {deadline_str}")
+            else: 
+                st.success(f"📅 Deadline přihlášek: {deadline_str}")
+        # ------------------------------------
 
         if main_lat and main_lon:
             forecast = get_forecast(main_lat, main_lon, akce['datum'])
@@ -695,12 +707,8 @@ def vykreslit_detail_akce(akce, unique_key):
                 poznamka = st.text_input("Poznámka", key=f"inp_note_{unique_key}")
                 
                 # --- LOGIKA CHECKBOXU UBYTOVÁNÍ ---
-                # Defaultně False
                 ubyt = False
                 
-                # Checkbox zobrazíme jen když:
-                # 1. Není to jednodenní trénink (pokud nemáš explicitně řečeno jinak)
-                # 2. Není po deadlinu ubytování
                 if ma_ubytovani:
                     if not je_po_deadlinu_ubyt:
                         ubyt = st.checkbox("🛏️ Společné ubytko", key=f"chk_ubyt_{unique_key}")
@@ -720,21 +728,18 @@ def vykreslit_detail_akce(akce, unique_key):
                                     existujici = df_full[(df_full['id_akce'] == akce_id_str) & (df_full['jméno'] == finalni_jmeno)]
                                     old_dopr, old_id_auto = "", ""
                                     
-                                    # Pokud se jen updatuje, zachováme starou hodnotu ubytka, POKUD je po deadlinu a už to měl
                                     puvodni_ubytko = ""
                                     if not existujici.empty:
                                         old_dopr = existujici.iloc[0].get('doprava', "")
                                         old_id_auto = existujici.iloc[0].get('id_auto', "")
                                         puvodni_ubytko = existujici.iloc[0].get('ubytování', "")
                                     
-                                    # Finální stav ubytka
+                                    # Finální stav ubytka - zachováme staré, pokud je už po deadlinu
                                     final_ubyt_str = ""
                                     if ma_ubytovani:
                                         if je_po_deadlinu_ubyt:
-                                            # Pokud je po deadlinu, nemůžeme měnit. Necháme původní.
                                             final_ubyt_str = puvodni_ubytko
                                         else:
-                                            # Před deadlinem bere hodnotu z checkboxu
                                             final_ubyt_str = "Ano 🛏️" if ubyt else ""
                                     
                                     df_full = df_full[~((df_full['id_akce'] == akce_id_str) & (df_full['jméno'] == finalni_jmeno))]
@@ -761,8 +766,6 @@ def vykreslit_detail_akce(akce, unique_key):
                 with c_btn2:
                     if st.button("🚗 Doprava...", key=f"btn_dopr_{unique_key}", use_container_width=True):
                         if finalni_jmeno:
-                            # Pro dopravu posíláme aktuální stav (z DB nebo formuláře)
-                            # Pokud uživatel ještě není v DB, pošleme False/None, ale to nevadí
                             show_doprava_dialog(akce_id_str, akce.get('název', ''), akce['datum'].strftime('%d.%m.'), finalni_jmeno, poznamka, ubyt)
                         else: st.warning("Nejdřív vyber jméno!")
             elif je_po_deadlinu: st.info("🔒 Přihlášky uzavřeny.")
