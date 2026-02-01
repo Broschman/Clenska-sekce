@@ -429,7 +429,7 @@ def vykreslit_detail_akce(akce, unique_key):
                         
                         with stylable_container(key=f"btn_dopr_c_{unique_key}_{i}", css_styles=css):
                             if st.button(label, key=f"btn_dopr_{unique_key}_{i}", help=tooltip):
-                                show_doprava_dialog(
+                                utils.show_doprava_dialog(
                                     akce_id=akce_id_str,
                                     nazev_akce=akce['název'],
                                     datum_akce=akce['datum'].strftime('%d.%m.'),
