@@ -19,6 +19,7 @@ import textwrap
 import styles
 import utils
 import data_manager
+import auth
 
 print("--- ZAČÁTEK RERUNU ---")
 
@@ -28,6 +29,11 @@ styles.inject_mobile_warning()
 
 # --- 1. NASTAVENÍ STRÁNKY ---
 st.set_page_config(page_title="Kalendář RBK", page_icon="🌲", layout="wide")
+
+# 2. LOGIN BRÁNA 🚪
+# Pokud check_password vrátí False, aplikace se tady zastaví a dál nečte.
+if not auth.check_password():
+    st.stop()
 
 def vykreslit_detail_akce(akce, unique_key):
     """
