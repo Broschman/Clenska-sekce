@@ -289,21 +289,20 @@ with stylable_container(key="footer_logos", css_styles="img {height: 50px !impor
 st.markdown('</div>', unsafe_allow_html=True)
 st.markdown("<div style='margin-bottom: 20px'></div>", unsafe_allow_html=True)
 
+# ... (Patička a konec předchozího kódu) ...
+st.markdown("<div style='margin-bottom: 20px'></div>", unsafe_allow_html=True)
+
 # ==============================================================================
-# 6. FLOATING CYBER-COACH (Pravý dolní roh)
+# 6. FLOATING CYBER-COACH (Pravý dolní roh) - DOČASNĚ VYPNUTO
 # ==============================================================================
-# Načteme CSS styl
+"""
+# TENTO KÓD JE ZAKOMENTOVANÝ A NEBUDE SE SPOUŠTĚT
+# AŽ HO BUDEŠ CHTÍT ZAPNOUT, SMAŽ TY TŘI UVOZOVKY NA ZAČÁTKU A NA KONCI
+
 chat_css = styles.get_floating_chat_css()
 
-# Použijeme stylable_container pro fixní pozici
-# Poznámka: Aby tohle fungovalo, musíš mít import: from streamlit_extras.stylable_container import stylable_container
 with stylable_container(key="floating_bot_container", css_styles=chat_css):
-    
-    # Ikonka robota v tlačítku
     with st.popover("🤖", help="Otevřít Cyber-Coache"):
-        
-        # Tady načteme data a spustíme bota uvnitř bubliny
-        # Data načítáme tady, aby byla vždy čerstvá při otevření
         try:
             import data_manager
             # Načteme data (pro jistotu znovu, ať vidí změny)
@@ -314,8 +313,4 @@ with stylable_container(key="floating_bot_container", css_styles=chat_css):
             
         except Exception as e:
             st.error(f"Bot Error: {e}")
-
-# Poznámka: Pokud máš v app.py už sekci "5. PLOVOUCÍ TLAČÍTKO" (Nápad?), 
-# může se překrývat. Doporučuji to staré tlačítko buď dát pryč, 
-# nebo mu v CSS změnit pozici (např. 'bottom: 110px' místo 30px), 
-# aby byly nad sebou.
+"""
