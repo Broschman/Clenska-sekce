@@ -253,26 +253,28 @@ def vykreslit_detail_akce(akce, unique_key):
                                         time.sleep(1)
                                     
                                     st.toast(f"✅ {finalni_jmeno} zapsán(a)!")
-                                    # Na konci můžeš formulář vyčistit manuálně nebo přes rerun
                                     time.sleep(1)
                                     st.rerun()
-                            else:
-                                    st.warning("Musíš vyplnit jméno!")
-                        
-                        elif doprava_btn:
-                            # 2. Klikl na DOPRAVU -> Neukládáme přihlášku, jen otevíráme dialog
-                            if finalni_jmeno:
-                                # Zavoláme dialog a předáme mu jméno z formuláře
-                                show_doprava_dialog(
-                                    akce_id=akce_id_str,
-                                    nazev_akce=akce['název'],
-                                    datum_akce=akce['datum'].strftime('%d.%m.'),
-                                    pre_jmeno=finalni_jmeno,
-                                    in_poznamka=poznamka_input,
-                                    in_ubytovani=ubytovani_input
-                                )
-                            else:
-                                st.warning("Nejdřív vyber nebo napiš jméno, abych věděl, pro koho tu dopravu řešíme.")
+
+                            except Exception as e: 
+                                st.error(f"Chyba zápisu: {e}")
+                        else: 
+                            st.warning("Musíš vyplnit jméno!")
+
+                    elif doprava_btn:
+                        # 2. Klikl na DOPRAVU -> Neukládáme přihlášku, jen otevíráme dialog
+                        if finalni_jmeno:
+                            # Zavoláme dialog a předáme mu jméno z formuláře
+                            show_doprava_dialog(
+                                akce_id=akce_id_str,
+                                nazev_akce=akce['název'],
+                                datum_akce=akce['datum'].strftime('%d.%m.'),
+                                pre_jmeno=finalni_jmeno,
+                                in_poznamka=poznamka_input,
+                                in_ubytovani=ubytovani_input
+                            )
+                        else:
+                            st.warning("Nejdřív vyber nebo napiš jméno, abych věděl, pro koho tu dopravu řešíme.")
                                     
                                     # 6. Okamžitá aktualizace lokální tabulky
                                     lidi = pd.concat([lidi, novy_zaznam], ignore_index=True)
