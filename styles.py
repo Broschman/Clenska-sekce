@@ -45,22 +45,19 @@ def load_css():
         /* === HLAVNÍ NADPIS - CENTROVÁNÍ === */
         h1 {{ 
             font-size: 3rem !important; 
-            text-align: center !important; /* Celý řádek (text i logo v něm) na střed */
+            text-align: center !important; 
             margin-bottom: 20px !important;
         }}
 
-        /* === LOGO - V ŘÁDKU VEDLE TEXTU === */
+        /* === LOGO === */
         img.header-logo {{
             height: 80px !important; 
             width: auto !important;
             object-fit: contain !important;
-            
-            /* TOTO JE KLÍČOVÁ ZMĚNA: */
-            display: inline-block !important;   /* Chová se jako písmeno, ne jako blok */
-            vertical-align: middle !important;  /* Srovná se na střed výšky textu */
-            margin-right: 20px !important;      /* Odstup od nadpisu */
-            margin-top: -10px !important;       /* Jemná korekce výšky */
-            
+            display: inline-block !important;   
+            vertical-align: middle !important;  
+            margin-right: 20px !important;      
+            margin-top: -10px !important;       
             filter: drop-shadow(0 0 10px {NEON_BLUE});
             transition: transform 0.3s;
         }}
@@ -108,12 +105,19 @@ def load_css():
         }}
         .day-number {{ color: #888; font-weight: 600; display: block; text-align: center; margin-bottom: 8px; }}
 
+        /* === POPOVER (Bublina) - UPRAVENÁ ŠÍŘKA === */
         div[data-testid="stPopoverBody"] {{
             background-color: rgba(14, 17, 23, 0.95) !important;
             border: 1px solid rgba(255, 255, 255, 0.15) !important;
             backdrop-filter: blur(20px);
             border-radius: 12px !important;
             box-shadow: 0 0 40px rgba(0, 0, 0, 0.8) !important;
+            
+            /* ZMĚNA ŠÍŘKY */
+            width: 850px !important;      /* Dost místa pro 2 sloupce */
+            max-width: 95vw !important;   /* Ochrana pro mobily (aby to nepřeteklo) */
+            max-height: 85vh !important;  /* Aby se dalo scrollovat, kdyby to bylo dlouhé */
+            overflow-y: auto !important;
         }}
 
         #MainMenu, footer, header, .stDeployButton {{visibility: hidden;}}
@@ -121,7 +125,7 @@ def load_css():
         [data-testid="stDecoration"] {{display:none;}}
     </style>
     """, unsafe_allow_html=True)
-
+    
 # --- GENERÁTORY STYLŮ (Zcela nezávislé) ---
 
 def get_cyber_button_css(bg_color, glow_color):
