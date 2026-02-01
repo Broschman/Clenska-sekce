@@ -171,17 +171,19 @@ def show_calendar_section():
                     
                     # ... předchozí logika (typ, styly, ikony) ...
                     
-                    styly = styles.BARVY_AKCI.get(style_key, styles.BARVY_AKCI["default"])
+                    style_dict = styles.BARVY_AKCI.get(style_key, styles.BARVY_AKCI["default"])
                     glow_color = styly.get("glow", "#39ff14")
                     bg_color = styly.get("bg", "rgba(255,255,255,0.05)")
 
                     ikony = { "les": "🌲", "sprint": "🏙️", "nočák": "🌗" }
                     emoji = ikony.get(druh, "🏃")
                     label = f"{emoji} {akce['název'].split('-')[0].strip()}"
-                    if je_po_deadlinu: label = "🔒 " + label
+                    if je_po_deadlinu:
+                        style_dict = {"bg": "#F3F4F6", "color": "#9CA3AF", "border": "1px solid #E5E7EB", "shadow": "none"}
+                        label = "🔒 " + label
                     
                     # ZDE POUŽIJEME FUNKCI ZE STYLES (TUČNÉ PÍSMO)
-                    calendar_css = styles.get_cyber_button_css(bg_color, glow_color)
+                    calendar_css = styles.get_event_button_css(style_dict)
 
                     with stylable_container(key=f"btn_c_{unique_key}", css_styles=calendar_css):
                         with st.popover(label, use_container_width=True):
