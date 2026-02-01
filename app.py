@@ -253,11 +253,11 @@ def vykreslit_detail_akce(akce, unique_key):
                                         time.sleep(1)
                                     
                                     st.toast(f"✅ {finalni_jmeno} zapsán(a)!")
-                                    # Na konci můžeš formulář vyčistit manuálně nebo přes rerun
-                                    time.sleep(1)
-                                    st.rerun()
+                                     # Na konci můžeš formulář vyčistit manuálně nebo přes rerun
+                                     time.sleep(1)
+                                     st.rerun()
                                 else:
-                                    st.warning("Musíš vyplnit jméno!")
+                                     st.warning("Musíš vyplnit jméno!")
                         
                             elif doprava_btn:
                                 # 2. Klikl na DOPRAVU -> Neukládáme přihlášku, jen otevíráme dialog
