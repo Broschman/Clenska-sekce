@@ -322,13 +322,12 @@ def export_admin_section(lidi, nazev_akce, unique_key):
                 </script>
                 """, height=0)
 
-# --- Vlož do utils.py ---
+# utils.py
 
 @st.dialog("🚗 Správa dopravy")
 def show_doprava_dialog(akce_id, nazev_akce, datum_akce, pre_jmeno, in_poznamka=None, in_ubytovani=None):
     """
     Modální okno pro řešení dopravy.
-    FIX: Pokud předvybrané jméno není v seznamu, dynamicky ho přidáme, aby fungoval výběr.
     """
     conn = data_manager.get_connection()
     
@@ -346,19 +345,18 @@ def show_doprava_dialog(akce_id, nazev_akce, datum_akce, pre_jmeno, in_poznamka=
 
     st.markdown(f"**{nazev_akce}** ({datum_akce})")
     
-    # === OPRAVENÁ LOGIKA VÝBĚRU JMÉNA ===
     # 1. Načíst seznam
     seznam_jmen = data_manager.load_jmena()
     
     # 2. Ošetřit vstup (str a strip)
     target_jmeno = str(pre_jmeno).strip() if pre_jmeno else None
     
-    # 3. Pokud jméno existuje, ale není v seznamu (např. nové), přidáme ho tam
+    # 3. Pokud jméno existuje, ale není v seznamu, přidáme ho
     if target_jmeno and target_jmeno not in seznam_jmen:
         seznam_jmen.append(target_jmeno)
-        seznam_jmen.sort() # Ať je to hezké
+        seznam_jmen.sort()
         
-    # 4. Najít index (teď už to musí klapnout)
+    # 4. Najít index
     idx_jmeno = None
     if target_jmeno:
         try:
@@ -366,8 +364,22 @@ def show_doprava_dialog(akce_id, nazev_akce, datum_akce, pre_jmeno, in_poznamka=
         except ValueError:
             idx_jmeno = None
 
+    # ### --- FIX: VYNUCENÁ AKTUALIZACE STAVU ---
+    # Pokud máme target_jmeno (otevřeli jsme to přes tlačítko u konkrétní osoby),
+    # musíme donutit selectbox, aby se přepsal. Jinak si drží starou hodnotu z minula.
+    if target_jmeno and "diag_jmeno" in st.session_state:
+        if st.session_state.diag_jmeno != target_jmeno:
+            st.session_state.diag_jmeno = target_jmeno
+    # ### -------------------------------------
+
     # 5. Vykreslit selectbox
-    vybrane_jmeno = st.selectbox("Kdo jsi?", options=seznam_jmen, index=idx_jmeno, key="diag_jmeno", disabled=(target_jmeno is not None))
+    vybrane_jmeno = st.selectbox(
+        "Kdo jsi?", 
+        options=seznam_jmen, 
+        index=idx_jmeno, 
+        key="diag_jmeno", 
+        disabled=(target_jmeno is not None)
+    )
     
     st.markdown("---")
 
