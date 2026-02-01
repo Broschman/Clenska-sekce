@@ -335,22 +335,21 @@ def vykreslit_detail_akce(akce, unique_key):
         for i, (idx, row) in enumerate(lidi.iterrows()):
             bg = "#F3F4F6" if i % 2 == 0 else "white"
             
-            # === FIX PROTI PROPADÁNÍ OKRAJŮ ===
-            # 1. display: flow-root -> donutí kontejner obalit i vnitřní marginy prvků
-            # 2. padding: 12px 10px -> dostatek masa nahoře i dole
+            # === FIX S PRŮHLEDNÝM RÁMEČKEM ===
+            # border: 1px solid transparent -> Toto zastaví propadání marginů
             row_css = f"""
                 {{
                     background-color: {bg};
                     border-radius: 8px;
-                    padding: 12px 10px;
+                    padding: 8px 5px;
                     margin-bottom: 2px;
-                    display: flow-root; 
-                    width: 100%;
+                    border: 1px solid transparent; 
                 }}
             """
             
             with stylable_container(key=f"r_{unique_key}_{i}", css_styles=row_css):
                 
+                # --- LOGIKA MAZÁNÍ ---
                 je_k_smazani = (delete_key_state in st.session_state) and (st.session_state[delete_key_state] == row['jméno'])
                 
                 if je_k_smazani:
@@ -374,7 +373,6 @@ def vykreslit_detail_akce(akce, unique_key):
                 
                 else:
                     # --- BĚŽNÝ ŘÁDEK ---
-                    # vertical_alignment="center" zde funguje spolehlivě díky flow-root obalu
                     c1, c2, c3, c4, c5, c6 = st.columns(cols_ratio, vertical_alignment="center")
                     
                     c1.write(f"{i+1}.")
@@ -384,7 +382,7 @@ def vykreslit_detail_akce(akce, unique_key):
                     # === DOPRAVA (TLAČÍTKA) ===
                     dopr = str(row.get('doprava', ''))
                     
-                    # 1. Barvy
+                    # 1. Barvy (Light Mode)
                     btn_label = "➕"
                     btn_bg = "white"
                     btn_border = "1px dashed #9CA3AF"
@@ -407,7 +405,7 @@ def vykreslit_detail_akce(akce, unique_key):
                         btn_border = "1px solid #D97706"
                         btn_color = "#92400E"
 
-                    # 2. CSS Tlačítka
+                    # 2. CSS Tlačítka (Tvůj styl + fixy)
                     css_btn = f"""
                         button {{
                             background-color: {btn_bg} !important;
