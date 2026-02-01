@@ -339,15 +339,19 @@ def vykreslit_detail_akce(akce, unique_key):
         for i, (idx, row) in enumerate(lidi.iterrows()):
             bg = "#F3F4F6" if i % 2 == 0 else "white"
             
-            # 🔧 FIX: Zvětšil jsem padding na 15px (bylo 10px).
-            # Teď bude řádek o dost vyšší a vzdušnější.
+            # 🔧 FIX: 
+            # 1. Padding zvětšen na 20px (aby byl řádek vysoký).
+            # 2. 'display: flex' a 'align-items: center' zajistí, že text i tlačítko budou v jedné rovině.
+            # 3. 'width: 100%' zajistí, že se pruh roztáhne přes celou šířku stránky.
             css_row = f"""
                 {{
                     background-color: {bg}; 
                     border-radius: 8px; 
-                    padding: 15px 15px; 
+                    padding: 20px 15px; 
                     margin-bottom: 4px;
                     width: 100%;
+                    display: flex;
+                    align-items: center;
                 }}
             """
             
@@ -377,7 +381,6 @@ def vykreslit_detail_akce(akce, unique_key):
                 
                 else:
                     # --- BĚŽNÝ ŘÁDEK ---
-                    # vertical_alignment="center" zajistí, že obsah bude uprostřed té zvýšené výšky
                     c1, c2, c3, c4, c5, c6 = st.columns(ratio, vertical_alignment="center")
                     
                     c1.write(f"{i+1}.")
