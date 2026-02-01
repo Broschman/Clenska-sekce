@@ -340,18 +340,29 @@ def vykreslit_detail_akce(akce, unique_key):
             bg = "#F3F4F6" if i % 2 == 0 else "white"
             
             # 🔧 FIX: 
-            # 1. Padding zvětšen na 20px (aby byl řádek vysoký).
-            # 2. 'display: flex' a 'align-items: center' zajistí, že text i tlačítko budou v jedné rovině.
-            # 3. 'width: 100%' zajistí, že se pruh roztáhne přes celou šířku stránky.
+            # 1. display: flex + align-items: center = vertikální centr kontejneru
+            # 2. Druhá část CSS (div...) natvrdo odstraní odsazení textu (margin-bottom),
+            #    které v Streamlitu normálně tlačí text nahoru mimo střed.
             css_row = f"""
                 {{
                     background-color: {bg}; 
                     border-radius: 8px; 
-                    padding: 20px 15px; 
+                    padding: 15px 15px; 
                     margin-bottom: 4px;
                     width: 100%;
                     display: flex;
                     align-items: center;
+                }}
+                /* Vynulování marginů u textu uvnitř řádku */
+                div[data-testid="stMarkdownContainer"] p {{
+                    margin-bottom: 0px !important;
+                    padding-bottom: 0px !important;
+                    line-height: 1 !important;
+                }}
+                /* Pojistka pro caption (poznámka) */
+                div[data-testid="stCaptionContainer"] {{
+                    margin-bottom: 0px !important;
+                    line-height: 1 !important;
                 }}
             """
             
@@ -381,6 +392,7 @@ def vykreslit_detail_akce(akce, unique_key):
                 
                 else:
                     # --- BĚŽNÝ ŘÁDEK ---
+                    # vertical_alignment="center" zarovná sloupce vůči sobě
                     c1, c2, c3, c4, c5, c6 = st.columns(ratio, vertical_alignment="center")
                     
                     c1.write(f"{i+1}.")
@@ -446,6 +458,7 @@ def vykreslit_detail_akce(akce, unique_key):
                     c5.write(row.get('ubytování', ''))
                     
                     if not je_po_deadlinu:
+                         # Opravený styl pro koš - odstraněny divné marginy
                          with stylable_container(key=f"delc_{unique_key}_{i}", css_styles="button {margin:0 !important; padding:0 !important; height:auto !important; border:none; background:transparent; color: #EF4444; box-shadow: none !important;}"):
                             if c6.button("🗑️", key=f"d_{unique_key}_{i}"): 
                                 st.session_state[delete_key_state] = row['jméno']
