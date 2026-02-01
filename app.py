@@ -324,7 +324,6 @@ def vykreslit_detail_akce(akce, unique_key):
     
     if not lidi.empty:
         # Definice hlavičky
-        # Poměry sloupců (upraveno pro širší tlačítko)
         cols_ratio = [0.4, 2.0, 1.5, 1.3, 0.6, 0.5]
         
         h1, h2, h3, h4, h5, h6 = st.columns(cols_ratio) 
@@ -339,21 +338,20 @@ def vykreslit_detail_akce(akce, unique_key):
         for i, (idx, row) in enumerate(lidi.iterrows()):
             bg = "#F3F4F6" if i % 2 == 0 else "white"
             
-            # === ZMĚNA PŘÍSTUPU ===
-            # CSS dělá JENOM barvu a padding. Žádný layout.
-            # display: block zajistí, že se to chová jako normální div pod sebou.
+            # === PŘESNĚ TOHLE JSI CHTĚL ===
+            # display: block = chová se to jako normální kvádr
+            # padding: 12px 10px = 12px nahoře/dole (to dělá tu výšku), 10px vlevo/vpravo
             css_bg = f"""
                 {{
                     background-color: {bg};
                     border-radius: 8px;
-                    padding: 5px 10px; /* Vzduch okolo */
+                    padding: 12px 10px; 
                     margin-bottom: 2px;
                 }}
             """
             
             with stylable_container(key=f"row_bg_{unique_key}_{i}", css_styles=css_bg):
                 
-                # --- LOGIKA MAZÁNÍ (stejná jako dřív) ---
                 je_k_smazani = (delete_key_state in st.session_state) and (st.session_state[delete_key_state] == row['jméno'])
                 
                 if je_k_smazani:
@@ -376,20 +374,18 @@ def vykreslit_detail_akce(akce, unique_key):
                         st.rerun()
                 
                 else:
-                    # --- BĚŽNÝ ŘÁDEK ---
-                    # TADY SE DĚJE MAGIE ZAROVNÁNÍ: vertical_alignment="center"
-                    # To zajistí, že text i tlačítko budou v jedné rovině uprostřed výšky.
+                    # TADY JE TA MAGIE: vertical_alignment="center"
+                    # Streamlit sám zarovná text i tlačítko přesně na střed toho našeho nafouknutého pruhu.
                     c1, c2, c3, c4, c5, c6 = st.columns(cols_ratio, vertical_alignment="center")
                     
                     c1.write(f"{i+1}.")
                     c2.markdown(f"**{row['jméno']}**")
                     c3.caption(row.get('poznámka', ''))
                     
-                    # === TLAČÍTKO DOPRAVY ===
+                    # === TLAČÍTKO ===
                     with c4:
                         raw_doprava = str(row.get('doprava', ''))
                         
-                        # Definice stylu tlačítka
                         if not raw_doprava or raw_doprava == "nan":
                             label = "➕"
                             tooltip = "Nastavit dopravu"
@@ -412,7 +408,6 @@ def vykreslit_detail_akce(akce, unique_key):
                             tooltip = raw_doprava
                             style = "background-color: white; border: 1px solid #E5E7EB; color: #374151;"
                         
-                        # CSS čistě pro tlačítko (aby vyplnilo šířku sloupce)
                         btn_css = f"""
                         button {{
                             width: 100%;
@@ -422,7 +417,7 @@ def vykreslit_detail_akce(akce, unique_key):
                             white-space: nowrap;
                             overflow: hidden;
                             text-overflow: ellipsis;
-                            margin: 0 !important; /* Důležité: žádné marginy navíc */
+                            margin: 0 !important;
                             {style}
                         }}
                         """
