@@ -185,27 +185,54 @@ def get_event_info(query: str) -> str:
 # --- 1. AKCE (Cachujeme, aby kalendář neblikal) ---
 # @st.cache_data(ttl=3600) 
 def load_akce():
-    print("STAHUJI AKCE Z WEBU...")
+    # print("STAHUJI AKCE Z WEBU...")
     try:
         df_akce = pd.read_csv(URL_AKCE)
-        # ... (zbytek logiky preprocessingu akcí, stejné jako dřív) ...
+        
+        # 1. Základní data a časy
         df_akce['datum'] = pd.to_datetime(df_akce['datum'], dayfirst=True, errors='coerce').dt.date
+        
         if 'datum_do' in df_akce.columns:
             df_akce['datum_do'] = pd.to_datetime(df_akce['datum_do'], dayfirst=True, errors='coerce').dt.date
             df_akce['datum_do'] = df_akce['datum_do'].fillna(df_akce['datum'])
         else:
             df_akce['datum_do'] = df_akce['datum']
-        df_akce['deadline'] = pd.to_datetime(df_akce['deadline'], dayfirst=True, errors='coerce').dt.date
+            
         df_akce = df_akce.dropna(subset=['datum'])
+        
+        # 2. Hlavní Deadline
+        df_akce['deadline'] = pd.to_datetime(df_akce['deadline'], dayfirst=True, errors='coerce').dt.date
+        
         def get_deadline(row):
-            return row['datum'] - timedelta(days=14) if pd.isna(row['deadline']) else row['deadline']
+            if pd.isna(row['deadline']):
+                return row['datum'] - timedelta(days=14)
+            return row['deadline']
+        
         df_akce['deadline'] = df_akce.apply(get_deadline, axis=1)
+
+        # === 3. DEADLINE UBYTOVÁNÍ (NOVÉ) ===
+        # Pokud sloupec v tabulce neexistuje, vytvoříme ho
+        if 'deadline_ubytovani' not in df_akce.columns:
+            df_akce['deadline_ubytovani'] = pd.NaT
+
+        df_akce['deadline_ubytovani'] = pd.to_datetime(df_akce['deadline_ubytovani'], dayfirst=True, errors='coerce').dt.date
+
+        # Logika: Pokud není vyplněn deadline ubytování, platí hlavní deadline
+        def get_accom_deadline(row):
+            if pd.isna(row['deadline_ubytovani']):
+                return row['deadline']
+            return row['deadline_ubytovani']
+
+        df_akce['deadline_ubytovani'] = df_akce.apply(get_accom_deadline, axis=1)
+        # ====================================
+        
         if 'id' in df_akce.columns:
             df_akce['id'] = df_akce['id'].astype(str).str.replace(r'\.0$', '', regex=True)
+            
         return df_akce
-    except:
+    except Exception as e:
+        # print(f"Chyba load_akce: {e}")
         return pd.DataFrame()
-
 # --- 2. PŘIHLÁŠKY (BEZ CACHE = ŽIVÉ ČTENÍ) ---
 # Tady jsme smazali @st.cache_data. Pokaždé se načtou čerstvá data.
 def load_prihlasky():
