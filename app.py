@@ -330,130 +330,98 @@ def vykreslit_detail_akce(akce, unique_key):
         h3.markdown("<b>Poznámka</b>", unsafe_allow_html=True)
         h4.markdown("🚗 <b>Doprava</b>", unsafe_allow_html=True)
         h5.markdown("🛏️", unsafe_allow_html=True)
-        st.markdown("<hr style='margin: 5px 0 10px 0; border-top: 1px solid #E5E7EB;'>", unsafe_allow_html=True)
+        
+        # První oddělovač
+        st.markdown("<hr style='margin: 0 0 10px 0; border-top: 2px solid #E5E7EB;'>", unsafe_allow_html=True)
         
         for i, (idx, row) in enumerate(lidi.iterrows()):
-            bg = "#F3F4F6" if i % 2 == 0 else "white"
             
-            # === FIX S PRŮHLEDNÝM RÁMEČKEM ===
-            # border: 1px solid transparent -> Toto zastaví propadání marginů
-            row_css = f"""
-                {{
-                    background-color: {bg};
-                    border-radius: 8px;
-                    padding: 8px 5px;
-                    margin-bottom: 2px;
-                    border: 1px solid transparent; 
-                }}
-            """
+            # --- LOGIKA MAZÁNÍ ---
+            je_k_smazani = (delete_key_state in st.session_state) and (st.session_state[delete_key_state] == row['jméno'])
             
-            with stylable_container(key=f"r_{unique_key}_{i}", css_styles=row_css):
-                
-                # --- LOGIKA MAZÁNÍ ---
-                je_k_smazani = (delete_key_state in st.session_state) and (st.session_state[delete_key_state] == row['jméno'])
-                
-                if je_k_smazani:
+            if je_k_smazani:
+                # Jednoduchý kontejner pro smazání (červený podkres pro varování se hodí, ale můžeme ho dát pryč)
+                with stylable_container(key=f"del_row_{unique_key}_{i}", css_styles="{background-color: #FEF2F2; border-radius: 8px; padding: 10px;}"):
                     col_warn, col_yes, col_no = st.columns([3, 1, 1], vertical_alignment="center")
                     col_warn.warning(f"Opravdu smazat: **{row['jméno']}**?", icon="⚠️")
                     
-                    with stylable_container(key=f"btn_yes_c_{i}", css_styles="button {background-color: #DC2626 !important; color: white !important; border: none;}"):
-                        if col_yes.button("✅ ANO", key=f"yes_{unique_key}_{i}"):
-                            df_curr = conn.read(worksheet="prihlasky", ttl=0)
-                            df_curr['id_akce'] = df_curr['id_akce'].astype(str).str.replace(r'\.0$', '', regex=True)
-                            conn.update(worksheet="prihlasky", data=df_curr[~((df_curr['id_akce'] == akce_id_str) & (df_curr['jméno'] == row['jméno']))])
-                            data_manager.handle_driver_removal(conn, akce_id_str, row['jméno'])
-                            del st.session_state[delete_key_state]
-                            st.toast("🗑️ Smazáno.")
-                            time.sleep(1)
-                            st.rerun()
-                    
-                    if col_no.button("❌ ZPĚT", key=f"no_{unique_key}_{i}"):
+                    if col_yes.button("✅ ANO", key=f"yes_{unique_key}_{i}", use_container_width=True):
+                        df_curr = conn.read(worksheet="prihlasky", ttl=0)
+                        df_curr['id_akce'] = df_curr['id_akce'].astype(str).str.replace(r'\.0$', '', regex=True)
+                        conn.update(worksheet="prihlasky", data=df_curr[~((df_curr['id_akce'] == akce_id_str) & (df_curr['jméno'] == row['jméno']))])
+                        data_manager.handle_driver_removal(conn, akce_id_str, row['jméno'])
                         del st.session_state[delete_key_state]
+                        st.toast("🗑️ Smazáno.")
+                        time.sleep(1)
                         st.rerun()
                 
-                else:
-                    # --- BĚŽNÝ ŘÁDEK ---
-                    c1, c2, c3, c4, c5, c6 = st.columns(cols_ratio, vertical_alignment="center")
-                    
-                    c1.write(f"{i+1}.")
-                    c2.markdown(f"**{row['jméno']}**")
-                    c3.caption(row.get('poznámka', ''))
-                    
-                    # === DOPRAVA (TLAČÍTKA) ===
+                    if col_no.button("❌ ZPĚT", key=f"no_{unique_key}_{i}", use_container_width=True):
+                        del st.session_state[delete_key_state]
+                        st.rerun()
+            
+            else:
+                # --- BĚŽNÝ ŘÁDEK (ČISTÝ) ---
+                # Žádný stylable_container okolo, jen čisté sloupce
+                c1, c2, c3, c4, c5, c6 = st.columns(cols_ratio, vertical_alignment="center")
+                
+                c1.write(f"{i+1}.")
+                c2.markdown(f"**{row['jméno']}**")
+                c3.caption(row.get('poznámka', ''))
+                
+                # === TLAČÍTKO DOPRAVY (Tady CSS necháme, aby tlačítko vypadalo hezky) ===
+                with c4:
                     dopr = str(row.get('doprava', ''))
                     
-                    # 1. Barvy (Light Mode)
-                    btn_label = "➕"
-                    btn_bg = "white"
-                    btn_border = "1px dashed #9CA3AF"
-                    btn_color = "#6B7280"
-                    
-                    if "Řidič" in dopr:
-                        btn_label = "🚙 Řidič"
-                        btn_bg = "#DCFCE7"
-                        btn_border = "1px solid #16A34A"
-                        btn_color = "#166534"
+                    # Logika barev tlačítka
+                    if not dopr or dopr == "nan":
+                        label = "➕"
+                        bg, color, border = "white", "#6B7280", "1px dashed #9CA3AF"
+                    elif "Řidič" in dopr:
+                        label = "🚙 Řidič"
+                        bg, color, border = "#DCFCE7", "#166534", "1px solid #16A34A"
                     elif "Spolujízda" in dopr or "Jedu s" in dopr:
-                        clean_name = dopr.replace("Spolujízda:", "").replace("Spolujízda", "").replace("Jedu s:", "").strip()
-                        btn_label = f"➡️ {clean_name}"
-                        btn_bg = "#DBEAFE"
-                        btn_border = "1px solid #2563EB"
-                        btn_color = "#1E40AF"
+                        clean = dopr.replace("Spolujízda:", "").replace("Spolujízda", "").replace("Jedu s:", "").strip()
+                        label = f"➡️ {clean}"
+                        bg, color, border = "#DBEAFE", "#1E40AF", "1px solid #2563EB"
                     elif "Chci" in dopr or "Hledám" in dopr:
-                        btn_label = "🙋‍♂️ Hledám"
-                        btn_bg = "#FEF3C7"
-                        btn_border = "1px solid #D97706"
-                        btn_color = "#92400E"
+                        label = "🙋‍♂️ Hledám"
+                        bg, color, border = "#FEF3C7", "#92400E", "1px solid #D97706"
+                    else:
+                        label = dopr
+                        bg, color, border = "white", "#374151", "1px solid #E5E7EB"
 
-                    # 2. CSS Tlačítka (Tvůj styl + fixy)
-                    css_btn = f"""
+                    # CSS jen pro to tlačítko
+                    btn_css = f"""
                         button {{
-                            background-color: {btn_bg} !important;
-                            color: {btn_color} !important;
-                            border: {btn_border} !important;
+                            background-color: {bg} !important;
+                            color: {color} !important;
+                            border: {border} !important;
                             border-radius: 6px !important;
                             padding: 2px 8px !important;
-                            height: auto !important;
-                            min-height: 28px !important;
+                            min-height: 30px !important;
                             width: 100% !important;
-                            transition: all 0.2s ease !important;
-                            
-                            font-family: 'Exo 2', sans-serif !important;
-                            font-weight: 700 !important;
-                            font-size: 0.85rem !important;
                             white-space: nowrap !important;
                             overflow: hidden !important;
                             text-overflow: ellipsis !important;
                         }}
-                        
-                        button p {{
-                            font-family: 'Exo 2', sans-serif !important;
-                            font-weight: 700 !important;
-                            font-size: 0.85rem !important;
-                            margin: 0 !important;
-                        }}
-
-                        button:hover {{
-                            filter: brightness(0.95);
-                        }}
+                        button:hover {{ filter: brightness(0.95); }}
                     """
+                    
+                    with stylable_container(key=f"cont_btn_{unique_key}_{i}", css_styles=btn_css):
+                        if st.button(label, key=f"btn_d_{unique_key}_{i}", use_container_width=True):
+                            show_doprava_dialog(akce_id_str, akce['název'], akce['datum'].strftime('%d.%m.'), row['jméno'])
 
-                    with stylable_container(key=f"cont_btn_d_{unique_key}_{i}", css_styles=css_btn):
-                        if c4.button(btn_label, key=f"btn_row_d_{unique_key}_{i}", use_container_width=True, help=dopr):
-                             show_doprava_dialog(
-                                akce_id=akce_id_str, 
-                                nazev_akce=akce['název'], 
-                                datum_akce=akce['datum'].strftime('%d.%m.'), 
-                                pre_jmeno=row['jméno']
-                            )
+                c5.write(row.get('ubytování', ''))
+                
+                # Tlačítko smazat (jednoduché)
+                if not je_po_deadlinu:
+                    if c6.button("🗑️", key=f"del_{unique_key}_{i}"):
+                        st.session_state[delete_key_state] = row['jméno']
+                        st.rerun()
 
-                    c5.write(row.get('ubytování', ''))
+            # Oddělovací čára za každým řádkem (místo zebry)
+            st.markdown("<hr style='margin: 5px 0; border-top: 1px solid #F3F4F6;'>", unsafe_allow_html=True)
 
-                    if not je_po_deadlinu:
-                        with stylable_container(key=f"del_btn_container_{unique_key}_{i}", css_styles="button {margin:0 !important; padding:0 !important; height:auto !important; border:none; background:transparent; color: #EF4444; box-shadow: none !important;}"):
-                            if c6.button("🗑️", key=f"del_{unique_key}_{i}", use_container_width=False):
-                                st.session_state[delete_key_state] = row['jméno']
-                                st.rerun()
     else: 
         st.caption("Zatím nikdo. Buď první!")
     
