@@ -194,8 +194,7 @@ def vykreslit_detail_akce(akce, unique_key):
                     
                     st.markdown("<br>", unsafe_allow_html=True)
                     
-                    # --- TADY JE TA ZMĚNA ---
-                    # Dáme dvě tlačítka vedle sebe pomocí sloupců
+                    # --- TLAČÍTKA (uvnitř formuláře) ---
                     c_btn_zapis, c_btn_doprava = st.columns([1, 1], gap="small")
                     
                     with c_btn_zapis:
@@ -203,12 +202,15 @@ def vykreslit_detail_akce(akce, unique_key):
                         odeslat_btn = st.form_submit_button("Zapsat se", type="primary", use_container_width=True)
                         
                     with c_btn_doprava:
-                        # Tlačítko pro dopravu (taky submit button, aby přečetl data z formu)
+                        # Tlačítko pro dopravu
                         doprava_btn = st.form_submit_button("🚗 Řešit dopravu", use_container_width=True)
                     
+                    # --- LOGIKA ODESLÁNÍ ---
+                    # 1. Zjistíme jméno (musí být definováno PŘED podmínkami tlačítek)
+                    finalni_jmeno = nove_jmeno.strip() if nove_jmeno else vybrane_jmeno
+                    
+                    # === VARIANT A: Klikl na ZAPSAT SE ===
                     if odeslat_btn:
-                        finalni_jmeno = nove_jmeno.strip() if nove_jmeno else vybrane_jmeno
-                        
                         if finalni_jmeno:
                             try:
                                 # 1. Kontrola duplicity
@@ -238,16 +240,15 @@ def vykreslit_detail_akce(akce, unique_key):
                                     update_data = pd.concat([aktualni_data, novy_zaznam], ignore_index=True)
                                     conn.update(worksheet="prihlasky", data=update_data)
                                     
-                                    # 4. ULOŽENÍ NOVÉHO JMÉNA (Bez čištění cache)
+                                    # 4. ULOŽENÍ NOVÉHO JMÉNA (pokud je nové)
                                     if finalni_jmeno not in seznam_jmen:
                                         try:
                                             jmena_df = conn.read(worksheet="jmena")
                                             nove_jmeno_df = pd.DataFrame([{"jméno": finalni_jmeno}])
-                                            jmena_update = pd.concat([jmena_df, nove_jmeno_df], ignore_index=True)
-                                            conn.update(worksheet="jmena", data=jmena_update)
+                                            conn.update(worksheet="jmena", data=pd.concat([jmena_df, nove_jmeno_df], ignore_index=True))
                                         except Exception as e:
-                                            print(f"Chyba při ukládání jména: {e}")        
-                                    
+                                            print(f"Chyba jména: {e}")
+
                                     # 5. Animace úspěchu
                                     with st_lottie_spinner(styles.lottie_success, key=f"anim_{unique_key}"): 
                                         time.sleep(1)
@@ -261,8 +262,8 @@ def vykreslit_detail_akce(akce, unique_key):
                         else: 
                             st.warning("Musíš vyplnit jméno!")
 
+                    # === VARIANT B: Klikl na DOPRAVU ===
                     elif doprava_btn:
-                        # 2. Klikl na DOPRAVU -> Neukládáme přihlášku, jen otevíráme dialog
                         if finalni_jmeno:
                             # Zavoláme dialog a předáme mu jméno z formuláře
                             show_doprava_dialog(
@@ -275,16 +276,12 @@ def vykreslit_detail_akce(akce, unique_key):
                             )
                         else:
                             st.warning("Nejdřív vyber nebo napiš jméno, abych věděl, pro koho tu dopravu řešíme.")
-                                    
-                            # 6. Okamžitá aktualizace lokální tabulky
-                            lidi = pd.concat([lidi, novy_zaznam], ignore_index=True)
 
-                            except Exception as e: 
-                                st.error(f"Chyba zápisu: {e}")
-                        else: 
-                            st.warning("Musíš vyplnit jméno!")
-            elif je_po_deadlinu: st.info("🔒 Tabulka uzavřena. Kontaktuj trenéra.")
-
+            # --- KONEC FORMULÁŘE ---
+            # Tento elif patří k podmínce "if not je_po_deadlinu" o úroveň výš (mimo form)
+            elif je_po_deadlinu: 
+                st.info("🔒 Tabulka uzavřena. Kontaktuj trenéra.")
+                
     # --- MAPA (DOLE) ---
     st.markdown("<hr style='margin: 30px 0;'>", unsafe_allow_html=True)
     if body_k_vykresleni:
