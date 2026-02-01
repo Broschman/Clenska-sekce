@@ -9,6 +9,53 @@ import base64
 from io import BytesIO
 import re
 
+def get_weather_emoji(wmo_code):
+    """Převede WMO kód počasí na emoji a text."""
+    if wmo_code == 0: return "☀️", "Jasno"
+    if wmo_code in [1, 2, 3]: return "⛅", "Polojasno"
+    if wmo_code in [45, 48]: return "🌫️", "Mlha"
+    if wmo_code in [51, 53, 55]: return "🚿", "Mrholení"
+    if wmo_code in [61, 63, 65]: return "🌧️", "Déšť"
+    if wmo_code in [71, 73, 75]: return "❄️", "Sníh"
+    if wmo_code in [80, 81, 82]: return "💧", "Přeháňky"
+    if wmo_code in [95, 96, 99]: return "⚡", "Bouřky"
+    return "🌡️", "Neznámé"
+
+@st.cache_data(ttl=3600)
+def get_forecast(lat, lon, target_date):
+    """Stáhne předpověď z Open-Meteo."""
+    try:
+        days_diff = (target_date - date.today()).days
+        if days_diff < 0 or days_diff > 10:
+            return None
+
+        url = "https://api.open-meteo.com/v1/forecast"
+        params = {
+            "latitude": lat,
+            "longitude": lon,
+            # PŘIDÁNO "sunset" DO SEZNAMU:
+            "daily": ["weathercode", "temperature_2m_max", "precipitation_sum", "windspeed_10m_max", "sunset"],
+            "timezone": "auto",
+            "start_date": target_date.strftime("%Y-%m-%d"),
+            "end_date": target_date.strftime("%Y-%m-%d")
+        }
+        
+        r = requests.get(url, params=params, timeout=2)
+        data = r.json()
+        
+        if "daily" in data:
+            d = data["daily"]
+            return {
+                "code": d["weathercode"][0],
+                "temp_max": d["temperature_2m_max"][0],
+                "precip": d["precipitation_sum"][0],
+                "wind": d["windspeed_10m_max"][0],
+                "sunset": d["sunset"][0]  # <--- PŘIDÁNO TOTO (vrací formát "2023-10-25T17:45")
+            }
+        return None
+    except:
+        return None
+
 @st.cache_data(ttl=3600*24) # Uložíme si to na 24 hodin
 def get_coords_from_place(place_name):
     """Zjistí souřadnice podle názvu místa (Geocoding přes Nominatim)."""
