@@ -772,11 +772,17 @@ def vykreslit_detail_akce(akce, unique_key):
 
     # --- SEZNAM ---
     st.markdown("<hr style='margin: 30px 0; border-top: 1px solid rgba(255,255,255,0.1);'>", unsafe_allow_html=True)
+    
     if body_k_vykresleni:
         start_lat, start_lon, _ = body_k_vykresleni[0]
-        m = folium.Map(location=[start_lat, start_lon], tiles="CartoDB dark_matter")
+        
+        # ZMĚNA: Přidán zoom_start=14 pro lepší detail
+        m = folium.Map(location=[start_lat, start_lon], tiles="CartoDB dark_matter", zoom_start=14)
+        
         folium.Marker([start_lat, start_lon], tooltip="Sraz").add_to(m)
-        st_folium(m, height=250, width=700, key=f"m_{unique_key}", returned_objects=[])
+        
+        # ZMĚNA: height=350, width=800 (aby to sedělo do rozšířeného okna)
+        st_folium(m, height=350, width=800, key=f"m_{unique_key}", returned_objects=[])
 
     st.markdown(f"#### 👥 Zapsaní ({len(lidi)})")
     if not lidi.empty:
