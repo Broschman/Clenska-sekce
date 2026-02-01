@@ -228,7 +228,10 @@ if search_text or len(search_date_value) > 0:
             je_po_deadlinu = dnes > akce['deadline']
             
             typ_udalosti = str(akce.get('typ', '')).lower()
+            druh = str(akce.get('druh', '')).lower() # Potřebujeme i druh pro emoji
+
             style_key = "default"
+            # ... (zde je tvá logika stylů if "mčr" in typ...) ...
             if "mčr" in typ_udalosti: style_key = "mcr"
             elif "ža" in typ_udalosti: style_key = "za"
             elif "žb" in typ_udalosti: style_key = "zb"
@@ -240,14 +243,21 @@ if search_text or len(search_date_value) > 0:
             elif any(s in typ_udalosti for s in ["závod", "liga"]): style_key = "zavod"
 
             styly = styles.BARVY_AKCI.get(style_key, styles.BARVY_AKCI["default"])
-            # ... logika stylů ...
             glow_color = styly.get("glow", "#39ff14")
             bg_color = styly.get("bg", "rgba(255,255,255,0.05)")
             
-            # ZDE POUŽIJEME FUNKCI ZE STYLES
+            # ### --- FIX: DEFINICE LABELU (Tohle chybělo) ---
+            ikony = { "les": "🌲", "sprint": "🏙️", "nočák": "🌗" }
+            emoji = ikony.get(druh, "🏃")
+            # U hledání necháme celý název, ať uživatel ví, co našel
+            label = f"{emoji} {akce['název']}"
+            if je_po_deadlinu: label = "🔒 " + label
+            # ### -------------------------------------------
+
             search_css = styles.get_cyber_button_css(bg_color, glow_color)
 
             with stylable_container(key=f"btn_search_{unique_key}", css_styles=search_css):
+                # Teď už 'label' existuje a nebude to padat
                 with st.popover(label, use_container_width=True):
                     utils.vykreslit_detail_akce(akce, unique_key)
 else:
