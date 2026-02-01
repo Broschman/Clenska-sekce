@@ -1,191 +1,285 @@
 import streamlit as st
 import requests
 
-# === 1. BARVY (Paleta Cyber-ROG) ===
-NEON_GREEN = "#39ff14"
-NEON_BLUE = "#00f3ff"
-NEON_RED = "#ff073a"
-NEON_ORANGE = "#ff5f1f"
-DARK_BG = "#0e1117"
-
-# --- DEFINICE BAREV PRO AKCE ---
-BARVY_AKCI = {
-    "mcr": {"bg": "rgba(255, 7, 58, 0.1)", "glow": "#ff073a"},
-    "za": {"bg": "rgba(255, 7, 58, 0.1)", "glow": "#ef4444"},
-    "zb": {"bg": "rgba(249, 115, 22, 0.1)", "glow": "#f97316"},
-    "soustredeni": {"bg": "rgba(234, 179, 8, 0.1)", "glow": "#eab308"},
-    "oblastni": {"bg": "rgba(59, 130, 246, 0.1)", "glow": "#3b82f6"},
-    "zimni_liga": {"bg": "rgba(107, 114, 128, 0.1)", "glow": "#9ca3af"},
-    "stafety": {"bg": "rgba(168, 85, 247, 0.1)", "glow": "#a855f7"},
-    "trenink": {"bg": "rgba(34, 197, 94, 0.1)", "glow": "#22c55e"},
-    "zavod": {"bg": "rgba(20, 184, 166, 0.1)", "glow": "#14b8a6"},
-    "default": {"bg": "rgba(255, 255, 255, 0.05)", "glow": "#ffffff"}
-}
-
+# === 1. CSS STYLY (Původní Clean Design) ===
 def load_css():
-    st.markdown(f"""
+    st.markdown("""
     <style>
-        /* FONT FIX */
-        @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;600;700;800;900&family=Rajdhani:wght@500;600;700&display=swap&subset=latin,latin-ext');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
 
-        /* === GLOBÁLNÍ RESET === */
-        body, p, h1, h2, h3, h4, h5, h6, li, a, label, input, textarea {{
-            font-family: 'Exo 2', sans-serif !important;
-            color: #e0e0e0;
-        }}
-        
-        /* Nadpisy */
-        h1, h2, h3 {{
-            font-family: 'Rajdhani', 'Exo 2', sans-serif !important;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            font-weight: 700 !important;
-        }}
-        
-        /* === HLAVNÍ NADPIS - CENTROVÁNÍ === */
-        h1 {{ 
-            font-size: 3rem !important; 
-            text-align: center !important; 
-            margin-bottom: 20px !important;
-        }}
+        html, body, [class*="css"] {
+            font-family: 'Inter', sans-serif;
+            color: #1f2937;
+        }
+        /* === STEALTH MODE (SKRYTÍ UI STREAMLITU) === */
+        #MainMenu {visibility: hidden;}
+        footer {visibility: hidden;}
+        header {visibility: hidden;}
+        .stDeployButton {display:none;}
+        [data-testid="stToolbar"] {visibility: hidden;}
+        [data-testid="stDecoration"] {display:none;}
 
-        /* === LOGO === */
-        img.header-logo {{
-            height: 80px !important; 
-            width: auto !important;
-            object-fit: contain !important;
-            display: inline-block !important;   
-            vertical-align: middle !important;  
-            margin-right: 20px !important;      
-            margin-top: -10px !important;       
-            filter: drop-shadow(0 0 10px {NEON_BLUE});
-            transition: transform 0.3s;
-        }}
-        img.header-logo:hover {{ transform: scale(1.1) rotate(5deg); }}
-
-        h1 span.gradient-text {{
-            background: linear-gradient(90deg, {NEON_GREEN}, {NEON_BLUE});
+        /* Nadpis - Textová část s gradientem */
+        h1 span.gradient-text {
+            background: -webkit-linear-gradient(45deg, #166534, #15803d);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            font-weight: 800;
-        }}
-
-        .stApp {{
-            background-color: {DARK_BG};
-            background-image: 
-                radial-gradient(circle at 50% 30%, rgba(0, 243, 255, 0.04) 0%, transparent 60%),
-                repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.02) 0px, rgba(255, 255, 255, 0.02) 1px, transparent 1px, transparent 40px),
-                repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.02) 0px, rgba(255, 255, 255, 0.02) 1px, transparent 1px, transparent 40px);
-            background-attachment: fixed;
-        }}
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: -1px;
+        }
         
-        /* === GLOBÁLNÍ TLAČÍTKA === */
-        .stButton > button {{
-            font-family: 'Exo 2', sans-serif !important;
-            font-weight: 700 !important;
-        }}
+        /* Nadpis - Kontejner */
+        h1 {
+            text-align: center !important;
+            margin: 0;
+            padding-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px; /* Mezera mezi textem a logem */
+        }
+
+        /* Logo v nadpisu */
+        h1 img.header-logo {
+            height: 60px; /* Výška loga v nadpisu */
+            width: auto;
+            vertical-align: middle;
+            margin-top: -5px; /* Jemné doladění pozice */
+            transition: transform 0.3s ease;
+        }
         
-        /* Primary tlačítko */
-        button[kind="primary"] {{
-            background: rgba(57, 255, 20, 0.1) !important;
-            color: {NEON_GREEN} !important;
-            border: 1px solid {NEON_GREEN} !important;
-            font-weight: 700 !important;
-        }}
+        h1 img.header-logo:hover {
+            transform: scale(1.1) rotate(5deg);
+        }
 
-        /* Kalendář box */
-        .today-box {{
-            background: rgba(255, 7, 58, 0.2); 
-            color: {NEON_RED}; 
-            border: 1px solid {NEON_RED};
-            display: inline-flex; align-items: center; justify-content: center;    
-            width: 30px; height: 30px; border-radius: 8px; font-weight: 800;
-            box-shadow: 0 0 15px rgba(255, 7, 58, 0.4);
-            margin: 0 auto 8px auto;    
-        }}
-        .day-number {{ color: #888; font-weight: 600; display: block; text-align: center; margin-bottom: 8px; }}
+        h3 {
+            font-weight: 700;
+            color: #111;
+            margin-bottom: 0.5rem;
+        }
 
-        /* === POPOVER (Bublina) - UPRAVENÁ ŠÍŘKA === */
-        div[data-testid="stPopoverBody"] {{
-            background-color: rgba(14, 17, 23, 0.95) !important;
-            border: 1px solid rgba(255, 255, 255, 0.15) !important;
-            backdrop-filter: blur(20px);
+        /* === ŠIROKÁ BUBLINA (POPOVER) === */
+        div[data-testid="stPopoverBody"] {
+            width: 800px !important;      
+            max-width: 95vw !important;   
+            max-height: 85vh !important;
             border-radius: 12px !important;
-            box-shadow: 0 0 40px rgba(0, 0, 0, 0.8) !important;
-            
-            /* ZMĚNA ŠÍŘKY */
-            width: 850px !important;      /* Dost místa pro 2 sloupce */
-            max-width: 95vw !important;   /* Ochrana pro mobily (aby to nepřeteklo) */
-            max-height: 85vh !important;  /* Aby se dalo scrollovat, kdyby to bylo dlouhé */
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2) !important;
+            padding: 20px !important; 
             overflow-y: auto !important;
-        }}
+        }
 
-        #MainMenu, footer, header, .stDeployButton {{visibility: hidden;}}
-        [data-testid="stToolbar"] {{visibility: hidden;}}
-        [data-testid="stDecoration"] {{display:none;}}
+        /* Plovoucí tlačítko */
+        .floating-container {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 9999;
+        }
+        .floating-container button {
+            background: linear-gradient(135deg, #2563EB, #1D4ED8) !important;
+            color: white !important;
+            border: none !important;
+            border-radius: 50px !important;
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4) !important;
+            font-weight: 600 !important;
+            padding: 12px 24px !important;
+            transition: all 0.3s ease !important;
+        }
+        .floating-container button:hover {
+            transform: translateY(-5px) scale(1.05) !important;
+            box-shadow: 0 8px 25px rgba(37, 99, 235, 0.6) !important;
+        }
+
+        /* Dnešní den */
+        .today-box {
+            background: #DC2626;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: 700;
+            box-shadow: 0 4px 10px rgba(220, 38, 38, 0.4);
+            display: inline-block;
+            margin-bottom: 8px;
+        }
+
+        .day-number {
+            font-size: 1.1em;
+            font-weight: 700;
+            color: #6B7280;
+            margin-bottom: 8px;
+            display: block;
+            text-align: center;
+        }
+        
+        div[data-testid="column"] {
+            padding: 2px;
+        }
+        
+        /* Inputy */
+        .stTextInput input, .stSelectbox div[data-baseweb="select"] {
+            border-radius: 8px !important;
+            border: 1px solid #E5E7EB;
+        }
+        .stTextInput input:focus, .stSelectbox div[data-baseweb="select"]:focus-within {
+            border-color: #2563EB !important;
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2) !important;
+        }
+        
+        /* Globální tlačítka pro tento design */
+        .stButton > button {
+            font-weight: 600 !important;
+            border-radius: 8px !important;
+        }
     </style>
     """, unsafe_allow_html=True)
+
+
+# === NOVÉ FUNKCE PRO HTML KOMPONENTY ===
+
+def inject_mobile_warning():
+    """Vloží CSS/HTML pro varování 'Otoč telefon'."""
+    st.markdown("""
+    <style>
+        #rotate-warning {
+            display: none; 
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background-color: #ffffff; z-index: 999999;
+            flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 20px;
+        }
+        @media only screen and (orientation: portrait) and (max-width: 900px) {
+            #rotate-warning { display: flex !important; }
+            .stApp { overflow: hidden; }
+        }
+    </style>
+    <div id="rotate-warning">
+        <div style="font-size: 60px;">📱➡️🔄</div>
+        <h1 style="color: #000; margin-top: 20px;">Otoč telefon</h1>
+        <p style="color: #333; font-size: 1.2rem;">Pro správné zobrazení kalendáře
+        otoč zařízení na šířku.</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+def get_ics_button_html(b64_data, filename):
+    """Vrátí HTML pro stahovací tlačítko kalendáře."""
+    return f"""
+    <a href="data:text/calendar;base64,{b64_data}" download="{filename}.ics" style="text-decoration:none;">
+        <div style="background-color: #ffffff; border: 1px solid rgba(49, 51, 63, 0.2); border-radius: 8px; padding: 6px 0px; text-align: center; cursor: pointer; color: #31333F; font-size: 1.2rem; transition: background-color 0.2s;" 
+        onmouseover="this.style.backgroundColor='#f0f2f6'; this.style.borderColor='#f0f2f6';" 
+        onmouseout="this.style.backgroundColor='#ffffff'; this.style.borderColor='rgba(49, 51, 63, 0.2)';">
+            📅
+        </div>
+    </a>
+    """
+
+def get_weather_card_html(w_icon, w_text, temp, rain, wind, sunset_html=""):
+    """Vrátí HTML pro kartičku počasí."""
+    bg_weather = "#eff6ff" if rain > 1 else "#f9fafb"
+    border_weather = "#bfdbfe" if rain > 1 else "#e5e7eb"
     
-# --- GENERÁTORY STYLŮ (Zcela nezávislé) ---
+    html = f"""
+    <div style="margin-top: 10px; margin-bottom: 20px; padding: 10px; background-color: {bg_weather}; border: 1px solid {border_weather}; border-radius: 10px; display: flex; align-items: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+        <div style="font-size: 2rem; margin-right: 15px;">{w_icon}</div>
+        <div style="line-height: 1.2; flex-grow: 1;">
+            <div style="font-weight: 700; color: #1f2937;">{w_text}, {temp}°C</div>
+            <div style="font-size: 0.85rem; color: #4b5563;">💧 {rain} mm • 💨 {wind} km/h</div>
+        </div>
+        {sunset_html}
+    </div>
+    """
+    return html.replace("\n", "")
+
+def get_footer_html():
+    return "<div style='text-align: center; color: #9CA3AF; font-size: 0.8em; font-family: sans-serif;'><b>Členská sekce RBK</b> • Designed by Broschman • v1.2.22.22<br>© 2026 All rights reserved</div>"
+
+# --- 2. LOTTIE ANIMACE ---
+@st.cache_data(ttl=3600*24)
+def load_lottieurl(url: str):
+    try:
+        r = requests.get(url)
+        if r.status_code != 200:
+            return None
+        return r.json()
+    except:
+        return None
+
+lottie_success = load_lottieurl("https://assets9.lottiefiles.com/packages/lf20_jbrw3hcz.json")
+
+# --- 3. DEFINICE BAREV (Kompatibilita pro app.py) ---
+# Tyto konstanty v původním styles.py nebyly, ale app.py je vyžaduje.
+# Mapujeme je na "normální" barvy pro Light Mode.
+
+NEON_GREEN = "#16A34A"  # Green-600
+NEON_BLUE = "#2563EB"   # Blue-600
+NEON_RED = "#DC2626"    # Red-600
+NEON_ORANGE = "#EA580C" # Orange-600
+DARK_BG = "#FFFFFF"     # White instead of Dark
+
+BARVY_AKCI = {
+    "mcr": {
+        "bg": "linear-gradient(90deg, #EF4444, #F59E0B, #10B981, #3B82F6, #8B5CF6)", 
+        "color": "white", "border": "none", "shadow": "0 4px 6px rgba(0,0,0,0.15)",
+        "glow": "#EF4444" # Dummy value for compatibility
+    },
+    "za": {"bg": "#DC2626", "color": "white", "border": "none", "shadow": "0 2px 4px rgba(220, 38, 38, 0.3)", "glow": "#DC2626"},
+    "zb": {"bg": "#EA580C", "color": "white", "border": "none", "shadow": "0 2px 4px rgba(234, 88, 12, 0.3)", "glow": "#EA580C"},
+    "soustredeni": {"bg": "#D97706", "color": "white", "border": "none", "shadow": "0 2px 4px rgba(217, 119, 6, 0.3)", "glow": "#D97706"},
+    "oblastni": {"bg": "#2563EB", "color": "white", "border": "none", "shadow": "0 2px 4px rgba(37, 99, 235, 0.3)", "glow": "#2563EB"},
+    "zimni_liga": {"bg": "#4B5563", "color": "white", "border": "none", "shadow": "0 2px 4px rgba(75, 85, 99, 0.3)", "glow": "#4B5563"},
+    "stafety": {"bg": "#9333EA", "color": "white", "border": "none", "shadow": "0 2px 4px rgba(147, 51, 234, 0.3)", "glow": "#9333EA"},
+    "trenink": {"bg": "#16A34A", "color": "white", "border": "none", "shadow": "0 2px 4px rgba(22, 163, 74, 0.3)", "glow": "#16A34A"},
+    "zavod": {"bg": "#0D9488", "color": "white", "border": "none", "shadow": "0 2px 4px rgba(13, 148, 136, 0.3)", "glow": "#0D9488"},
+    "default": {
+        "bg": "#FFFFFF", "color": "#374151", "border": "1px solid #E5E7EB", "shadow": "0 1px 2px rgba(0,0,0,0.05)", "glow": "#E5E7EB"
+    }
+}
+
+def badge(text, bg="#f3f4f6", color="#111"):
+    return f"<span style='background-color: {bg}; color: {color}; padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; margin-right: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);'>{text}</span>"
+
+
+# === 4. COMPATIBILITY LAYER (Funkce, které app.py volá, ale ve starém styles.py nebyly) ===
 
 def get_cyber_button_css(bg_color, glow_color):
     """
-    PRO: Kalendář, Dashboard, Hledání
-    VZHLED: Tučné, Velké + ZALAMOVÁNÍ + VYCENTROVÁNÍ
+    Náhrada za neonové tlačítko. Vrací Clean Design tlačítko.
+    Ignorujeme 'glow_color' a 'bg_color' (nebo je použijeme jen jemně), 
+    abychom zachovali čistý vzhled.
     """
-    return f"""
-        button {{
-            background: {bg_color} !important;
-            border: none !important;
-            box-shadow: inset 0 0 0 1px {glow_color}, 0 0 8px {glow_color}44 !important;
-            
-            width: 100% !important;
+    return """
+        button {
+            background-color: #ffffff !important;
+            border: 1px solid #e5e7eb !important;
+            color: #374151 !important;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
             border-radius: 8px !important;
-            padding: 12px 5px !important;
-            
-            /* CENTROVÁNÍ KONTEJNERU */
-            text-align: center !important;
-            display: flex !important;
-            justify-content: center !important;
-            align-items: center !important;
-            flex-direction: column !important;
-            
-            margin-bottom: 8px !important;
-            
-            /* POVOLENÍ ROZTAŽENÍ NA VÝŠKU */
-            height: auto !important;       
-            min-height: 60px !important;   
-            white-space: pre-wrap !important; /* Povolí \\n */
-            
-            transition: box-shadow 0.2s ease !important;
-        }}
-
-        button p {{
-            font-family: 'Exo 2', sans-serif !important;
-            font-size: 18px !important;
-            font-weight: 700 !important;
-            color: #ffffff !important;
-            
-            /* CENTROVÁNÍ TEXTU */
-            text-align: center !important;
+            padding: 8px 12px !important;
             width: 100% !important;
-            
-            line-height: 1.4 !important;
-            letter-spacing: 0.5px !important;
-            text-shadow: 0 0 1px rgba(255,255,255,0.4) !important;
-            margin: 0 !important;
-        }}
-
-        button:hover {{
-            box-shadow: inset 0 0 0 2px {glow_color}, 0 0 25px {glow_color} !important;
-            background-color: {glow_color}22 !important;
-            color: #fff !important;
-            z-index: 99 !important;
-        }}
+            height: auto !important;
+            min-height: 50px !important;
+            white-space: pre-wrap !important;
+            transition: all 0.2s ease !important;
+        }
+        button p {
+            font-size: 16px !important;
+            font-weight: 600 !important;
+            color: #374151 !important;
+        }
+        button:hover {
+            border-color: #2563EB !important;
+            color: #2563EB !important;
+            box-shadow: 0 4px 6px rgba(37, 99, 235, 0.1) !important;
+        }
+        button:hover p {
+            color: #2563EB !important;
+        }
     """
-    
+
 def get_transport_css(bg, color, border):
-    """PRO: Doprava"""
+    """
+    Náhrada pro tlačítka dopravy.
+    """
     return f"""
         button {{
             background-color: {bg} !important;
@@ -196,82 +290,40 @@ def get_transport_css(bg, color, border):
             height: auto !important;
             min-height: 28px !important;
             width: 100% !important;
-            transition: all 0.2s ease !important;
-            
-            font-family: 'Exo 2', sans-serif !important;
-            font-weight: 700 !important;
+            font-weight: 600 !important;
             font-size: 0.85rem !important;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
         }}
-        
-        button p {{
-            font-family: 'Exo 2', sans-serif !important;
-            font-weight: 700 !important;
-            font-size: 0.85rem !important;
-            margin: 0 !important;
-        }}
-
-        button:hover {{
-            filter: brightness(1.2);
-        }}
+        button p {{ margin: 0 !important; }}
+        button:hover {{ filter: brightness(0.95); }}
     """
 
 def get_delete_css():
-    """PRO: Koš"""
-    return f"""
-        button {{
-            background-color: rgba(255, 255, 255, 0.05) !important;
-            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    """Ikona koše."""
+    return """
+        button {
+            background-color: transparent !important;
+            border: 1px solid #fee2e2 !important;
+            color: #ef4444 !important;
             border-radius: 6px !important;
-            color: #ff073a !important;
-            padding: 0 !important;
             width: 40px !important;
             height: 40px !important;
-            min-height: 40px !important;
-            display: block !important;
-            margin: 0 auto !important;
-            font-weight: 700 !important; 
-        }}
-        
-        button > div {{
-            display: flex !important;
-            justify-content: center !important;
-            align-items: center !important;
-        }}
-        
-        button:hover {{
-            color: #ff5f1f !important;
-            background-color: rgba(255, 7, 58, 0.2) !important;
-            border-color: #ff073a !important;
-            transform: scale(1.05);
-            margin: 0 auto !important;
-        }}
+            transition: all 0.2s !important;
+        }
+        button:hover {
+            background-color: #fee2e2 !important;
+            border-color: #ef4444 !important;
+        }
     """
 
 def get_floating_chat_css():
-    """
-    CSS pouze pro pozicování kontejneru.
-    Posunuto výš (bottom: 90px), aby to nepřekrývalo 'Manage app'.
-    """
-    return f"""
-        {{
+    """Pozice chatu."""
+    return """
+        {
             position: fixed;
             bottom: 90px;
             right: 30px;
             z-index: 99999;
             width: auto;
-        }}
+        }
     """
-    
-# --- OSTATNÍ FUNKCE ---
-def inject_mobile_warning(): st.markdown("""<style>@media only screen and (orientation: portrait) and (max-width: 900px) {#rotate-warning {display:flex !important;} .stApp {overflow:hidden;}}</style>""", unsafe_allow_html=True)
-def get_ics_button_html(b64_data, filename): return f"""<a href="data:text/calendar;base64,{b64_data}" download="{filename}.ics" style="text-decoration:none;"><div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 6px 0; text-align: center; cursor: pointer; color: #fff; transition: 0.3s;" onmouseover="this.style.borderColor='#00f3ff'; this.style.color='#00f3ff'; this.style.boxShadow='0 0 10px #00f3ff';" onmouseout="this.style.borderColor='rgba(255, 255, 255, 0.2)'; this.style.color='#fff'; this.style.boxShadow='none';">📅</div></a>"""
-def get_weather_card_html(w_icon, w_text, temp, rain, wind, sunset_html=""):
-    border = NEON_BLUE if rain < 2 else NEON_RED
-    return f"""<div style="margin-top:10px; margin-bottom:20px; padding:15px; background:linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01)); border:1px solid {border}; border-left:4px solid {border}; border-radius:10px; display:flex; align-items:center; color:white; box-shadow: 0 4px 15px rgba(0,0,0,0.2);"><div style="font-size:2rem; margin-right:15px; filter: drop-shadow(0 0 5px rgba(255,255,255,0.3));">{w_icon}</div><div style="flex-grow:1;"><div style="font-weight:bold; font-family:'Exo 2', sans-serif; color:{border}">{w_text}, {temp}°C</div><div style="font-size:0.85rem; color:#aaa; font-family:'Exo 2', sans-serif;">💧 {rain} mm • 💨 {wind} km/h</div></div>{sunset_html}</div>"""
-def get_footer_html(): return f"<div style='text-align: center; color: #6b7280; font-size: 0.8em; margin-top: 20px; font-family: \"Exo 2\", sans-serif;'>SYSTEM: <span style='color:{NEON_GREEN}'>ONLINE</span> • RBK 2026</div>"
-def badge(text, bg="#333", color="#fff"): return f"<span style='background-color: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #e5e7eb; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; margin-right: 6px; font-family: \"Exo 2\", sans-serif;'>{text}</span>"
-@st.cache_data(ttl=3600*24)
-def load_lottieurl(url):
-    try: return requests.get(url).json()
-    except: return None
-lottie_success = load_lottieurl("https://assets9.lottiefiles.com/packages/lf20_jbrw3hcz.json")
