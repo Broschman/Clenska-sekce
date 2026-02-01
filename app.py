@@ -321,25 +321,39 @@ def vykreslit_detail_akce(akce, unique_key):
     st.markdown("<hr style='margin: 10px 0;'>", unsafe_allow_html=True)
     st.markdown(f"#### 👥 Zapsaní ({len(lidi)})")
     
-    # CSS FIX: Toto srovná texty do latě (odstraní spodní mezeru, která texty vytlačuje nahoru)
+    # === CSS ÚKLID PRO DOKONALÉ ZAROVNÁNÍ ===
+    # Tímto odstraníme skryté mezery u textů, aby seděly přesně na středu jako tlačítka.
     st.markdown("""
     <style>
-        /* Zacílíme na texty uvnitř sloupců v této sekci */
+        /* Zarovnání textu ve sloupcích */
+        div[data-testid="column"] {
+            display: flex !important;
+            align-items: center !important; /* Vertikální centr */
+        }
+        /* Odstranění marginů u textů (Jméno) */
         div[data-testid="column"] p {
             margin-bottom: 0px !important;
-            line-height: 1.5 !important;
+            padding-bottom: 0px !important;
+            line-height: 1.2 !important;
         }
-        div[data-testid="column"] {
-            display: flex;
-            align-items: center; /* Vertikální centr */
+        /* Odstranění marginů u caption (Poznámka) */
+        div[data-testid="column"] div[data-testid="stCaptionContainer"] {
+            margin-bottom: 0px !important;
+            padding-bottom: 0px !important;
+        }
+        /* Odstranění marginů u widgetů (aby koš neuhýbal) */
+        div[data-testid="column"] div[data-testid="stButton"] {
+            margin-top: 0px !important;
+            margin-bottom: 0px !important;
         }
     </style>
     """, unsafe_allow_html=True)
 
     if not lidi.empty:
+        # Poměry sloupců
         cols_ratio = [0.4, 2.0, 1.5, 1.3, 0.6, 0.5]
         
-        # Hlavička
+        # Hlavička (taky zarovnaná)
         h1, h2, h3, h4, h5, h6 = st.columns(cols_ratio, vertical_alignment="center") 
         h1.markdown("<b style='color:#9CA3AF'>#</b>", unsafe_allow_html=True)
         h2.markdown("<b>Jméno</b>", unsafe_allow_html=True)
@@ -351,7 +365,7 @@ def vykreslit_detail_akce(akce, unique_key):
         
         for i, (idx, row) in enumerate(lidi.iterrows()):
             
-            # Oddělovač řádků (tenká linka)
+            # Oddělovač řádků
             st.markdown("<div style='border-top: 1px solid #F3F4F6; margin: 8px 0;'></div>", unsafe_allow_html=True)
 
             je_k_smazani = (delete_key_state in st.session_state) and (st.session_state[delete_key_state] == row['jméno'])
@@ -378,7 +392,7 @@ def vykreslit_detail_akce(akce, unique_key):
             
             else:
                 # --- BĚŽNÝ ŘÁDEK ---
-                # Klíčová věc: vertical_alignment="center"
+                # Vše zarovnáno na střed (díky CSS i parametru funkce)
                 c1, c2, c3, c4, c5, c6 = st.columns(cols_ratio, vertical_alignment="center")
                 
                 c1.write(f"{i+1}.")
@@ -389,6 +403,7 @@ def vykreslit_detail_akce(akce, unique_key):
                 with c4:
                     dopr = str(row.get('doprava', ''))
                     
+                    # Barvy a text
                     if not dopr or dopr == "nan":
                         label = "➕"
                         bg, color, border = "white", "#6B7280", "1px dashed #9CA3AF"
@@ -406,7 +421,7 @@ def vykreslit_detail_akce(akce, unique_key):
                         label = dopr
                         bg, color, border = "white", "#374151", "1px solid #E5E7EB"
 
-                    # CSS pro tlačítko (žádné marginy!)
+                    # CSS tlačítka
                     btn_css = f"""
                         button {{
                             background-color: {bg} !important;
@@ -430,9 +445,10 @@ def vykreslit_detail_akce(akce, unique_key):
 
                 c5.write(row.get('ubytování', ''))
                 
-                # Koš (zarovnaný)
+                # === TLAČÍTKO KOŠE (ZAROVNANÉ) ===
                 if not je_po_deadlinu:
-                     with stylable_container(key=f"delc_{unique_key}_{i}", css_styles="button {margin:0 !important; padding:0 !important; height:auto !important; border:none; background:transparent; color: #EF4444; box-shadow: none !important;}"):
+                     # Odstraníme defaultní padding tlačítka, aby bylo kompaktní a ve středu
+                     with stylable_container(key=f"delc_{unique_key}_{i}", css_styles="button {border:none; background:transparent; color: #EF4444; padding: 0 !important; margin: 0 !important; display: flex; align-items: center; justify-content: center;}"):
                         if c6.button("🗑️", key=f"del_{unique_key}_{i}"):
                             st.session_state[delete_key_state] = row['jméno']
                             st.rerun()
