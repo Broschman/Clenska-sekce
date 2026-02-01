@@ -333,26 +333,24 @@ def vykreslit_detail_akce(akce, unique_key):
         st.markdown("<hr style='margin: 5px 0 10px 0; border-top: 1px solid #E5E7EB;'>", unsafe_allow_html=True)
         
         for i, (idx, row) in enumerate(lidi.iterrows()):
-            # 1. Zebra striping
             bg = "#F3F4F6" if i % 2 == 0 else "white"
-            pad = "10px 5px" 
             
-            # Styl řádku (Flexbox pro zarovnání)
+            # === FIX PROTI PROPADÁNÍ OKRAJŮ ===
+            # 1. display: flow-root -> donutí kontejner obalit i vnitřní marginy prvků
+            # 2. padding: 12px 10px -> dostatek masa nahoře i dole
             row_css = f"""
                 {{
                     background-color: {bg};
                     border-radius: 8px;
-                    padding: {pad};
+                    padding: 12px 10px;
                     margin-bottom: 2px;
-                    display: flex;
-                    align-items: center;
-                    min-height: 40px;
+                    display: flow-root; 
+                    width: 100%;
                 }}
             """
             
             with stylable_container(key=f"r_{unique_key}_{i}", css_styles=row_css):
                 
-                # --- LOGIKA MAZÁNÍ ---
                 je_k_smazani = (delete_key_state in st.session_state) and (st.session_state[delete_key_state] == row['jméno'])
                 
                 if je_k_smazani:
@@ -376,6 +374,7 @@ def vykreslit_detail_akce(akce, unique_key):
                 
                 else:
                     # --- BĚŽNÝ ŘÁDEK ---
+                    # vertical_alignment="center" zde funguje spolehlivě díky flow-root obalu
                     c1, c2, c3, c4, c5, c6 = st.columns(cols_ratio, vertical_alignment="center")
                     
                     c1.write(f"{i+1}.")
@@ -385,31 +384,30 @@ def vykreslit_detail_akce(akce, unique_key):
                     # === DOPRAVA (TLAČÍTKA) ===
                     dopr = str(row.get('doprava', ''))
                     
-                    # 1. Default (Prázdné) -> Light Mode barvy
+                    # 1. Barvy
                     btn_label = "➕"
                     btn_bg = "white"
                     btn_border = "1px dashed #9CA3AF"
                     btn_color = "#6B7280"
                     
-                    # 2. Určení barev podle typu
                     if "Řidič" in dopr:
                         btn_label = "🚙 Řidič"
-                        btn_bg = "#DCFCE7"       # Světle zelená
+                        btn_bg = "#DCFCE7"
                         btn_border = "1px solid #16A34A"
                         btn_color = "#166534"
                     elif "Spolujízda" in dopr or "Jedu s" in dopr:
                         clean_name = dopr.replace("Spolujízda:", "").replace("Spolujízda", "").replace("Jedu s:", "").strip()
                         btn_label = f"➡️ {clean_name}"
-                        btn_bg = "#DBEAFE"       # Světle modrá
+                        btn_bg = "#DBEAFE"
                         btn_border = "1px solid #2563EB"
                         btn_color = "#1E40AF"
                     elif "Chci" in dopr or "Hledám" in dopr:
                         btn_label = "🙋‍♂️ Hledám"
-                        btn_bg = "#FEF3C7"       # Světle oranžová
+                        btn_bg = "#FEF3C7"
                         btn_border = "1px solid #D97706"
                         btn_color = "#92400E"
 
-                    # 3. TVŮJ CSS STYL (Implementovaný přímo)
+                    # 2. CSS Tlačítka
                     css_btn = f"""
                         button {{
                             background-color: {btn_bg} !important;
@@ -438,11 +436,10 @@ def vykreslit_detail_akce(akce, unique_key):
                         }}
 
                         button:hover {{
-                            filter: brightness(0.95); /* Pro světlý režim raději ztmavit */
+                            filter: brightness(0.95);
                         }}
                     """
 
-                    # 4. Vykreslení
                     with stylable_container(key=f"cont_btn_d_{unique_key}_{i}", css_styles=css_btn):
                         if c4.button(btn_label, key=f"btn_row_d_{unique_key}_{i}", use_container_width=True, help=dopr):
                              show_doprava_dialog(
@@ -454,7 +451,6 @@ def vykreslit_detail_akce(akce, unique_key):
 
                     c5.write(row.get('ubytování', ''))
 
-                    # Koš
                     if not je_po_deadlinu:
                         with stylable_container(key=f"del_btn_container_{unique_key}_{i}", css_styles="button {margin:0 !important; padding:0 !important; height:auto !important; border:none; background:transparent; color: #EF4444; box-shadow: none !important;}"):
                             if c6.button("🗑️", key=f"del_{unique_key}_{i}", use_container_width=False):
