@@ -247,16 +247,22 @@ def badge(text, bg="#f3f4f6", color="#111"):
 
 def get_cyber_button_css(bg_color, glow_color):
     """
-    Náhrada za neonové tlačítko. Vrací Clean Design tlačítko.
-    Ignorujeme 'glow_color' a 'bg_color' (nebo je použijeme jen jemně), 
-    abychom zachovali čistý vzhled.
+    Vrací CSS pro barevné tlačítko v Light Designu.
     """
-    return """
-        button {
-            background-color: #ffffff !important;
-            border: 1px solid #e5e7eb !important;
-            color: #374151 !important;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
+    # Pokud je pozadí bílé (default), chceme tmavý text. Jinak bílý text.
+    is_white_bg = "#FFFFFF" in bg_color or "#ffffff" in bg_color
+    text_color = "#374151" if is_white_bg else "#FFFFFF"
+    border = "1px solid #E5E7EB" if is_white_bg else "none"
+    
+    # Hover efekt: u barevných tlačítek lehce ztmavíme (brightness filtr)
+    hover_filter = "brightness(0.9)" if not is_white_bg else "brightness(0.98)"
+
+    return f"""
+        button {{
+            background: {bg_color} !important;
+            border: {border} !important;
+            color: {text_color} !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
             border-radius: 8px !important;
             padding: 8px 12px !important;
             width: 100% !important;
@@ -264,22 +270,19 @@ def get_cyber_button_css(bg_color, glow_color):
             min-height: 50px !important;
             white-space: pre-wrap !important;
             transition: all 0.2s ease !important;
-        }
-        button p {
+        }}
+        button p {{
             font-size: 16px !important;
             font-weight: 600 !important;
-            color: #374151 !important;
-        }
-        button:hover {
-            border-color: #2563EB !important;
-            color: #2563EB !important;
-            box-shadow: 0 4px 6px rgba(37, 99, 235, 0.1) !important;
-        }
-        button:hover p {
-            color: #2563EB !important;
-        }
+            color: {text_color} !important;
+        }}
+        button:hover {{
+            filter: {hover_filter} !important;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.15) !important;
+        }}
     """
-
+    
 def get_transport_css(bg, color, border):
     """
     Náhrada pro tlačítka dopravy.
