@@ -337,35 +337,31 @@ def vykreslit_detail_akce(akce, unique_key):
         
         # Iterace přes lidi
         for i, (idx, row) in enumerate(lidi.iterrows()):
-            # --- ZEBRA STRIPING LOGIKA ---
             bg = "#F3F4F6" if i % 2 == 0 else "white"
             
-            # 🔧 FIX: Vrátil jsem 'display: flex' (aby se kontejner roztáhl)
-            # a hlavně přidal složené závorky {{ }}, aby to Streamlit pochopil.
+            # 🔧 FIX: Zjednodušené CSS. Žádný flex, jen blok s barvou a paddingem.
+            # Díky tomu se sloupce uvnitř roztáhnou přirozeně od kraje ke kraji.
             css_row = f"""
                 {{
                     background-color: {bg}; 
                     border-radius: 8px; 
-                    padding: 8px 5px; 
-                    margin-bottom: 4px;
-                    display: flex; 
-                    align-items: center;
-                    min-height: 50px; /* Pojistka, aby byl řádek dost vysoký */
+                    padding: 4px 8px; /* Trochu vzduchu nahoře/dole a po stranách */
+                    margin-bottom: 2px;
                 }}
             """
             
+            # Tento kontejner obalí CELÝ řádek (všechny sloupce) jednou barvou
             with stylable_container(key=f"r_{unique_key}_{i}", css_styles=css_row):
                 
+                # --- LOGIKA MAZÁNÍ ---
                 je_k_smazani = (delete_key_state in st.session_state) and (st.session_state[delete_key_state] == row['jméno'])
                 
                 if je_k_smazani:
-                    # Mód potvrzení smazání
                     col_warn, col_yes, col_no = st.columns([3, 1, 1], vertical_alignment="center")
                     col_warn.warning(f"Opravdu smazat: **{row['jméno']}**?", icon="⚠️")
                     
                     with stylable_container(key=f"btn_yes_c_{unique_key}_{i}", css_styles="button {background-color: #DC2626 !important; color: white !important; border: none;}"):
                         if col_yes.button("✅ ANO", key=f"yes_{unique_key}_{i}"):
-                            # Smazání z DB
                             df_curr = conn.read(worksheet="prihlasky", ttl=0)
                             df_curr['id_akce'] = df_curr['id_akce'].astype(str).str.replace(r'\.0$', '', regex=True)
                             conn.update(worksheet="prihlasky", data=df_curr[~((df_curr['id_akce'] == akce_id_str) & (df_curr['jméno'] == row['jméno']))])
@@ -380,15 +376,15 @@ def vykreslit_detail_akce(akce, unique_key):
                         st.rerun()
                 
                 else:
-                    # BĚŽNÝ ŘÁDEK
-                    # Vertical alignment center zajistí, že je vše hezky v lince
+                    # --- BĚŽNÝ ŘÁDEK ---
+                    # vertical_alignment="center" zajistí, že tlačítka nebudou "viset" nahoře ani dole
                     c1, c2, c3, c4, c5, c6 = st.columns(ratio, vertical_alignment="center")
                     
                     c1.write(f"{i+1}.")
                     c2.markdown(f"**{row['jméno']}**")
                     c3.caption(row.get('poznámka', ''))
                     
-                    # === DOPRAVA (Tlačítka) ===
+                    # === DOPRAVA (TLAČÍTKA) ===
                     with c4:
                         raw_doprava = str(row.get('doprava', ''))
                         
@@ -396,8 +392,8 @@ def vykreslit_detail_akce(akce, unique_key):
                         if not raw_doprava or raw_doprava == "nan":
                             label = "➕"
                             tooltip = "Nastavit dopravu"
-                            # Průhledné pozadí, aby prosvítala zebra
-                            styl_btn = "background-color: transparent; border: 1px dashed #9CA3AF; color: #6B7280;" 
+                            # Tady dáme bílou (nebo průhlednou), ale s rámečkem
+                            styl_btn = "background-color: rgba(255,255,255,0.5); border: 1px dashed #9CA3AF; color: #6B7280;" 
                         
                         elif "Řidič" in raw_doprava:
                             label = "🚙 Řidič"
@@ -420,7 +416,7 @@ def vykreslit_detail_akce(akce, unique_key):
                             tooltip = raw_doprava
                             styl_btn = "background-color: white; border: 1px solid #E5E7EB; color: #374151;"
 
-                        # 2. CSS Tlačítka
+                        # 2. CSS pro tlačítko (aby se roztáhlo a vypadalo hezky)
                         css_btn = f"""
                         button {{
                             width: 100%; 
@@ -429,13 +425,16 @@ def vykreslit_detail_akce(akce, unique_key):
                             min-height: 32px; 
                             border-radius: 6px;
                             margin: 0px !important; 
+                            white-space: nowrap; /* Zabrání zalamování textu v tlačítku */
+                            overflow: hidden;
+                            text-overflow: ellipsis;
                             {styl_btn}
                         }}
                         """
                         
                         with stylable_container(key=f"btn_dopr_c_{unique_key}_{i}", css_styles=css_btn):
                             if st.button(label, key=f"btn_dopr_{unique_key}_{i}", help=tooltip):
-                                utils.show_doprava_dialog(
+                                show_doprava_dialog(
                                     akce_id=akce_id_str,
                                     nazev_akce=akce['název'],
                                     datum_akce=akce['datum'].strftime('%d.%m.'),
@@ -445,7 +444,8 @@ def vykreslit_detail_akce(akce, unique_key):
                     c5.write(row.get('ubytování', ''))
                     
                     if not je_po_deadlinu:
-                         with stylable_container(key=f"delc_{unique_key}_{i}", css_styles="button {margin:0 !important; padding:0 !important; height:auto !important; border:none; background:transparent; color: #EF4444;}"):
+                         # Tlačítko koše - musíme zajistit, aby nemělo divné marginy
+                         with stylable_container(key=f"delc_{unique_key}_{i}", css_styles="button {margin:0 !important; padding:0 !important; height:auto !important; border:none; background:transparent; color: #EF4444; box-shadow: none !important;}"):
                             if c6.button("🗑️", key=f"d_{unique_key}_{i}"): 
                                 st.session_state[delete_key_state] = row['jméno']
                                 st.rerun()
