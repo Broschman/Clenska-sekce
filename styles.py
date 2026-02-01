@@ -122,11 +122,11 @@ def get_nav_button_css():
 
 def get_event_button_css(style_dict):
     """
-    Generuje CSS pro tlačítka akcí (Dashboard, Kalendář, Search).
-    Používá 'Clean Mode' logiku - žádné neony, jen solidní background nebo border.
+    Styl pro AKCE (syté barvy).
+    Vynucuje barvu textu definovanou v paletě (většinou white).
     """
     bg = style_dict.get("bg", "#ffffff")
-    color = style_dict.get("color", "#1f2937")
+    color = style_dict.get("color", "#1f2937") # Default text
     border = style_dict.get("border", "none")
     shadow = style_dict.get("shadow", "none")
     
@@ -136,39 +136,27 @@ def get_event_button_css(style_dict):
             color: {color} !important;
             border: {border} !important;
             box-shadow: {shadow} !important;
-            
-            width: 100% !important;
             border-radius: 8px !important;
-            padding: 8px 4px !important;
             min-height: 50px !important;
             height: auto !important;
-            
-            display: flex !important;
-            flex-direction: column !important;
-            justify-content: center !important;
-            align-items: center !important;
-            
-            transition: all 0.2s ease !important;
+            padding: 8px 4px !important;
         }}
         
+        /* AGRESIVNÍ VYNUCENÍ BARVY TEXTU */
         button p {{
+            color: {color} !important;
             font-family: 'Inter', sans-serif !important;
             font-size: 14px !important;
             font-weight: 600 !important;
-            line-height: 1.3 !important;
-            margin: 0 !important;
-            color: {color} !important;
-            text-align: center !important;
         }}
 
         button:hover {{
-            filter: brightness(1.08);
+            filter: brightness(1.1);
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
             z-index: 10;
         }}
     """
-
+    
 def get_transport_css(bg, color, border):
     """Clean verze tlačítek pro dopravu (v soupisce)."""
     return f"""
