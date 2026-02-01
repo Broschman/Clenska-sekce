@@ -7,3 +7,4 @@ streamlit-folium
 requests
 folium
 openpyxl
+extra_streamlit_components
