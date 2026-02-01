@@ -244,13 +244,13 @@ if search_text or len(search_date_value) > 0:
             elif "trénink" in typ_udalosti: style_key = "trenink"
             elif any(s in typ_udalosti for s in ["závod", "liga"]): style_key = "zavod"
 
-            styly = styles.BARVY_AKCI.get(style_key, styles.BARVY_AKCI["default"])
+            style_dict = styles.BARVY_AKCI.get(style_key, styles.BARVY_AKCI["default"])
             # ... logika stylů ...
             glow_color = styly.get("glow", "#39ff14")
             bg_color = styly.get("bg", "rgba(255,255,255,0.05)")
             
             # ZDE POUŽIJEME FUNKCI ZE STYLES
-            search_css = styles.get_cyber_button_css(bg_color, glow_color)
+            search_css = styles.get_event_button_css(style_dict)
 
             with stylable_container(key=f"btn_search_{unique_key}", css_styles=search_css):
                 with st.popover(label, use_container_width=True):
