@@ -256,7 +256,7 @@ def vykreslit_detail_akce(akce, unique_key):
                                     # Na konci můžeš formulář vyčistit manuálně nebo přes rerun
                                     time.sleep(1)
                                     st.rerun()
-                               else:
+                                else:
                                     st.warning("Musíš vyplnit jméno!")
                         
                             elif doprava_btn:
