@@ -9,6 +9,169 @@ import base64
 from io import BytesIO
 import re
 
+def dms_to_decimal(dms_str):
+    """Převede souřadnice ve formátu DMS (stupně, minuty, vteřiny) na decimal."""
+    try:
+        dms_str = dms_str.upper().strip()
+        match = re.match(r"(\d+)[°](\d+)['′](\d+(\.\d+)?)[^NSEW]*([NSEW])?", dms_str)
+        if match:
+            deg, minutes, seconds, _, direction = match.groups()
+            val = float(deg) + float(minutes)/60 + float(seconds)/3600
+            if direction in ['S', 'W']: val = -val
+            return val
+        return float(dms_str)
+    except: return None
+
+def parse_map_coordinates(mapa_raw, nazev_akce="Bod"):
+    """
+    Z textového odkazu (mapy.cz, google maps) nebo souřadnic vytáhne seznam bodů.
+    Vrací: list of tuples (lat, lon, nazev)
+    """
+    body = []
+    mapa_raw = str(mapa_raw).strip()
+    
+    if not mapa_raw:
+        return []
+
+    try:
+        # 1. Je to URL?
+        if "http" in mapa_raw:
+            parsed = urlparse(mapa_raw)
+            params = parse_qs(parsed.query)
+            
+            # Mapy.cz 'ud' parametry (vlastní body)
+            if 'ud' in params:
+                uds = params['ud']
+                uts = params.get('ut', [])
+                for i, ud_val in enumerate(uds):
+                    parts = ud_val.split(',')
+                    if len(parts) >= 2:
+                        lat, lon = dms_to_decimal(parts[0]), dms_to_decimal(parts[1])
+                        if lat and lon:
+                            nazev = uts[i] if i < len(uts) else f"Bod {i+1}"
+                            body.append((lat, lon, nazev))
+            
+            # Pokud nejsou 'ud', zkusíme střed mapy (x, y nebo q)
+            if not body:
+                lat, lon = None, None
+                if 'x' in params and 'y' in params:
+                    lon, lat = float(params['x'][0]), float(params['y'][0])
+                elif 'q' in params:
+                    q_parts = params['q'][0].replace(' ', '').split(',')
+                    if len(q_parts) >= 2: lat, lon = float(q_parts[0]), float(q_parts[1])
+                
+                if lat and lon:
+                    body.append((lat, lon, nazev_akce))
+        
+        # 2. Nejsou to jen souřadnice oddělené středníkem?
+        else:
+            raw_parts = mapa_raw.split(';')
+            for part in raw_parts:
+                part = part.strip()
+                if not part: continue
+                # Vyčistit bordel okolo čísel
+                clean_text = re.sub(r'[^\d.,]', ' ', part)
+                num_parts = clean_text.replace(',', ' ').split()
+                num_parts = [p for p in num_parts if len(p) > 0]
+                
+                if len(num_parts) >= 2:
+                    v1, v2 = float(num_parts[0]), float(num_parts[1])
+                    # Detekce prohozených souřadnic (ČR je cca 48-51 N, 12-19 E)
+                    if 12 <= v1 <= 19 and 48 <= v2 <= 52: lat, lon = v2, v1
+                    else: lat, lon = v1, v2
+                    body.append((lat, lon, f"Bod {len(body)+1}"))
+    except:
+        pass
+        
+    return body
+
+def export_admin_section(lidi, nazev_akce, unique_key):
+    """
+    Izolovaná sekce pro export s automatickým stahováním po zadání hesla.
+    """
+    conn = data_manager.get_connection()
+
+    if not lidi.empty:
+        st.markdown("---")
+        c_export, c_dummy = st.columns([1, 2])
+        
+        with c_export:
+            export_state_key = f"export_open_{unique_key}"
+            is_open = st.session_state.get(export_state_key, False)
+            btn_label = "🔓 Zavřít export" if is_open else "🔐 Export pro trenéry"
+            
+            if st.button(btn_label, key=f"btn_toggle_exp_{unique_key}"):
+                st.session_state[export_state_key] = not is_open
+                st.rerun()
+
+            if st.session_state.get(export_state_key, False):
+                with stylable_container(
+                    key=f"cont_exp_{unique_key}",
+                    css_styles="{background-color: #f9fafb; padding: 15px; border-radius: 8px; border: 1px solid #e5e7eb; margin-top: 10px;}"
+                ):
+                    # Input s nápovědou (tooltip), že stačí Enter
+                    password = st.text_input("Zadej heslo (a stiskni Enter):", type="password", key=f"pwd_{unique_key}", help="Po zadání hesla stiskni Enter a soubor se sám stáhne.")
+                    
+                    if password == "8848":
+                        # 1. Příprava dat
+                        output = BytesIO()
+                        df_to_export = lidi[["jméno", "poznámka", "doprava", "ubytování"]].copy()
+                        df_to_export.to_excel(output, index=False, sheet_name='Soupiska')
+                        excel_data = output.getvalue()
+                        b64 = base64.b64encode(excel_data).decode()
+                        file_name_safe = re.sub(r'[^\w\s-]', '', nazev_akce).strip().replace(' ', '_')
+                        full_file_name = f"{file_name_safe}_soupiska.xlsx"
+
+                        st.success("✅ Heslo přijato. Stahování...")
+
+                        # 2. Vytvoření skrytého odkazu (kotvy) pomocí HTML
+                        # Tento odkaz není vidět (display:none), ale nese data
+                        download_link_html = f"""
+                        <a href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{b64}" 
+                           download="{full_file_name}" 
+                           id="auto_download_link_{unique_key}" 
+                           style="display:none;">Download</a>
+                        """
+                        st.markdown(download_link_html, unsafe_allow_html=True)
+
+                        # 3. JavaScript, který na ten skrytý odkaz klikne
+                        # Musíme chvíli počkat (setTimeout), než se HTML vykreslí do DOMu
+                        components.html(f"""
+                        <script>
+                            setTimeout(function() {{
+                                const link = window.parent.document.getElementById('auto_download_link_{unique_key}');
+                                if (link) {{
+                                    link.click();
+                                }}
+                            }}, 500);
+                        </script>
+                        """, height=0)
+
+                        # 4. Pro jistotu necháme i manuální tlačítko (kdyby prohlížeč blokoval skripty)
+                        st.download_button(
+                            label="📥 Stáhnout znovu (pokud se nestáhlo)",
+                            data=excel_data,
+                            file_name=full_file_name,
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            key=f"dl_xls_{unique_key}"
+                        )
+                        
+                    elif password:
+                        st.error("❌ Špatné heslo.")
+
+                # Scroll script (zůstává)
+                components.html("""
+                <script>
+                    const popovers = window.parent.document.querySelectorAll('[data-testid="stPopoverBody"]');
+                    if (popovers.length > 0) {
+                        const lastPopover = popovers[popovers.length - 1];
+                        setTimeout(() => {
+                            lastPopover.scrollTo({ top: lastPopover.scrollHeight, behavior: 'smooth' });
+                        }, 100);
+                    }
+                </script>
+                """, height=0)
+
 def get_weather_emoji(wmo_code):
     """Převede WMO kód počasí na emoji a text."""
     if wmo_code == 0: return "☀️", "Jasno"
