@@ -321,26 +321,43 @@ def vykreslit_detail_akce(akce, unique_key):
     st.markdown("<hr style='margin: 10px 0;'>", unsafe_allow_html=True)
     st.markdown(f"#### 👥 Zapsaní ({len(lidi)})")
     
+    # CSS FIX: Toto srovná texty do latě (odstraní spodní mezeru, která texty vytlačuje nahoru)
+    st.markdown("""
+    <style>
+        /* Zacílíme na texty uvnitř sloupců v této sekci */
+        div[data-testid="column"] p {
+            margin-bottom: 0px !important;
+            line-height: 1.5 !important;
+        }
+        div[data-testid="column"] {
+            display: flex;
+            align-items: center; /* Vertikální centr */
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
     if not lidi.empty:
-        # Definice hlavičky
         cols_ratio = [0.4, 2.0, 1.5, 1.3, 0.6, 0.5]
-        h1, h2, h3, h4, h5, h6 = st.columns(cols_ratio) 
+        
+        # Hlavička
+        h1, h2, h3, h4, h5, h6 = st.columns(cols_ratio, vertical_alignment="center") 
         h1.markdown("<b style='color:#9CA3AF'>#</b>", unsafe_allow_html=True)
         h2.markdown("<b>Jméno</b>", unsafe_allow_html=True)
         h3.markdown("<b>Poznámka</b>", unsafe_allow_html=True)
         h4.markdown("🚗 <b>Doprava</b>", unsafe_allow_html=True)
         h5.markdown("🛏️", unsafe_allow_html=True)
         
-        # První oddělovač
-        st.markdown("<hr style='margin: 0 0 10px 0; border-top: 2px solid #E5E7EB;'>", unsafe_allow_html=True)
+        st.markdown("<hr style='margin: 5px 0 0 0; border-top: 2px solid #E5E7EB;'>", unsafe_allow_html=True)
         
         for i, (idx, row) in enumerate(lidi.iterrows()):
             
-            # --- LOGIKA MAZÁNÍ ---
+            # Oddělovač řádků (tenká linka)
+            st.markdown("<div style='border-top: 1px solid #F3F4F6; margin: 8px 0;'></div>", unsafe_allow_html=True)
+
             je_k_smazani = (delete_key_state in st.session_state) and (st.session_state[delete_key_state] == row['jméno'])
             
             if je_k_smazani:
-                # Jednoduchý kontejner pro smazání (červený podkres pro varování se hodí, ale můžeme ho dát pryč)
+                # Sekce pro smazání
                 with stylable_container(key=f"del_row_{unique_key}_{i}", css_styles="{background-color: #FEF2F2; border-radius: 8px; padding: 10px;}"):
                     col_warn, col_yes, col_no = st.columns([3, 1, 1], vertical_alignment="center")
                     col_warn.warning(f"Opravdu smazat: **{row['jméno']}**?", icon="⚠️")
@@ -360,19 +377,18 @@ def vykreslit_detail_akce(akce, unique_key):
                         st.rerun()
             
             else:
-                # --- BĚŽNÝ ŘÁDEK (ČISTÝ) ---
-                # Žádný stylable_container okolo, jen čisté sloupce
+                # --- BĚŽNÝ ŘÁDEK ---
+                # Klíčová věc: vertical_alignment="center"
                 c1, c2, c3, c4, c5, c6 = st.columns(cols_ratio, vertical_alignment="center")
                 
                 c1.write(f"{i+1}.")
                 c2.markdown(f"**{row['jméno']}**")
                 c3.caption(row.get('poznámka', ''))
                 
-                # === TLAČÍTKO DOPRAVY (Tady CSS necháme, aby tlačítko vypadalo hezky) ===
+                # === TLAČÍTKO DOPRAVY ===
                 with c4:
                     dopr = str(row.get('doprava', ''))
                     
-                    # Logika barev tlačítka
                     if not dopr or dopr == "nan":
                         label = "➕"
                         bg, color, border = "white", "#6B7280", "1px dashed #9CA3AF"
@@ -390,7 +406,7 @@ def vykreslit_detail_akce(akce, unique_key):
                         label = dopr
                         bg, color, border = "white", "#374151", "1px solid #E5E7EB"
 
-                    # CSS jen pro to tlačítko
+                    # CSS pro tlačítko (žádné marginy!)
                     btn_css = f"""
                         button {{
                             background-color: {bg} !important;
@@ -398,8 +414,9 @@ def vykreslit_detail_akce(akce, unique_key):
                             border: {border} !important;
                             border-radius: 6px !important;
                             padding: 2px 8px !important;
-                            min-height: 30px !important;
+                            min-height: 32px !important;
                             width: 100% !important;
+                            margin: 0 !important;
                             white-space: nowrap !important;
                             overflow: hidden !important;
                             text-overflow: ellipsis !important;
@@ -413,14 +430,12 @@ def vykreslit_detail_akce(akce, unique_key):
 
                 c5.write(row.get('ubytování', ''))
                 
-                # Tlačítko smazat (jednoduché)
+                # Koš (zarovnaný)
                 if not je_po_deadlinu:
-                    if c6.button("🗑️", key=f"del_{unique_key}_{i}"):
-                        st.session_state[delete_key_state] = row['jméno']
-                        st.rerun()
-
-            # Oddělovací čára za každým řádkem (místo zebry)
-            st.markdown("<hr style='margin: 5px 0; border-top: 1px solid #F3F4F6;'>", unsafe_allow_html=True)
+                     with stylable_container(key=f"delc_{unique_key}_{i}", css_styles="button {margin:0 !important; padding:0 !important; height:auto !important; border:none; background:transparent; color: #EF4444; box-shadow: none !important;}"):
+                        if c6.button("🗑️", key=f"del_{unique_key}_{i}"):
+                            st.session_state[delete_key_state] = row['jméno']
+                            st.rerun()
 
     else: 
         st.caption("Zatím nikdo. Buď první!")
