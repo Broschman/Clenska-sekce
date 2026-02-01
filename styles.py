@@ -1,15 +1,23 @@
 import streamlit as st
 import requests
 
-# === 1. DEFINICE BAREV PRO LIGHT MODE ===
-# Tyto barvy nyní použijeme pro tlačítka v utils.py
+# === 1. DEFINICE BAREV (KOMPATIBILITA) ===
+# Tyto proměnné app.py vyžaduje. Mapujeme je na normální barvy pro Light Mode.
+NEON_GREEN = "#16A34A"  # Green-600
+NEON_BLUE = "#2563EB"   # Blue-600
+NEON_RED = "#DC2626"    # Red-600
+NEON_ORANGE = "#EA580C" # Orange-600
+DARK_BG = "#FFFFFF"     # Bílá místo tmavé
+
+# Barvy pro tlačítka v tabulce (použité v utils.py)
 COLORS = {
-    "green_bg": "#dcfce7", "green_text": "#166534",  # Pro řidiče
-    "blue_bg": "#dbeafe", "blue_text": "#1e40af",    # Pro pasažéry
-    "red_bg": "#fee2e2", "red_text": "#991b1b",      # Pro "Chci odvoz"
-    "gray_bg": "#f3f4f6", "gray_text": "#374151"     # Pro neutrální
+    "green_bg": "#dcfce7", "green_text": "#166534",
+    "blue_bg": "#dbeafe", "blue_text": "#1e40af",
+    "red_bg": "#fee2e2", "red_text": "#991b1b",
+    "gray_bg": "#f3f4f6", "gray_text": "#374151"
 }
 
+# Definice barev pro akce (Kalendář)
 BARVY_AKCI = {
     "mcr": {"bg": "linear-gradient(90deg, #EF4444, #F59E0B, #10B981)", "glow": "#EF4444"},
     "za": {"bg": "#DC2626", "glow": "#DC2626"},
@@ -23,6 +31,7 @@ BARVY_AKCI = {
     "default": {"bg": "#FFFFFF", "glow": "#E5E7EB"}
 }
 
+# === 2. CSS STYLY ===
 def load_css():
     st.markdown("""
     <style>
@@ -78,7 +87,7 @@ def load_css():
     </style>
     """, unsafe_allow_html=True)
 
-# --- CSS GENERÁTORY ---
+# === 3. CSS GENERÁTORY ===
 
 def get_cyber_button_css(bg_color, glow_color):
     """CSS pro hlavní tlačítka v kalendáři"""
@@ -109,7 +118,7 @@ def get_transport_css(bg, color, border):
         button {{
             background-color: {bg} !important;
             color: {color} !important;
-            border: 1px solid {bg} !important; /* Border stejný jako pozadí pro čistší vzhled */
+            border: 1px solid {bg} !important;
             border-radius: 6px !important;
             padding: 4px 12px !important;
             min-height: 32px !important;
@@ -134,7 +143,7 @@ def get_delete_css():
 def get_floating_chat_css():
     return "{position: fixed; bottom: 90px; right: 30px; z-index: 99999;}"
 
-# --- HTML KOMPONENTY (Zůstávají stejné) ---
+# === 4. HTML KOMPONENTY ===
 def inject_mobile_warning(): st.markdown("<style>@media only screen and (orientation: portrait) and (max-width: 900px) {#rotate-warning {display:flex !important;} .stApp {overflow:hidden;}}</style>", unsafe_allow_html=True)
 def get_ics_button_html(b64, name): return f"""<a href="data:text/calendar;base64,{b64}" download="{name}.ics" style="text-decoration:none;"><div style="background:#fff; border:1px solid #e5e7eb; border-radius:8px; padding:6px; text-align:center; color:#374151; font-size:1.2rem; transition:0.2s;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='#fff'">📅</div></a>"""
 def get_weather_card_html(icon, text, temp, rain, wind, sunset=""):
