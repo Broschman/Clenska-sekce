@@ -1,19 +1,7 @@
 [theme]
-base = "light"
-primaryColor = "#16A34A"        # Zelená (ladí k tvému "trenink" a "les" stylu)
-backgroundColor = "#F9FAFB"     # Světle šedá (shoduje se s body background v styles.py)
-secondaryBackgroundColor = "#FFFFFF" # Bílá pro boční panel a karty
-textColor = "#1F2937"           # Tmavě šedá pro text (ladí s Inter fontem)
-font = "sans serif"
-
-[server]
-headless = true
-enableCORS = false
-enableXsrfProtection = false
-
-[browser]
-gatherUsageStats = false        # Vypne odesílání statistik Streamlitu
-serverAddress = "localhost"
-
-[runner]
-magicEnabled = false            # Vypne "magic" výpis proměnných (čistší chování)
+base="dark"
+primaryColor="#00f3ff"
+backgroundColor="#0e1117"
+secondaryBackgroundColor="#1b1e24"
+textColor="#e0e0e0"
+font="sans serif"
