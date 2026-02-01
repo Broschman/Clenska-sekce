@@ -84,13 +84,18 @@ for week in month_days:
             datum_dne = date(curr_y, curr_m, day)
             akce_dne = df_akce[(df_akce['datum'] <= datum_dne) & (df_akce['datum_do'] >= datum_dne)]
             
-            for _, akce in akce_dne.iterrows():
-                # Tady používáme čistá tlačítka
-                typ = str(akce.get('typ', 'default')).lower()
-                style_key = "default"
-                if "mčr" in typ: style_key = "mcr"
-                elif "trénink" in typ: style_key = "trenink"
-                # ... (další typy)
+            zavodni_slova = ["závod", "mčr", "žebříček", "liga", "mistrovství", "štafety", "ža", "žb"]
+                    je_zavod_obecne = any(s in typ for s in zavodni_slova)
+                    style_key = "default"
+                    if "mčr" in typ: style_key = "mcr"
+                    elif "ža" in typ: style_key = "za"
+                    elif "žb" in typ: style_key = "zb"
+                    elif "soustředění" in typ: style_key = "soustredeni"
+                    elif "oblastní" in typ: style_key = "oblastni"
+                    elif "zimní" in typ: style_key = "zimni_liga"
+                    elif "štafety" in typ: style_key = "stafety"
+                    elif "trénink" in typ: style_key = "trenink"
+                    elif je_zavod_obecne: style_key = "zavod"
                 
                 label = f"{akce['název'][:15]}..."
                 with st.popover(label, use_container_width=True):
