@@ -441,7 +441,7 @@ def vykreslit_detail_akce(akce, unique_key):
                     
                     with stylable_container(key=f"cont_btn_{unique_key}_{i}", css_styles=btn_css):
                         if st.button(label, key=f"btn_d_{unique_key}_{i}", use_container_width=True):
-                            show_doprava_dialog(akce_id_str, akce['název'], akce['datum'].strftime('%d.%m.'), row['jméno'])
+                            utils.show_doprava_dialog(akce_id_str, akce['název'], akce['datum'].strftime('%d.%m.'), row['jméno'])
 
                 c5.write(row.get('ubytování', ''))
                 
