@@ -216,22 +216,26 @@ NEON_RED = "#DC2626"    # Red-600
 NEON_ORANGE = "#EA580C" # Orange-600
 DARK_BG = "#FFFFFF"     # White instead of Dark
 
+# --- 3. DEFINICE BAREV (Podle legendy) ---
 BARVY_AKCI = {
     "mcr": {
-        "bg": "linear-gradient(90deg, #EF4444, #F59E0B, #10B981, #3B82F6, #8B5CF6)", 
-        "color": "white", "border": "none", "shadow": "0 4px 6px rgba(0,0,0,0.15)",
-        "glow": "#EF4444" # Dummy value for compatibility
+        # Gradient pro MČR
+        "bg": "linear-gradient(90deg, #EF4444, #F59E0B, #10B981)", 
+        "glow": "#EF4444" # Fallback barva
     },
-    "za": {"bg": "#DC2626", "color": "white", "border": "none", "shadow": "0 2px 4px rgba(220, 38, 38, 0.3)", "glow": "#DC2626"},
-    "zb": {"bg": "#EA580C", "color": "white", "border": "none", "shadow": "0 2px 4px rgba(234, 88, 12, 0.3)", "glow": "#EA580C"},
-    "soustredeni": {"bg": "#D97706", "color": "white", "border": "none", "shadow": "0 2px 4px rgba(217, 119, 6, 0.3)", "glow": "#D97706"},
-    "oblastni": {"bg": "#2563EB", "color": "white", "border": "none", "shadow": "0 2px 4px rgba(37, 99, 235, 0.3)", "glow": "#2563EB"},
-    "zimni_liga": {"bg": "#4B5563", "color": "white", "border": "none", "shadow": "0 2px 4px rgba(75, 85, 99, 0.3)", "glow": "#4B5563"},
-    "stafety": {"bg": "#9333EA", "color": "white", "border": "none", "shadow": "0 2px 4px rgba(147, 51, 234, 0.3)", "glow": "#9333EA"},
-    "trenink": {"bg": "#16A34A", "color": "white", "border": "none", "shadow": "0 2px 4px rgba(22, 163, 74, 0.3)", "glow": "#16A34A"},
-    "zavod": {"bg": "#0D9488", "color": "white", "border": "none", "shadow": "0 2px 4px rgba(13, 148, 136, 0.3)", "glow": "#0D9488"},
+    "za": {"bg": "#DC2626", "glow": "#DC2626"}, # Červená
+    "zb": {"bg": "#EA580C", "glow": "#EA580C"}, # Oranžová tmavší
+    "soustredeni": {"bg": "#D97706", "glow": "#D97706"}, # Oranžová/Žlutá
+    "oblastni": {"bg": "#2563EB", "glow": "#2563EB"}, # Modrá
+    "zimni_liga": {"bg": "#4B5563", "glow": "#4B5563"}, # Šedá
+    "stafety": {"bg": "#9333EA", "glow": "#9333EA"}, # Fialová
+    "trenink": {"bg": "#16A34A", "glow": "#16A34A"}, # Zelená
+    "zavod": {"bg": "#0D9488", "glow": "#0D9488"}, # Tyrkysová (Ostatní)
+    
+    # Defaultní bílá (pro akce bez typu)
     "default": {
-        "bg": "#FFFFFF", "color": "#374151", "border": "1px solid #E5E7EB", "shadow": "0 1px 2px rgba(0,0,0,0.05)", "glow": "#E5E7EB"
+        "bg": "#FFFFFF", 
+        "glow": "#E5E7EB"
     }
 }
 
