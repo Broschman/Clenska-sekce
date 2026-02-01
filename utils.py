@@ -356,7 +356,7 @@ def show_doprava_dialog(akce_id, nazev_akce, datum_akce, pre_jmeno, in_poznamka=
         seznam_jmen.append(target_jmeno)
         seznam_jmen.sort()
         
-    # 4. Najít index
+    # 4. Najít index (pro případ, že NENÍ vynucené jméno)
     idx_jmeno = None
     if target_jmeno:
         try:
@@ -364,15 +364,16 @@ def show_doprava_dialog(akce_id, nazev_akce, datum_akce, pre_jmeno, in_poznamka=
         except ValueError:
             idx_jmeno = None
 
-    # ### --- FIX: VYNUCENÁ AKTUALIZACE STAVU ---
-    # Pokud máme target_jmeno (otevřeli jsme to přes tlačítko u konkrétní osoby),
-    # musíme donutit selectbox, aby se přepsal. Jinak si drží starou hodnotu z minula.
-    if target_jmeno and "diag_jmeno" in st.session_state:
-        if st.session_state.diag_jmeno != target_jmeno:
-            st.session_state.diag_jmeno = target_jmeno
-    # ### -------------------------------------
+    # ### --- FIX PROTI VAROVÁNÍ ---
+    # Pokud máme target_jmeno, vnutíme ho do Session State.
+    # ZÁROVEŇ musíme vynulovat 'idx_jmeno', aby se nehádal parametr 'index' se 'session_state'.
+    if target_jmeno:
+        st.session_state.diag_jmeno = target_jmeno
+        idx_jmeno = None  # <--- TOTO VYŘEŠÍ VAROVÁNÍ
+    # ### --------------------------
 
     # 5. Vykreslit selectbox
+    # Pokud je idx_jmeno None, Streamlit použije hodnotu z key="diag_jmeno" (což chceme).
     vybrane_jmeno = st.selectbox(
         "Kdo jsi?", 
         options=seznam_jmen, 
