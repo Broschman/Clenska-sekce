@@ -52,8 +52,29 @@ def load_css():
 
         h1, h2, h3, h4 { color: #111827 !important; font-weight: 700 !important; }
         
-        .stButton > button { font-weight: 600 !important; border-radius: 8px !important; }
+        /* === GLOBÁLNÍ TLAČÍTKA (Navigace měsíců) === */
+        .stButton > button {
+            background-color: #ffffff !important;
+            color: #1f2937 !important;      /* TADY JE TA ČERNÁ */
+            border: 1px solid #e5e7eb !important;
+            font-weight: 600 !important;
+            border-radius: 8px !important;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
+        }
+        .stButton > button:hover {
+            border-color: #2563EB !important;
+            color: #2563EB !important;
+            background-color: #f9fafb !important;
+        }
         
+        /* Primary tlačítka (např. v dashboardu nebo formulářích) */
+        button[kind="primary"] {
+            background-color: #2563EB !important;
+            color: white !important;
+            border: 1px solid #2563EB !important;
+        }
+
+        /* === SKRYTÍ STREAMLIT UI === */
         #MainMenu, footer, header, .stDeployButton, [data-testid="stToolbar"], [data-testid="stDecoration"] {
             display: none !important; visibility: hidden !important;
         }
@@ -83,7 +104,6 @@ def load_css():
         .day-number { font-size: 1.1em; font-weight: 700; color: #6B7280; display: block; text-align: center; }
     </style>
     """, unsafe_allow_html=True)
-
 # === 3. CSS GENERÁTORY ===
 
 def get_cyber_button_css(bg_color, glow_color):
