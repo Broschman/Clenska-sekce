@@ -45,52 +45,10 @@ with col_title:
     """, unsafe_allow_html=True)
 
 with col_help:
-    with st.popover("❔", help="Nápověda a Legenda"):
-        # --- NADPIS ---
-        st.markdown("### 🌲 Průvodce aplikací")
-        
-        # --- 1. FUNKCIONALITY ---
-        st.markdown("""
-        **1. 📅 Dva pohledy na akce**
-        * **Kalendář:** Klasický měsíční pohled. Kliknutím na den/akci otevřeš detaily.
-        * **Vyhledávání (nahoře):** Zadej text (např. "MČR") nebo vyber datum. Kalendář zmizí a uvidíš seznam vyfiltrovaných akcí.
-        
-        **2. ✍️ Přihlašování & Odhlašování**
-        * **Zápis:** V detailu akce vyber své jméno (nebo napiš nové), zvol dopravu/ubytko a potvrď.
-        * **Odhlášení:** V seznamu přihlášených najdi své jméno a klikni na **koš 🗑️**.
-        * ⚠️ **Pozor:** U závodů (ŽA, ŽB, MČR) je tato tabulka **pouze interní** (doprava/spaní). Na závod se musíš přihlásit přes **ORIS** (odkaz je vždy v detailu akce).
-        
-        **3. 🗺️ Mapy a Počasí**
-        * U každé akce se automaticky načítá **předpověď počasí** a čas **západu slunce 🌑** (hodí se na nočáky).
-        * Dole v detailu najdeš mapu s bodem srazu a tlačítka pro navigaci (**Waze, Google, Mapy.cz**).
-        
-        **4. 🗓️ Export do mobilu**
-        * V záhlaví každé akce je malé tlačítko 📅. Kliknutím si stáhneš soubor `.ics`, který ti akci přidá do tvého Outlooku nebo Google Kalendáře.
-        
-        **5. 🔐 Pro trenéry**
-        * Pod seznamem přihlášených je tlačítko **Export**. Po zadání hesla se stáhne Excel soupiska (např. pro nahlášení ubytování).
-        """)
-        
-        st.divider()
+    with st.popover("❔", help="Nápověda"):
+        st.markdown("### 🌲 Průvodce")
+        st.write("Vítej v Cyber-Sekci RBK.")
 
-        # --- 2. LEGENDA BAREV ---
-        st.markdown("### 🎨 Legenda barev (Typ akce)")
-        st.markdown("""
-        <div style="display: grid; gap: 8px; font-size: 0.85rem;">
-            <div style="display: flex; align-items: center;"><span style="width: 18px; height: 18px; border-radius: 4px; background: linear-gradient(90deg, #EF4444, #F59E0B, #10B981); margin-right: 10px;"></span><b>MČR / Mistrovství</b></div>
-            <div style="display: flex; align-items: center;"><span style="width: 18px; height: 18px; border-radius: 4px; background: #DC2626; margin-right: 10px;"></span><b>Závod ŽA</b>  (Licence A)</div>
-            <div style="display: flex; align-items: center;"><span style="width: 18px; height: 18px; border-radius: 4px; background: #EA580C; margin-right: 10px;"></span><b>Závod ŽB</b>  (Licence B)</div>
-            <div style="display: flex; align-items: center;"><span style="width: 18px; height: 18px; border-radius: 4px; background: #D97706; margin-right: 10px;"></span><b>Soustředění</b></div>
-            <div style="display: flex; align-items: center;"><span style="width: 18px; height: 18px; border-radius: 4px; background: #2563EB; margin-right: 10px;"></span><b>Oblastní žebříček</b></div>
-            <div style="display: flex; align-items: center;"><span style="width: 18px; height: 18px; border-radius: 4px; background: #4B5563; margin-right: 10px;"></span><b>Zimní liga</b></div>
-            <div style="display: flex; align-items: center;"><span style="width: 18px; height: 18px; border-radius: 4px; background: #9333EA; margin-right: 10px;"></span><b>Štafety</b></div>
-            <div style="display: flex; align-items: center;"><span style="width: 18px; height: 18px; border-radius: 4px; background: #16A34A; margin-right: 10px;"></span><b>Trénink</b></div>
-             <div style="display: flex; align-items: center;"><span style="width: 18px; height: 18px; border-radius: 4px; background: #0D9488; margin-right: 10px;"></span><b>Ostatní závody</b></div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        st.divider()
-        
 conn = data_manager.get_connection()
 df_akce = data_manager.load_akce()
 seznam_jmen = data_manager.load_jmena()
@@ -270,10 +228,7 @@ if search_text or len(search_date_value) > 0:
             je_po_deadlinu = dnes > akce['deadline']
             
             typ_udalosti = str(akce.get('typ', '')).lower()
-            druh = str(akce.get('druh', '')).lower() # Potřebujeme i druh pro emoji
-
             style_key = "default"
-            # ... (zde je tvá logika stylů if "mčr" in typ...) ...
             if "mčr" in typ_udalosti: style_key = "mcr"
             elif "ža" in typ_udalosti: style_key = "za"
             elif "žb" in typ_udalosti: style_key = "zb"
@@ -285,21 +240,14 @@ if search_text or len(search_date_value) > 0:
             elif any(s in typ_udalosti for s in ["závod", "liga"]): style_key = "zavod"
 
             styly = styles.BARVY_AKCI.get(style_key, styles.BARVY_AKCI["default"])
+            # ... logika stylů ...
             glow_color = styly.get("glow", "#39ff14")
             bg_color = styly.get("bg", "rgba(255,255,255,0.05)")
             
-            # ### --- FIX: DEFINICE LABELU (Tohle chybělo) ---
-            ikony = { "les": "🌲", "sprint": "🏙️", "nočák": "🌗" }
-            emoji = ikony.get(druh, "🏃")
-            # U hledání necháme celý název, ať uživatel ví, co našel
-            label = f"{emoji} {akce['název']}"
-            if je_po_deadlinu: label = "🔒 " + label
-            # ### -------------------------------------------
-
+            # ZDE POUŽIJEME FUNKCI ZE STYLES
             search_css = styles.get_cyber_button_css(bg_color, glow_color)
 
             with stylable_container(key=f"btn_search_{unique_key}", css_styles=search_css):
-                # Teď už 'label' existuje a nebude to padat
                 with st.popover(label, use_container_width=True):
                     utils.vykreslit_detail_akce(akce, unique_key)
 else:
