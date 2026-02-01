@@ -295,10 +295,9 @@ st.markdown("<div style='margin-bottom: 20px'></div>", unsafe_allow_html=True)
 # ==============================================================================
 # 6. FLOATING CYBER-COACH (Pravý dolní roh) - DOČASNĚ VYPNUTO
 # ==============================================================================
-"""
-# TENTO KÓD JE ZAKOMENTOVANÝ A NEBUDE SE SPOUŠTĚT
-# AŽ HO BUDEŠ CHTÍT ZAPNOUT, SMAŽ TY TŘI UVOZOVKY NA ZAČÁTKU A NA KONCI
 
+# Přidali jsme "_ =" ... tím říkáme Pythonu "ulož to do šuplíku" a Streamlit to nevypíše.
+_ = """
 chat_css = styles.get_floating_chat_css()
 
 with stylable_container(key="floating_bot_container", css_styles=chat_css):
