@@ -158,6 +158,8 @@ def show_calendar_section():
                     
                     zavodni_slova = ["závod", "mčr", "žebříček", "liga", "mistrovství", "štafety", "ža", "žb"]
                     je_zavod_obecne = any(s in typ for s in zavodni_slova)
+                    
+                    # Určení klíče stylu
                     style_key = "default"
                     if "mčr" in typ: style_key = "mcr"
                     elif "ža" in typ: style_key = "za"
@@ -169,26 +171,27 @@ def show_calendar_section():
                     elif "trénink" in typ: style_key = "trenink"
                     elif je_zavod_obecne: style_key = "zavod"
                     
-                    # ... předchozí logika (typ, styly, ikony) ...
-                    
+                    # === NOVÁ LOGIKA STYLŮ (CLEAN MODE) ===
+                    # 1. Načteme základní styl z palety
                     style_dict = styles.BARVY_AKCI.get(style_key, styles.BARVY_AKCI["default"])
-                    glow_color = styly.get("glow", "#39ff14")
-                    bg_color = styly.get("bg", "rgba(255,255,255,0.05)")
 
+                    # 2. Ikony
                     ikony = { "les": "🌲", "sprint": "🏙️", "nočák": "🌗" }
                     emoji = ikony.get(druh, "🏃")
                     label = f"{emoji} {akce['název'].split('-')[0].strip()}"
-                    if je_po_deadlinu:
-                        style_dict = {"bg": "#F3F4F6", "color": "#9CA3AF", "border": "1px solid #E5E7EB", "shadow": "none"}
-                        label = "🔒 " + label
                     
-                    # ZDE POUŽIJEME FUNKCI ZE STYLES (TUČNÉ PÍSMO)
+                    # 3. Úprava pro prošlé deadliny (zšednutí)
+                    if je_po_deadlinu: 
+                        label = "🔒 " + label
+                        style_dict = {"bg": "#F3F4F6", "color": "#9CA3AF", "border": "1px solid #E5E7EB", "shadow": "none"}
+                    
+                    # 4. Generování CSS pomocí nové funkce
                     calendar_css = styles.get_event_button_css(style_dict)
 
                     with stylable_container(key=f"btn_c_{unique_key}", css_styles=calendar_css):
                         with st.popover(label, use_container_width=True):
                             utils.vykreslit_detail_akce(akce, unique_key)
-
+                            
 # ==============================================================================
 # 2. HLEDÁNÍ
 # ==============================================================================
@@ -232,6 +235,9 @@ if search_text or len(search_date_value) > 0:
             unique_key = f"search_{akce_id_str}"
             je_po_deadlinu = dnes > akce['deadline']
             
+            # Label
+            label = f"{akce['název']} ({akce['datum'].strftime('%d.%m.')})"
+
             typ_udalosti = str(akce.get('typ', '')).lower()
             style_key = "default"
             if "mčr" in typ_udalosti: style_key = "mcr"
@@ -244,12 +250,14 @@ if search_text or len(search_date_value) > 0:
             elif "trénink" in typ_udalosti: style_key = "trenink"
             elif any(s in typ_udalosti for s in ["závod", "liga"]): style_key = "zavod"
 
+            # === NOVÁ LOGIKA STYLŮ (CLEAN MODE) ===
             style_dict = styles.BARVY_AKCI.get(style_key, styles.BARVY_AKCI["default"])
-            # ... logika stylů ...
-            glow_color = styly.get("glow", "#39ff14")
-            bg_color = styly.get("bg", "rgba(255,255,255,0.05)")
             
-            # ZDE POUŽIJEME FUNKCI ZE STYLES
+            if je_po_deadlinu:
+                label = "🔒 " + label
+                style_dict = {"bg": "#F3F4F6", "color": "#9CA3AF", "border": "1px solid #E5E7EB", "shadow": "none"}
+            
+            # Generování CSS
             search_css = styles.get_event_button_css(style_dict)
 
             with stylable_container(key=f"btn_search_{unique_key}", css_styles=search_css):
