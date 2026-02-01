@@ -266,7 +266,7 @@ def vykreslit_detail_akce(akce, unique_key):
                     elif doprava_btn:
                         if finalni_jmeno:
                             # Zavoláme dialog a předáme mu jméno z formuláře
-                            show_doprava_dialog(
+                            utils.show_doprava_dialog(
                                 akce_id=akce_id_str,
                                 nazev_akce=akce['název'],
                                 datum_akce=akce['datum'].strftime('%d.%m.'),
