@@ -253,7 +253,19 @@ def get_base64_image(image_path):
 def badge(text, bg="#f3f4f6", color="#111"):
     return f"<span style='background-color: {bg}; color: {color}; padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; margin-right: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.05);'>{text}</span>"
 
-# === 4. BAREVNÁ SCHÉMATA (Clean Palette) ===
+# === 4. POMOCNÉ FUNKCE (Lottie atd.) ===
+
+@st.cache_data(ttl=3600*24)
+def load_lottieurl(url):
+    try:
+        r = requests.get(url)
+        if r.status_code != 200:
+            return None
+        return r.json()
+    except:
+        return None
+
+# === 5. BAREVNÁ SCHÉMATA (Clean Palette) ===
 BARVY_AKCI = {
     "mcr": {
         "bg": "linear-gradient(135deg, #2563EB, #1D4ED8)", 
