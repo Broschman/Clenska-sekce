@@ -323,8 +323,11 @@ def vykreslit_detail_akce(akce, unique_key):
     st.markdown(f"#### 👥 Zapsaní ({len(lidi)})")
     
     if not lidi.empty:
-        # Definice sloupců pro HLAVIČKU (mimo smyčku)
-        h1, h2, h3, h4, h5, h6 = st.columns([0.4, 2.0, 1.5, 1.2, 0.6, 0.5]) 
+        # Definice hlavičky
+        # Poměry sloupců (upraveno pro širší tlačítko)
+        cols_ratio = [0.4, 2.0, 1.5, 1.3, 0.6, 0.5]
+        
+        h1, h2, h3, h4, h5, h6 = st.columns(cols_ratio) 
         h1.markdown("<b style='color:#9CA3AF'>#</b>", unsafe_allow_html=True)
         h2.markdown("<b>Jméno</b>", unsafe_allow_html=True)
         h3.markdown("<b>Poznámka</b>", unsafe_allow_html=True)
@@ -333,18 +336,27 @@ def vykreslit_detail_akce(akce, unique_key):
         
         st.markdown("<hr style='margin: 5px 0 10px 0; border-top: 1px solid #E5E7EB;'>", unsafe_allow_html=True)
         
-        # Iterace
         for i, (idx, row) in enumerate(lidi.iterrows()):
             bg = "#F3F4F6" if i % 2 == 0 else "white"
-            # Použijeme tvůj padding a styl, který fungoval, jen přidáme 'align-items: center'
-            pad = "10px 5px" 
             
-            with stylable_container(key=f"r_{unique_key}_{i}", css_styles=f"{{background-color: {bg}; border-radius: 6px; padding: {pad}; margin-bottom: 2px; display: flex; align-items: center; min-height: 40px;}}"):
+            # === ZMĚNA PŘÍSTUPU ===
+            # CSS dělá JENOM barvu a padding. Žádný layout.
+            # display: block zajistí, že se to chová jako normální div pod sebou.
+            css_bg = f"""
+                {{
+                    background-color: {bg};
+                    border-radius: 8px;
+                    padding: 5px 10px; /* Vzduch okolo */
+                    margin-bottom: 2px;
+                }}
+            """
+            
+            with stylable_container(key=f"row_bg_{unique_key}_{i}", css_styles=css_bg):
                 
+                # --- LOGIKA MAZÁNÍ (stejná jako dřív) ---
                 je_k_smazani = (delete_key_state in st.session_state) and (st.session_state[delete_key_state] == row['jméno'])
                 
                 if je_k_smazani:
-                    # Mód potvrzení (tvůj původní kód)
                     col_warn, col_yes, col_no = st.columns([3, 1, 1], vertical_alignment="center")
                     col_warn.warning(f"Opravdu smazat: **{row['jméno']}**?", icon="⚠️")
                     
@@ -364,59 +376,64 @@ def vykreslit_detail_akce(akce, unique_key):
                         st.rerun()
                 
                 else:
-                    # Normální řádek
-                    # Tady definujeme sloupce ZNOVU pro každý řádek, aby byly uvnitř toho barevného kontejneru
-                    c1, c2, c3, c4, c5, c6 = st.columns([0.4, 2.0, 1.5, 1.2, 0.6, 0.5], vertical_alignment="center")
+                    # --- BĚŽNÝ ŘÁDEK ---
+                    # TADY SE DĚJE MAGIE ZAROVNÁNÍ: vertical_alignment="center"
+                    # To zajistí, že text i tlačítko budou v jedné rovině uprostřed výšky.
+                    c1, c2, c3, c4, c5, c6 = st.columns(cols_ratio, vertical_alignment="center")
                     
                     c1.write(f"{i+1}.")
                     c2.markdown(f"**{row['jméno']}**")
                     c3.caption(row.get('poznámka', ''))
                     
-                    # === ZMĚNA: TADY MÍSTO TEXTU DÁVÁME TLAČÍTKO ===
+                    # === TLAČÍTKO DOPRAVY ===
                     with c4:
                         raw_doprava = str(row.get('doprava', ''))
                         
-                        # Logika stylu
+                        # Definice stylu tlačítka
                         if not raw_doprava or raw_doprava == "nan":
                             label = "➕"
                             tooltip = "Nastavit dopravu"
-                            # Průhledné pozadí s borderem
-                            styl_btn = "background-color: transparent; border: 1px dashed #9CA3AF; color: #6B7280;"
+                            style = "background-color: white; border: 1px dashed #9CA3AF; color: #6B7280;"
                         elif "Řidič" in raw_doprava:
                             label = "🚙 Řidič"
                             tooltip = "Nabízím auto"
-                            styl_btn = "background-color: #DCFCE7; border: 1px solid #16A34A; color: #166534;"
+                            style = "background-color: #DCFCE7; border: 1px solid #16A34A; color: #166534;"
                         elif "Spolujízda" in raw_doprava or "Jedu s" in raw_doprava:
                             clean_name = raw_doprava.replace("Spolujízda:", "").replace("Spolujízda", "").strip()
                             label = f"➡️ {clean_name}"
                             tooltip = raw_doprava
-                            styl_btn = "background-color: #DBEAFE; border: 1px solid #2563EB; color: #1E40AF;"
+                            style = "background-color: #DBEAFE; border: 1px solid #2563EB; color: #1E40AF;"
                         elif "Chci" in raw_doprava or "Hledám" in raw_doprava:
                             label = "🙋‍♂️ Hledám"
                             tooltip = "Chci odvoz"
-                            styl_btn = "background-color: #FEF3C7; border: 1px solid #D97706; color: #92400E;"
+                            style = "background-color: #FEF3C7; border: 1px solid #D97706; color: #92400E;"
                         else:
                             label = raw_doprava
                             tooltip = raw_doprava
-                            styl_btn = "background-color: white; border: 1px solid #E5E7EB; color: #374151;"
-
-                        # Jednoduché CSS jen pro tlačítko (žádné marginy kolem)
-                        css_btn = f"""
+                            style = "background-color: white; border: 1px solid #E5E7EB; color: #374151;"
+                        
+                        # CSS čistě pro tlačítko (aby vyplnilo šířku sloupce)
+                        btn_css = f"""
                         button {{
                             width: 100%;
                             padding: 2px 5px !important;
-                            font-size: 0.8rem !important;
-                            min-height: 30px;
+                            min-height: 32px !important;
                             border-radius: 6px;
                             white-space: nowrap;
                             overflow: hidden;
                             text-overflow: ellipsis;
-                            {styl_btn}
+                            margin: 0 !important; /* Důležité: žádné marginy navíc */
+                            {style}
                         }}
                         """
-                        with stylable_container(key=f"btn_dopr_c_{unique_key}_{i}", css_styles=css_btn):
-                            if st.button(label, key=f"btn_dopr_{unique_key}_{i}", help=tooltip):
-                                show_doprava_dialog(akce_id_str, akce['název'], akce['datum'].strftime('%d.%m.'), row['jméno'])
+                        with stylable_container(key=f"bc_{unique_key}_{i}", css_styles=btn_css):
+                            if st.button(label, key=f"bd_{unique_key}_{i}", help=tooltip):
+                                show_doprava_dialog(
+                                    akce_id=akce_id_str, 
+                                    nazev_akce=akce['název'], 
+                                    datum_akce=akce['datum'].strftime('%d.%m.'), 
+                                    pre_jmeno=row['jméno']
+                                )
 
                     c5.write(row.get('ubytování', ''))
                     
