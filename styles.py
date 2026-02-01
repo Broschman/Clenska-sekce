@@ -90,29 +90,34 @@ def load_css():
     </style>
     """, unsafe_allow_html=True)
 
-# === 2. CSS GENERÁTORY (ADAPTÉRY PRO NOVÝ DESIGN) ===
+# === 2. CSS GENERÁTORY (THE SILVER BULLET VERZE) ===
 
 def get_nav_button_css():
+    """
+    Navigace: Vždy bílé pozadí, vždy tmavý text.
+    """
     return """
-        /* Zacílíme tlačítko */
+        /* 1. Pozadí a okraje tlačítka */
         button {
             background-color: #ffffff !important;
             border: 1px solid #d1d5db !important;
             box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
+            transition: all 0.2s ease !important;
         }
 
-        /* TOTO JE TA MAGIE: Zacílíme přímo vnitřní kontejner textu */
+        /* 2. Text uvnitř (cílíme na <p> uvnitř Markdown kontejneru) */
         button div[data-testid="stMarkdownContainer"] p {
-            color: #111827 !important;  /* Tmavá barva */
+            color: #1f2937 !important; /* Tmavě šedá */
             font-weight: 700 !important;
         }
 
-        /* Hover efekt */
+        /* 3. Hover stav */
         button:hover {
             background-color: #f3f4f6 !important;
             border-color: #9ca3af !important;
         }
         
+        /* Text při hoveru musí zůstat tmavý */
         button:hover div[data-testid="stMarkdownContainer"] p {
             color: #000000 !important;
         }
@@ -120,18 +125,17 @@ def get_nav_button_css():
 
 def get_event_button_css(style_dict):
     """
-    Styl pro AKCE (syté barvy).
-    Vynucuje barvu textu definovanou v paletě (většinou white).
+    Akce: Barva textu se řídí parametrem 'color' v style_dict.
+    Pokud je v style_dict 'white', bude white. Pokud 'black', bude black.
     """
     bg = style_dict.get("bg", "#ffffff")
-    color = style_dict.get("color", "#1f2937") # Default text
+    text_color = style_dict.get("color", "#1f2937") # Tady bereme barvu z definice!
     border = style_dict.get("border", "none")
     shadow = style_dict.get("shadow", "none")
     
     return f"""
         button {{
             background: {bg} !important;
-            color: {color} !important;
             border: {border} !important;
             box-shadow: {shadow} !important;
             border-radius: 8px !important;
@@ -140,18 +144,23 @@ def get_event_button_css(style_dict):
             padding: 8px 4px !important;
         }}
         
-        /* AGRESIVNÍ VYNUCENÍ BARVY TEXTU */
-        button p {{
-            color: {color} !important;
+        /* ZDE JE KLÍČ: Vynutíme barvu textu, která přišla v style_dict */
+        button div[data-testid="stMarkdownContainer"] p {{
+            color: {text_color} !important;
             font-family: 'Inter', sans-serif !important;
             font-size: 14px !important;
             font-weight: 600 !important;
         }}
 
         button:hover {{
-            filter: brightness(1.1);
+            filter: brightness(1.08);
             transform: translateY(-1px);
             z-index: 10;
+        }}
+        
+        /* I při hoveru držíme tu samou barvu textu */
+        button:hover div[data-testid="stMarkdownContainer"] p {{
+            color: {text_color} !important;
         }}
     """
     
