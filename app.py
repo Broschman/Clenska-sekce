@@ -45,10 +45,52 @@ with col_title:
     """, unsafe_allow_html=True)
 
 with col_help:
-    with st.popover("❔", help="Nápověda"):
-        st.markdown("### 🌲 Průvodce")
-        st.write("Vítej v Cyber-Sekci RBK.")
+    with st.popover("❔", help="Nápověda a Legenda"):
+        # --- NADPIS ---
+        st.markdown("### 🌲 Průvodce aplikací")
+        
+        # --- 1. FUNKCIONALITY ---
+        st.markdown("""
+        **1. 📅 Dva pohledy na akce**
+        * **Kalendář:** Klasický měsíční pohled. Kliknutím na den/akci otevřeš detaily.
+        * **Vyhledávání (nahoře):** Zadej text (např. "MČR") nebo vyber datum. Kalendář zmizí a uvidíš seznam vyfiltrovaných akcí.
+        
+        **2. ✍️ Přihlašování & Odhlašování**
+        * **Zápis:** V detailu akce vyber své jméno (nebo napiš nové), zvol dopravu/ubytko a potvrď.
+        * **Odhlášení:** V seznamu přihlášených najdi své jméno a klikni na **koš 🗑️**.
+        * ⚠️ **Pozor:** U závodů (ŽA, ŽB, MČR) je tato tabulka **pouze interní** (doprava/spaní). Na závod se musíš přihlásit přes **ORIS** (odkaz je vždy v detailu akce).
+        
+        **3. 🗺️ Mapy a Počasí**
+        * U každé akce se automaticky načítá **předpověď počasí** a čas **západu slunce 🌑** (hodí se na nočáky).
+        * Dole v detailu najdeš mapu s bodem srazu a tlačítka pro navigaci (**Waze, Google, Mapy.cz**).
+        
+        **4. 🗓️ Export do mobilu**
+        * V záhlaví každé akce je malé tlačítko 📅. Kliknutím si stáhneš soubor `.ics`, který ti akci přidá do tvého Outlooku nebo Google Kalendáře.
+        
+        **5. 🔐 Pro trenéry**
+        * Pod seznamem přihlášených je tlačítko **Export**. Po zadání hesla se stáhne Excel soupiska (např. pro nahlášení ubytování).
+        """)
+        
+        st.divider()
 
+        # --- 2. LEGENDA BAREV ---
+        st.markdown("### 🎨 Legenda barev (Typ akce)")
+        st.markdown("""
+        <div style="display: grid; gap: 8px; font-size: 0.85rem;">
+            <div style="display: flex; align-items: center;"><span style="width: 18px; height: 18px; border-radius: 4px; background: linear-gradient(90deg, #EF4444, #F59E0B, #10B981); margin-right: 10px;"></span><b>MČR / Mistrovství</b></div>
+            <div style="display: flex; align-items: center;"><span style="width: 18px; height: 18px; border-radius: 4px; background: #DC2626; margin-right: 10px;"></span><b>Závod ŽA</b>  (Licence A)</div>
+            <div style="display: flex; align-items: center;"><span style="width: 18px; height: 18px; border-radius: 4px; background: #EA580C; margin-right: 10px;"></span><b>Závod ŽB</b>  (Licence B)</div>
+            <div style="display: flex; align-items: center;"><span style="width: 18px; height: 18px; border-radius: 4px; background: #D97706; margin-right: 10px;"></span><b>Soustředění</b></div>
+            <div style="display: flex; align-items: center;"><span style="width: 18px; height: 18px; border-radius: 4px; background: #2563EB; margin-right: 10px;"></span><b>Oblastní žebříček</b></div>
+            <div style="display: flex; align-items: center;"><span style="width: 18px; height: 18px; border-radius: 4px; background: #4B5563; margin-right: 10px;"></span><b>Zimní liga</b></div>
+            <div style="display: flex; align-items: center;"><span style="width: 18px; height: 18px; border-radius: 4px; background: #9333EA; margin-right: 10px;"></span><b>Štafety</b></div>
+            <div style="display: flex; align-items: center;"><span style="width: 18px; height: 18px; border-radius: 4px; background: #16A34A; margin-right: 10px;"></span><b>Trénink</b></div>
+             <div style="display: flex; align-items: center;"><span style="width: 18px; height: 18px; border-radius: 4px; background: #0D9488; margin-right: 10px;"></span><b>Ostatní závody</b></div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        st.divider()
+        
 conn = data_manager.get_connection()
 df_akce = data_manager.load_akce()
 seznam_jmen = data_manager.load_jmena()
