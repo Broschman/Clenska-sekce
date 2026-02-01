@@ -95,9 +95,10 @@ def load_css():
 def get_nav_button_css():
     """
     Navigace: Vždy bílé pozadí, vždy tmavý text.
+    FIX: Zvýšená specificita (váha) selektoru, aby ho nepřebil styl kalendáře.
     """
     return """
-        /* 1. Pozadí a okraje tlačítka */
+        /* 1. Tlačítko samotné */
         button {
             background-color: #ffffff !important;
             border: 1px solid #d1d5db !important;
@@ -105,8 +106,9 @@ def get_nav_button_css():
             transition: all 0.2s ease !important;
         }
 
-        /* 2. Text uvnitř (cílíme na <p> uvnitř Markdown kontejneru) */
-        button div[data-testid="stMarkdownContainer"] p {
+        /* 2. TEXT - ULTRA SPECIFICKÝ SELEKTOR */
+        /* Přidáním 'div[data-testid="column"]' a 'div' zvyšujeme váhu pravidla */
+        div[data-testid="column"] button div[data-testid="stMarkdownContainer"] p {
             color: #1f2937 !important; /* Tmavě šedá */
             font-weight: 700 !important;
         }
@@ -117,8 +119,8 @@ def get_nav_button_css():
             border-color: #9ca3af !important;
         }
         
-        /* Text při hoveru musí zůstat tmavý */
-        button:hover div[data-testid="stMarkdownContainer"] p {
+        /* Hover text - taky ultra specifický */
+        div[data-testid="column"] button:hover div[data-testid="stMarkdownContainer"] p {
             color: #000000 !important;
         }
     """
