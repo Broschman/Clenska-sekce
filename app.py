@@ -323,41 +323,50 @@ def vykreslit_detail_akce(akce, unique_key):
     st.markdown(f"#### 👥 Zapsaní ({len(lidi)})")
     
     if not lidi.empty:
-        # 1. DEFINICE SLOUPCŮ - Upravil jsem šířky, C4 (Doprava) je teď širší (1.2)
+        # Definice šířek sloupců
         ratio = [0.4, 2.0, 1.5, 1.2, 0.6, 0.5] 
         
         h1, h2, h3, h4, h5, h6 = st.columns(ratio) 
         h1.markdown("<b style='color:#9CA3AF'>#</b>", unsafe_allow_html=True)
         h2.markdown("<b>Jméno</b>", unsafe_allow_html=True)
         h3.markdown("<b>Poznámka</b>", unsafe_allow_html=True)
-        h4.markdown("🚗 <b>Doprava</b>", unsafe_allow_html=True) # Zvýrazněno
+        h4.markdown("🚗 <b>Doprava</b>", unsafe_allow_html=True)
         h5.markdown("🛏️", unsafe_allow_html=True)
         
         st.markdown("<hr style='margin: 5px 0 10px 0; border-top: 1px solid #E5E7EB;'>", unsafe_allow_html=True)
         
+        # Iterace přes lidi
         for i, (idx, row) in enumerate(lidi.iterrows()):
+            # --- ZEBRA STRIPING LOGIKA ---
             bg = "#F3F4F6" if i % 2 == 0 else "white"
-            # Trochu větší padding, aby se tam tlačítka nemačkala
-            pad = "8px 5px" 
             
-            with stylable_container(key=f"r_{unique_key}_{i}", css_styles=f"{{background-color: {bg}; border-radius: 6px; padding: {pad}; margin-bottom: 2px; min-height: 45px; display: flex; align-items: center;}}"):
+            # Kontejner celého řádku s barvou pozadí
+            with stylable_container(
+                key=f"r_{unique_key}_{i}", 
+                css_styles=f"{{background-color: {bg}; border-radius: 6px; padding: 8px 5px; margin-bottom: 2px; min-height: 45px; display: flex; align-items: center;}}"
+            ):
                 
-                # ... (logika pro mazání zůstává stejná - je_k_smazani atd.) ...
+                # Zjištění, zda je řádek v režimu mazání
                 je_k_smazani = (delete_key_state in st.session_state) and (st.session_state[delete_key_state] == row['jméno'])
                 
                 if je_k_smazani:
-                    # ... (tvůj kód pro potvrzení smazání - beze změny) ...
+                    # Mód potvrzení smazání
                     col_warn, col_yes, col_no = st.columns([3, 1, 1], vertical_alignment="center")
                     col_warn.warning(f"Opravdu smazat: **{row['jméno']}**?", icon="⚠️")
-                    with stylable_container(key=f"btn_yes_c_{i}", css_styles="button {background-color: #DC2626 !important; color: white !important; border: none;}"):
+                    
+                    with stylable_container(key=f"btn_yes_c_{unique_key}_{i}", css_styles="button {background-color: #DC2626 !important; color: white !important; border: none;}"):
                         if col_yes.button("✅ ANO", key=f"yes_{unique_key}_{i}"):
-                            # ... logika mazání ...
+                            # Smazání z DB
                             df_curr = conn.read(worksheet="prihlasky", ttl=0)
-                            # ... (tvůj stávající kód mazání) ...
+                            df_curr['id_akce'] = df_curr['id_akce'].astype(str).str.replace(r'\.0$', '', regex=True)
                             conn.update(worksheet="prihlasky", data=df_curr[~((df_curr['id_akce'] == akce_id_str) & (df_curr['jméno'] == row['jméno']))])
-                            # Pokud byl řidič, smažeme i auto (volitelné, ale doporučené)
+                            
+                            # Smazání auta řidiče (pokud existuje)
                             data_manager.handle_driver_removal(conn, akce_id_str, row['jméno'])
+                            
                             del st.session_state[delete_key_state]
+                            st.toast("🗑️ Smazáno.")
+                            time.sleep(1)
                             st.rerun()
                             
                     if col_no.button("❌ ZPĚT", key=f"no_{unique_key}_{i}"):
@@ -365,52 +374,46 @@ def vykreslit_detail_akce(akce, unique_key):
                         st.rerun()
                 
                 else:
-                    # BĚŽNÝ ŘÁDEK - Tady je změna
+                    # BĚŽNÝ ŘÁDEK S DATY
                     c1, c2, c3, c4, c5, c6 = st.columns(ratio, vertical_alignment="center")
                     
                     c1.write(f"{i+1}.")
                     c2.markdown(f"**{row['jméno']}**")
                     c3.caption(row.get('poznámka', ''))
                     
-                    # === NOVÁ LOGIKA PRO DOPRAVU (C4 - Tlačítko s textem) ===
+                    # === SROVNANÁ LOGIKA DOPRAVY (Tlačítka) ===
                     with c4:
                         raw_doprava = str(row.get('doprava', ''))
                         
-                        # 1. Analýza textu a určení stylu
+                        # 1. Styly tlačítek
                         if not raw_doprava or raw_doprava == "nan":
                             label = "➕"
                             tooltip = "Nastavit dopravu"
-                            # Šedé, dashed border (vypadá jako placeholder)
-                            styl_btn = "background-color: white; border: 1px dashed #9CA3AF; color: #6B7280;" 
+                            # Transparentní pozadí, aby prosvítala zebra!
+                            styl_btn = "background-color: transparent; border: 1px dashed #9CA3AF; color: #6B7280;" 
                         
                         elif "Řidič" in raw_doprava:
                             label = "🚙 Řidič"
                             tooltip = "Nabízím auto"
-                            # Zelená (Driver)
                             styl_btn = "background-color: #DCFCE7; border: 1px solid #16A34A; color: #166534;" 
                         
                         elif "Spolujízda" in raw_doprava or "Jedu s" in raw_doprava:
-                            # Odstraníme "Spolujízda:" a necháme jen jméno řidiče
                             clean_name = raw_doprava.replace("Spolujízda:", "").replace("Spolujízda", "").strip()
-                            label = f"➡️ {clean_name}" # Šipka naznačuje "jedu s"
+                            label = f"➡️ {clean_name}"
                             tooltip = raw_doprava
-                            # Modrá (Passenger)
                             styl_btn = "background-color: #DBEAFE; border: 1px solid #2563EB; color: #1E40AF;" 
                         
                         elif "Chci" in raw_doprava or "Hledám" in raw_doprava:
                             label = "🙋‍♂️ Hledám"
                             tooltip = "Chci odvoz"
-                            # Oranžová (Waiting)
                             styl_btn = "background-color: #FEF3C7; border: 1px solid #D97706; color: #92400E;" 
                         
                         else:
-                            # Fallback pro jiné texty
                             label = raw_doprava
                             tooltip = raw_doprava
                             styl_btn = "background-color: white; border: 1px solid #E5E7EB; color: #374151;"
 
-                        # 2. Vykreslení tlačítka
-                        # Pomocí CSS vynutíme, aby tlačítko vyplnilo celou šířku sloupce a mělo správnou barvu
+                        # 2. CSS s marginem (aby byla vidět zebra okolo tlačítka)
                         css = f"""
                         button {{
                             width: 100%; 
@@ -419,6 +422,7 @@ def vykreslit_detail_akce(akce, unique_key):
                             height: auto !important; 
                             min-height: 28px; 
                             border-radius: 6px;
+                            margin: 2px 0; 
                             {styl_btn}
                         }}
                         """
@@ -439,7 +443,8 @@ def vykreslit_detail_akce(akce, unique_key):
                             if c6.button("🗑️", key=f"d_{unique_key}_{i}"): 
                                 st.session_state[delete_key_state] = row['jméno']
                                 st.rerun()
-    else: st.caption("Zatím nikdo. Buď první!")
+    else: 
+        st.caption("Zatím nikdo. Buď první!")
     
     # === 🆕 VOLÁNÍ IZOLOVANÉ SEKCE Z UTILS ===
     utils.export_admin_section(lidi, akce['název'], unique_key)
