@@ -20,7 +20,7 @@ def check_password():
     cookie_manager = stx.CookieManager(key="auth_cookie_manager")
     
     # Načtení existující cookie
-    cookie_value = cookie_manager.get(name=COOKIE_NAME)
+    cookie_value = cookie_manager.get(COOKIE_NAME)
     
     # Získání správného hesla ze secrets
     correct_password = st.secrets["general"]["password"]
