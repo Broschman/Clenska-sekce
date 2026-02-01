@@ -93,29 +93,27 @@ def load_css():
 # === 2. CSS GENERÁTORY (ADAPTÉRY PRO NOVÝ DESIGN) ===
 
 def get_nav_button_css():
-    """
-    Speciální styl JEN pro navigační tlačítka (Další/Předchozí).
-    Vynucuje bílé pozadí a TMAVÝ text.
-    """
     return """
+        /* Zacílíme tlačítko */
         button {
             background-color: #ffffff !important;
             border: 1px solid #d1d5db !important;
-            color: #111827 !important; /* Tmavě šedá až černá */
             box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
-            transition: all 0.2s !important;
         }
-        /* Musíme zacílit i vnitřní <p>, jinak to Streamlit přebije */
-        button p {
-            color: #111827 !important;
+
+        /* TOTO JE TA MAGIE: Zacílíme přímo vnitřní kontejner textu */
+        button div[data-testid="stMarkdownContainer"] p {
+            color: #111827 !important;  /* Tmavá barva */
             font-weight: 700 !important;
         }
+
+        /* Hover efekt */
         button:hover {
             background-color: #f3f4f6 !important;
             border-color: #9ca3af !important;
-            color: #000000 !important;
         }
-        button:hover p {
+        
+        button:hover div[data-testid="stMarkdownContainer"] p {
             color: #000000 !important;
         }
     """
