@@ -423,7 +423,7 @@ def vykreslit_detail_akce(akce, unique_key):
                         df_curr = conn.read(worksheet="prihlasky", ttl=0)
                         df_curr['id_akce'] = df_curr['id_akce'].astype(str).str.replace(r'\.0$', '', regex=True)
                         conn.update(worksheet="prihlasky", data=df_curr[~((df_curr['id_akce'] == akce_id_str) & (df_curr['jméno'] == row['jméno']))])
-                        data_manager.handle_driver_removal(conn, akce_id_str, row['jméno'])
+                        utils.handle_driver_removal(conn, akce_id_str, row['jméno'])
                         del st.session_state[delete_key_state]
                         st.toast("🗑️ Smazáno.")
                         time.sleep(1)
