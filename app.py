@@ -209,7 +209,7 @@ def vykreslit_detail_akce(akce, unique_key):
                     nove_jmeno = st.text_input("Nebo nové jméno")
                     poznamka_input = st.text_input("Poznámka")
                     
-                   c_check1, c_check2 = st.columns(2)
+                    c_check1, c_check2 = st.columns(2)
                     doprava_input = c_check1.checkbox("🚗 Sháním odvoz")
                     
                     # --- LOGIKA UBYTOVÁNÍ START ---
