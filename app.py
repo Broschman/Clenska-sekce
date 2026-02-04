@@ -209,11 +209,27 @@ def vykreslit_detail_akce(akce, unique_key):
                     nove_jmeno = st.text_input("Nebo nové jméno")
                     poznamka_input = st.text_input("Poznámka")
                     
-                    c_check1, c_check2 = st.columns(2)
+                   c_check1, c_check2 = st.columns(2)
                     doprava_input = c_check1.checkbox("🚗 Sháním odvoz")
+                    
+                    # --- LOGIKA UBYTOVÁNÍ START ---
                     ubytovani_input = False
-                    if "trénink" not in typ_udalosti: 
-                        ubytovani_input = c_check2.checkbox("🛏️ Společné ubytko")
+                    
+                    # Ubytování řešíme jen pokud to není trénink
+                    if "trénink" not in typ_udalosti:
+                        deadline_ubyt = akce.get('deadline_ubytovani')
+                        zobrazit_ubyt = True
+
+                        # Pokud deadline existuje (není prázdný) A už vypršel -> skryjeme checkbox
+                        if pd.notnull(deadline_ubyt) and datetime.now() > deadline_ubyt:
+                            zobrazit_ubyt = False
+
+                        if zobrazit_ubyt:
+                            ubytovani_input = c_check2.checkbox("🛏️ Společné ubytko")
+                        elif pd.notnull(deadline_ubyt):
+                            # Volitelné: Informace, proč tam ten checkbox není
+                            c_check2.caption("🔒 Deadline ubytování uplynul")
+                    # --- LOGIKA UBYTOVÁNÍ END ---
                     
                     st.markdown("<br>", unsafe_allow_html=True)
                     
@@ -303,7 +319,7 @@ def vykreslit_detail_akce(akce, unique_key):
             # --- KONEC FORMULÁŘE ---
             # Tento elif patří k podmínce "if not je_po_deadlinu" o úroveň výš (mimo form)
             elif je_po_deadlinu: 
-                st.info("🔒 Tabulka uzavřena. Kontaktuj trenéra.")
+                st.info("🔒 Tabulka uzavřena. Kontaktuj trenéra. luckapetr@volny.cz (602 214 725)")
                 
     # --- MAPA (DOLE) ---
     st.markdown("<hr style='margin: 30px 0;'>", unsafe_allow_html=True)
