@@ -132,16 +132,13 @@ def vykreslit_detail_akce(akce, unique_key):
             st.success(f"📅 **Deadline:** {deadline_str}")
 
         # --- NOVINKA: CHYTRÝ DEADLINE UBYTOVÁNÍ 🛏️ ---
-        # 1. Načteme hodnotu a rovnou ji převedeme na datetime (pro jistotu)
         raw_ubyt = akce.get('deadline_ubytovani')
-        deadline_ubyt = pd.to_datetime(raw_ubyt, errors='coerce') 
         
-        # 2. Podmínka:
-        # - pd.notnull(deadline_ubyt): Zkontroluje, jestli je to platné datum (ne NaT)
-        # - deadline_ubyt != akce['deadline']: Zkontroluje, jestli se liší od hlavního
+        # dayfirst=True -> Říká pandasu, že formát je DD.MM.YYYY (český)
+        # errors='coerce' -> Když tam někdo napíše blbost (text), hodí to NaT (prázdno) a nespadne to
+        deadline_ubyt = pd.to_datetime(raw_ubyt, dayfirst=True, errors='coerce') 
+        
         if pd.notnull(deadline_ubyt) and deadline_ubyt != akce['deadline']:
-            
-            # Teď už je to 100% datum, takže strftime bude fungovat
             ubyt_str = deadline_ubyt.strftime('%d.%m.')
             
             if deadline_ubyt.hour != 0 or deadline_ubyt.minute != 0:
@@ -152,7 +149,7 @@ def vykreslit_detail_akce(akce, unique_key):
                     🛏️ <b>Deadline ubytování:</b> {ubyt_str}
                 </div>
             """, unsafe_allow_html=True)
-
+            
         # 3. 🌦️ POČASÍ + 🌑 ZÁPAD SLUNCE
         if main_lat and main_lon:
             forecast = utils.get_forecast(main_lat, main_lon, akce['datum'])
@@ -222,11 +219,12 @@ def vykreslit_detail_akce(akce, unique_key):
                     
                     # Ubytování řešíme jen pokud to není trénink
                     if "trénink" not in typ_udalosti:
-                        deadline_ubyt = pd.to_datetime(akce.get('deadline_ubytovani'), errors='coerce')
+                        # ZDE JSME PŘIDALI dayfirst=True
+                        deadline_ubyt = pd.to_datetime(akce.get('deadline_ubytovani'), dayfirst=True, errors='coerce')
                         
                         zobrazit_ubyt = True
 
-                        # Pokud deadline existuje (není prázdný) A už vypršel -> skryjeme checkbox
+                        # Pokud deadline existuje A už vypršel -> skryjeme
                         if pd.notnull(deadline_ubyt) and datetime.now() > deadline_ubyt:
                             zobrazit_ubyt = False
 
