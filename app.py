@@ -131,6 +131,25 @@ def vykreslit_detail_akce(akce, unique_key):
         else:
             st.success(f"📅 **Deadline:** {deadline_str}")
 
+        # --- NOVINKA: CHYTRÝ DEADLINE UBYTOVÁNÍ 🛏️ ---
+        deadline_ubyt = akce.get('deadline_ubytovani') # Bezpečné načtení
+        
+        # Podmínka: 1. Musí být vyplněno (není NaT/None) A ZÁROVEŇ 2. Musí se lišit od hlavního deadlinu
+        if pd.notnull(deadline_ubyt) and deadline_ubyt != akce['deadline']:
+            # Formátování data
+            ubyt_str = deadline_ubyt.strftime('%d.%m.')
+            
+            # Pokud má deadline i čas (není půlnoc), přidáme ho
+            if deadline_ubyt.hour != 0 or deadline_ubyt.minute != 0:
+                ubyt_str += deadline_ubyt.strftime(' %H:%M')
+            
+            # Vykreslení (jemně pod hlavním boxem)
+            st.markdown(f"""
+                <div style="margin-top: -10px; margin-bottom: 15px; padding-left: 5px; color: #4B5563; font-size: 0.9rem;">
+                    🛏️ <b>Deadline ubytování:</b> {ubyt_str}
+                </div>
+            """, unsafe_allow_html=True)
+
         # 3. 🌦️ POČASÍ + 🌑 ZÁPAD SLUNCE
         if main_lat and main_lon:
             forecast = utils.get_forecast(main_lat, main_lon, akce['datum'])
