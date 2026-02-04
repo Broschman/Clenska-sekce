@@ -131,14 +131,19 @@ def vykreslit_detail_akce(akce, unique_key):
         else:
             st.success(f"📅 **Deadline:** {deadline_str}")
 
-        # --- CHYTRÝ DEADLINE UBYTOVÁNÍ ---
-        deadline_ubyt = akce.get('deadline_ubytovani') 
+        # --- NOVINKA: CHYTRÝ DEADLINE UBYTOVÁNÍ 🛏️ ---
+        # 1. Načteme hodnotu a rovnou ji převedeme na datetime (pro jistotu)
+        raw_ubyt = akce.get('deadline_ubytovani')
+        deadline_ubyt = pd.to_datetime(raw_ubyt, errors='coerce') 
         
-        # Zobrazí se POUZE pokud:
-        # 1. Je v Excelu něco vyplněno (pd.notnull)
-        # 2. A datum se liší od hlavního deadlinu (aby tam nebylo 2x to samé)
+        # 2. Podmínka:
+        # - pd.notnull(deadline_ubyt): Zkontroluje, jestli je to platné datum (ne NaT)
+        # - deadline_ubyt != akce['deadline']: Zkontroluje, jestli se liší od hlavního
         if pd.notnull(deadline_ubyt) and deadline_ubyt != akce['deadline']:
+            
+            # Teď už je to 100% datum, takže strftime bude fungovat
             ubyt_str = deadline_ubyt.strftime('%d.%m.')
+            
             if deadline_ubyt.hour != 0 or deadline_ubyt.minute != 0:
                 ubyt_str += deadline_ubyt.strftime(' %H:%M')
             
