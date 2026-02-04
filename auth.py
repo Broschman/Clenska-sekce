@@ -4,50 +4,45 @@ import hmac
 import time
 from datetime import datetime, timedelta
 
-# Nastavení expirace cookie
+# Konfigurace
 COOKIE_EXPIRY_DAYS = 30
 COOKIE_NAME = "rbk_login_token"
 
 def check_password():
     """
-    Vrátí True, pokud je uživatel ověřen.
-    Vrátí False, pokud ne (a zobrazí login formulář).
+    Vrátí True = Uživatel je uvnitř.
+    Vrátí False = Uživatel vidí formulář.
     """
     
-    # 1. Inicializace Cookie Manageru
+    # 1. VIP FAST TRACK (Okamžitá kontrola paměti) 🏎️
+    # Pokud už víme, že je uživatel přihlášený z minula (v rámci jednoho sezení),
+    # rovnou vracíme True. Neřešíme cookies, neřešíme nic. 0 ms zpoždění.
+    if st.session_state.get("is_logged_in", False):
+        return True
+
+    # 2. Inicializace Cookie Manageru
+    # (Toto se provede jen při prvním načtení stránky nebo F5)
     cookie_manager = stx.CookieManager(key="auth_cookie_manager")
-    
-    # 2. Načtení cookie
     cookie_value = cookie_manager.get(COOKIE_NAME)
     correct_password = str(st.secrets["general"]["password"])
     
-    # --- A) COOKIE NALEZENA A JE SPRÁVNÁ ---
+    # 3. KONTROLA COOKIE 🍪
     if cookie_value and hmac.compare_digest(str(cookie_value), correct_password):
+        # Cookie je platná -> Uložíme do "VIP paměti" a pustíme dál
+        st.session_state["is_logged_in"] = True
         return True
 
-    # --- B) UŽIVATEL PRÁVĚ ZADAL HESLO (SESSION STATE) ---
-    if st.session_state.get("password_correct", False):
-        return True
-
-    # --- C) FIX PROBLIKÁVÁNÍ (ANTI-FLASH) ⚡ ---
+    # 4. ANTI-FLASH (Zabránění probliknutí formuláře) ⚡
     # Pokud cookie je None, může to znamenat, že se jen nestihla načíst.
-    # Zkontrolujeme, jestli už jsme zkusili "počkat" (pomocí flagu v session_state).
-    
     if cookie_value is None and "auth_check_completed" not in st.session_state:
-        # Jsme tu poprvé. Cookie je None. Nevykreslíme formulář, ale vynutíme RERUN.
-        # Tím dáme CookieManageru čas, aby načetl data z prohlížeče.
         st.session_state["auth_check_completed"] = True
         try:
-            st.rerun() # Okamžitý restart skriptu
+            st.rerun()
         except AttributeError:
-            # Fallback pro starší verze Streamlitu
             st.experimental_rerun()
         return False
 
-    # --- D) COOKIE OPRAVDU NENÍ (ZOBRAZIT FORMULÁŘ) ---
-    # Sem se dostaneme jen tehdy, pokud ani po RERUNu cookie nebyla nalezena.
-    # Tzn. uživatel opravdu není přihlášený.
-    
+    # 5. LOGIN FORMULÁŘ (Pokud nic výše neklaplo)
     col1, col2, col3 = st.columns([1, 2, 1])
     
     with col2:
@@ -60,9 +55,10 @@ def check_password():
             
             if submit:
                 if hmac.compare_digest(password_input, correct_password):
-                    st.session_state["password_correct"] = True
+                    # Úspěch!
+                    st.session_state["is_logged_in"] = True # VIP Pass
                     
-                    # Uložení cookie
+                    # Uložení cookie na příště
                     expires = datetime.now() + timedelta(days=COOKIE_EXPIRY_DAYS)
                     cookie_manager.set(COOKIE_NAME, password_input, expires_at=expires)
                     
