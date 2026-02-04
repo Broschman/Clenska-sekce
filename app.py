@@ -222,7 +222,8 @@ def vykreslit_detail_akce(akce, unique_key):
                     
                     # Ubytování řešíme jen pokud to není trénink
                     if "trénink" not in typ_udalosti:
-                        deadline_ubyt = akce.get('deadline_ubytovani')
+                        deadline_ubyt = pd.to_datetime(akce.get('deadline_ubytovani'), errors='coerce')
+                        
                         zobrazit_ubyt = True
 
                         # Pokud deadline existuje (není prázdný) A už vypršel -> skryjeme checkbox
