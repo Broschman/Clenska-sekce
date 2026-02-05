@@ -364,30 +364,33 @@ def vykreslit_detail_akce(akce, unique_key):
     st.markdown("<hr style='margin: 10px 0;'>", unsafe_allow_html=True)
     st.markdown(f"#### 👥 Zapsaní ({len(lidi)})")
     
-    # === CSS FIX PRO ZAROVNÁNÍ ===
-    # Toto srovná texty a tlačítka do jedné roviny
+    # === CSS UPDATE PRO LEPŠÍ ZAROVNÁNÍ ===
     st.markdown("""
     <style>
-        /* 1. Vynutí vertikální centr pro všechny sloupce v seznamu */
+        /* 1. Zarovnání obsahu sloupců přesně na střed */
         div[data-testid="column"] {
             display: flex !important;
-            align-items: center !important; /* Vertikální střed */
+            align-items: center !important; 
             height: 100% !important;
         }
         
-        /* 2. Odstraní "neviditelnou mezeru" nad tlačítky */
-        div[data-testid="stButton"] {
-            padding-top: 0px !important;
-            margin-top: 0px !important;
-        }
+        /* 2. Oprava tlačítek - odstranění zbytečných mezer */
         div[data-testid="stButton"] button {
             margin-top: 0px !important;
+            margin-bottom: 0px !important;
+            padding-top: 0.25rem !important; /* Menší vnitřní padding tlačítka */
+            padding-bottom: 0.25rem !important;
+            height: auto !important;
+            min-height: 38px !important; /* Fixní výška aby neuskakovala */
         }
-        
-        /* 3. Zajistí, že text jména nemá zbytečné mezery */
+
+        /* 3. ZAROVNÁNÍ TEXTU (Jméno vs Číslo) - TOTO JE KLÍČOVÉ */
         div[data-testid="stMarkdownContainer"] p {
             margin-bottom: 0px !important;
             padding: 0px !important;
+            line-height: 1.2 !important; /* Sjednocení výšky řádku */
+            display: flex !important;
+            align-items: center !important;
         }
     </style>
     """, unsafe_allow_html=True)
@@ -404,21 +407,21 @@ def vykreslit_detail_akce(akce, unique_key):
         h4.markdown("<b>Doprava</b>", unsafe_allow_html=True)
         h5.markdown("🛏️", unsafe_allow_html=True)
         
-        st.markdown("<hr style='margin: 5px 0 5px 0; border-top: 2px solid #E5E7EB;'>", unsafe_allow_html=True)
+        st.markdown("<hr style='margin: 5px 0 8px 0; border-top: 2px solid #E5E7EB;'>", unsafe_allow_html=True)
         
         # --- ŘÁDKY ---
         for i, (idx, row) in enumerate(lidi.iterrows()):
             
-            # Barva pozadí (Zebra)
-            bg_color = "#FFFFFF" if i % 2 == 0 else "#F3F4F6"
+            bg_color = "#FFFFFF" if i % 2 == 0 else "#F8F9FA" # Ještě jemnější šedá pro sudé
             
-            # Styl řádku (nižší padding = kompaktnější vzhled)
+            # ZVĚTŠENÝ PADDING (8px místo 4px) - Tlačítko se teď vejde!
             row_style = f"""
             {{
                 background-color: {bg_color};
-                border-radius: 6px;
-                padding: 4px 5px;  /* Horní/Dolní padding, Levý/Pravý padding */
-                margin-bottom: 2px;
+                border-radius: 8px;
+                padding: 8px 10px; 
+                margin-bottom: 4px;
+                border: 1px solid {bg_color}; /* Fix pro vizuální čistotu */
             }}
             """
 
@@ -426,14 +429,13 @@ def vykreslit_detail_akce(akce, unique_key):
                 key=f"row_cont_{unique_key}_{i}",
                 css_styles=row_style
             ):
-                # ZDE UŽ NEPOTŘEBUJEME vertical_alignment="center", PROTOŽE TO ŘEŠÍ CSS NAHOŘE
                 c1, c2, c3, c4, c5, c6 = st.columns(cols_ratio)
                 
-                # 1. Číslo
-                c1.write(f"{i+1}.")
+                # 1. Číslo (přidána tečka pro lepší vzhled)
+                c1.markdown(f"<span style='color: #6B7280; font-weight: bold;'>{i+1}.</span>", unsafe_allow_html=True)
                 
-                # 2. Jméno
-                c2.markdown(f"**{row['jméno']}**")
+                # 2. Jméno (Font size inherit, aby se nehádal)
+                c2.markdown(f"<span style='font-weight: 600; font-size: 1rem;'>{row['jméno']}</span>", unsafe_allow_html=True)
                 
                 # 3. Poznámka
                 poznamka_text = row.get('poznámka', '')
@@ -464,6 +466,7 @@ def vykreslit_detail_akce(akce, unique_key):
                 
                 with c6:
                     if je_k_smazani:
+                        # Varování
                         if st.button("✅", key=f"conf_del_{unique_key}_{i}"):
                             df_curr = conn.read(worksheet="prihlasky", ttl=0)
                             df_curr['id_akce'] = df_curr['id_akce'].astype(str).str.replace(r'\.0$', '', regex=True)
@@ -472,7 +475,7 @@ def vykreslit_detail_akce(akce, unique_key):
                             del st.session_state[delete_key_state]
                             st.rerun()
                     elif not je_po_deadlinu:
-                        # Tady taky use_container_width=False, aby koš nebyl roztažený
+                        # Koš
                         if st.button("🗑️", key=f"del_{unique_key}_{i}"):
                              st.session_state[delete_key_state] = row['jméno']
                              st.rerun()
