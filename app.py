@@ -360,104 +360,128 @@ def vykreslit_detail_akce(akce, unique_key):
 
     elif mapa_raw: st.warning("⚠️ Mapa se nenačetla.")
 
-    # --- SEZNAM (GRID KARET) ---
+    # --- SEZNAM (DLOUHÉ KARTY / ROW CARDS) ---
     st.markdown("<hr style='margin: 10px 0;'>", unsafe_allow_html=True)
     st.markdown(f"#### 👥 Zapsaní ({len(lidi)})")
 
+    # CSS pro vertikální zarovnání obsahu uvnitř karty
+    st.markdown("""
+    <style>
+        div[data-testid="stVerticalBlockBorderWrapper"] > div {
+             gap: 0px; /* Odstraní mezery mezi elementy uvnitř karty */
+        }
+        /* Zarovná texty a tlačítka na střed řádku */
+        div[data-testid="column"] {
+            display: flex !important;
+            align-items: center !important;
+            height: 100% !important;
+        }
+        /* Odstraní marginy tlačítek */
+        div[data-testid="stButton"] button {
+            margin: 0px !important;
+            height: auto !important;
+            padding-top: 4px !important;
+            padding-bottom: 4px !important;
+        }
+        /* Odstraní marginy textů */
+        div[data-testid="stMarkdownContainer"] p {
+            margin: 0px !important;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
     if not lidi.empty:
-        # 1. Konfigurace mřížky (počet sloupců vedle sebe)
-        N_COLS = 3
-        cols = st.columns(N_COLS) # Vytvoříme 3 hlavní sloupce
+        # Poměry sloupců uvnitř karty
+        # [Index, Jméno, Poznámka, Doprava, Ubytko, Koš]
+        cols_ratio = [0.4, 2.5, 2, 1.5, 0.5, 0.5]
+        
+        # (Volitelné) Hlavička - pokud ji chceš schovat a nechat jen karty, smaž tuto část
+        h1, h2, h3, h4, h5, h6 = st.columns(cols_ratio)
+        h1.caption("#")
+        h2.caption("Jméno")
+        h3.caption("Poznámka")
+        h4.caption("Doprava")
+        h5.caption("🛏️")
         
         for i, (idx, row) in enumerate(lidi.iterrows()):
-            # Vybereme sloupec, do kterého kartu vložíme (0, 1, 2, 0, 1, 2...)
-            current_col = cols[i % N_COLS]
             
-            with current_col:
-                # 2. Vytvoření karty (Boxík s rámečkem)
-                # Použijeme stylable_container pro vzhled karty
-                card_css = """
-                {
-                    border: 1px solid #E5E7EB;
-                    border-radius: 12px;
-                    padding: 15px;
-                    background-color: white;
-                    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-                    margin-bottom: 20px;
-                    height: 100%; /* Aby byly karty stejně vysoké */
-                    display: flex;
-                    flex-direction: column;
-                    justify-content: space-between;
-                }
-                """
+            # CSS pro kartu (Row Card)
+            # Bílý box, stín, zaoblené rohy, margin mezi kartami
+            card_style = """
+            {
+                background-color: #ffffff;
+                border: 1px solid #E5E7EB;
+                border-radius: 10px;
+                padding: 10px 15px;
+                margin-bottom: 8px; /* Mezera mezi kartami */
+                box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+                transition: transform 0.1s, box-shadow 0.1s;
+            }
+            """
+            # Hover efekt (volitelné - přes Python to nejde tak snadno, ale stín stačí)
+            
+            with stylable_container(key=f"card_row_{unique_key}_{i}", css_styles=card_style):
                 
-                with stylable_container(key=f"card_{unique_key}_{i}", css_styles=card_css):
-                    
-                    # --- VRŠEK KARTY (Jméno + Koš) ---
-                    c_top_name, c_top_del = st.columns([4, 1])
-                    
-                    with c_top_name:
-                        st.markdown(f"**{i+1}. {row['jméno']}**")
-                        # Poznámka hned pod jménem (pokud je)
-                        if row.get('poznámka'):
-                            st.caption(f"📝 {row['poznámka']}")
-                        else:
-                            # Prázdný řádek, aby karty tolik neskákaly výškou
-                            st.markdown("<div style='height: 20px'></div>", unsafe_allow_html=True)
-
-                    with c_top_del:
-                        # Logika mazání (stejná jako dřív, jen v rohu karty)
-                        delete_active = (delete_key_state in st.session_state) and (st.session_state[delete_key_state] == row['jméno'])
-                        
-                        if delete_active:
-                             if st.button("✅", key=f"conf_{unique_key}_{i}", help="Potvrdit smazání"):
-                                df_curr = conn.read(worksheet="prihlasky", ttl=0)
-                                df_curr['id_akce'] = df_curr['id_akce'].astype(str).str.replace(r'\.0$', '', regex=True)
-                                conn.update(worksheet="prihlasky", data=df_curr[~((df_curr['id_akce'] == akce_id_str) & (df_curr['jméno'] == row['jméno']))])
-                                utils.handle_driver_removal(conn, akce_id_str, row['jméno'])
-                                del st.session_state[delete_key_state]
-                                st.rerun()
-                        elif not je_po_deadlinu:
-                            # Minimalistický koš
-                            if st.button("🗑️", key=f"del_{unique_key}_{i}"):
-                                st.session_state[delete_key_state] = row['jméno']
-                                st.rerun()
-
-                    st.markdown("---") # Oddělovač v kartě
-                    
-                    # --- SPODEK KARTY (Doprava + Ubytko) ---
-                    # Tady už zarovnání neřešíme, každý prvek má svůj řádek nebo sloupec
-                    
-                    # 1. Doprava (Velké tlačítko)
+                # Uvnitř karty vytvoříme sloupce
+                c1, c2, c3, c4, c5, c6 = st.columns(cols_ratio)
+                
+                # 1. Číslo
+                c1.markdown(f"<span style='color: #9CA3AF; font-weight: bold;'>{i+1}.</span>", unsafe_allow_html=True)
+                
+                # 2. Jméno (Větší a výraznější)
+                c2.markdown(f"<span style='font-size: 1.05rem; font-weight: 600; color: #111827;'>{row['jméno']}</span>", unsafe_allow_html=True)
+                
+                # 3. Poznámka
+                poznamka_text = row.get('poznámka', '')
+                if poznamka_text:
+                    c3.caption(f"📝 {poznamka_text}")
+                else:
+                    c3.write("")
+                
+                # 4. Tlačítko DOPRAVY
+                with c4:
                     dopr = str(row.get('doprava', ''))
-                    # Barvy a texty (zkopírované z tvé původní logiky)
+                    # Logika labelů
+                    type_btn = "secondary"
                     if not dopr or dopr == "nan": 
-                        btn_label = "➕ Nastavit dopravu"
-                        type_btn = "secondary"
+                        btn_label = "➕ Doprava"
                     elif "Řidič" in dopr: 
                         btn_label = "🚙 Řidič"
-                        type_btn = "primary"
+                        type_btn = "primary" # Zvýrazní řidiče
                     elif "Spolujízda" in dopr or "Jedu s" in dopr: 
                         clean = dopr.replace("Spolujízda:", "").replace("Spolujízda", "").replace("Jedu s:", "").strip()
                         btn_label = f"➡️ {clean}"
-                        type_btn = "secondary"
                     elif "Chci" in dopr or "Hledám" in dopr: 
-                        btn_label = "🙋‍♂️ Hledám odvoz"
-                        type_btn = "secondary" # Nebo warning barvu, pokud chceš
+                        btn_label = "🙋‍♂️ Hledám"
                     else: 
                         btn_label = dopr
-                        type_btn = "secondary"
 
-                    if st.button(btn_label, key=f"btn_card_{unique_key}_{i}", use_container_width=True, type=type_btn):
+                    if st.button(btn_label, key=f"btn_r_{unique_key}_{i}", use_container_width=True, type=type_btn):
                          utils.show_doprava_dialog(akce_id_str, akce['název'], akce['datum'].strftime('%d.%m.'), row['jméno'])
-                    
-                    # 2. Ubytování (Jako badge pod tlačítkem)
+
+                # 5. Ubytování
+                with c5:
                     ubyt = str(row.get('ubytování', ''))
                     if ubyt and "Ano" in ubyt:
-                        st.markdown(
-                            "<div style='margin-top: 8px; text-align: center; background-color: #FEF3C7; color: #92400E; padding: 4px; border-radius: 6px; font-size: 0.8em; font-weight: bold;'>🛏️ Společné spaní</div>", 
-                            unsafe_allow_html=True
-                        )
+                        st.markdown("<div style='text-align:center;'>🛏️</div>", unsafe_allow_html=True)
+                
+                # 6. Koš
+                je_k_smazani = (delete_key_state in st.session_state) and (st.session_state[delete_key_state] == row['jméno'])
+                
+                with c6:
+                    if je_k_smazani:
+                        if st.button("✅", key=f"conf_del_{unique_key}_{i}", help="Potvrdit smazání"):
+                            df_curr = conn.read(worksheet="prihlasky", ttl=0)
+                            df_curr['id_akce'] = df_curr['id_akce'].astype(str).str.replace(r'\.0$', '', regex=True)
+                            conn.update(worksheet="prihlasky", data=df_curr[~((df_curr['id_akce'] == akce_id_str) & (df_curr['jméno'] == row['jméno']))])
+                            utils.handle_driver_removal(conn, akce_id_str, row['jméno'])
+                            del st.session_state[delete_key_state]
+                            st.rerun()
+                    elif not je_po_deadlinu:
+                        # Uděláme koš nenápadný (secondary/flat)
+                        if st.button("🗑️", key=f"del_{unique_key}_{i}"):
+                             st.session_state[delete_key_state] = row['jméno']
+                             st.rerun()
 
     else:
         st.info("Zatím nikdo. Buď první!")
