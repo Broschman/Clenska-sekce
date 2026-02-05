@@ -360,45 +360,46 @@ def vykreslit_detail_akce(akce, unique_key):
 
     elif mapa_raw: st.warning("⚠️ Mapa se nenačetla.")
 
-    # --- SEZNAM (ROBUSTNÍ KARTY) ---
+    # --- SEZNAM (ROW CARDS - FINAL CENTERING) ---
     st.markdown("<hr style='margin: 10px 0;'>", unsafe_allow_html=True)
     st.markdown(f"#### 👥 Zapsaní ({len(lidi)})")
 
-    # CSS pro vertikální zarovnání obsahu uvnitř karty
+    # CSS pro dokonalé zarovnání
     st.markdown("""
     <style>
-        /* Odstraní mezery mezi elementy uvnitř karty, aby nám nerozhazovaly layout */
+        /* 1. Reset mezer uvnitř karty */
         div[data-testid="stVerticalBlockBorderWrapper"] > div {
              gap: 0px; 
         }
         
-        /* KLÍČOVÉ: Všechny sloupce (texty i tlačítka) zarovná přesně na střed výšky */
+        /* 2. Zarovnání obsahu ve sloupcích */
         div[data-testid="column"] {
             display: flex !important;
-            align-items: center !important;
+            flex-direction: column !important; /* Streamlit sloupce jsou vertikální stacky */
+            justify-content: center !important; /* Toto zarovná obsah vertikálně na střed */
             height: 100% !important;
-            min-height: 50px !important; /* Pojistka pro výšku sloupce */
         }
         
-        /* Reset marginů u tlačítek, aby neuskakovala */
+        /* 3. Tlačítka - reset marginů */
         div[data-testid="stButton"] button {
             margin: 0px !important;
             height: auto !important;
-            min-height: 42px !important; /* Tlačítko bude mít vždy solidní výšku */
+            min-height: 42px !important; 
         }
         
-        /* Texty - odstranění marginů */
+        /* 4. Texty - reset marginů */
         div[data-testid="stMarkdownContainer"] p {
             margin: 0px !important;
+            line-height: 1.2 !important;
         }
     </style>
     """, unsafe_allow_html=True)
 
     if not lidi.empty:
-        # Poměry sloupců [Index, Jméno, Poznámka, Doprava, Ubytko, Koš]
+        # Poměry [Index, Jméno, Poznámka, Doprava, Ubytko, Koš]
         cols_ratio = [0.4, 2.5, 2, 1.5, 0.5, 0.5]
         
-        # Hlavičku necháme pro přehlednost (volitelné)
+        # Hlavička (volitelná)
         h1, h2, h3, h4, h5, h6 = st.columns(cols_ratio)
         h1.caption("#")
         h2.caption("Jméno")
@@ -408,26 +409,28 @@ def vykreslit_detail_akce(akce, unique_key):
         
         for i, (idx, row) in enumerate(lidi.iterrows()):
             
-            # === ZMĚNA ZDE: "TLUSTŠÍ" KARTA ===
+            # Styl karty
             card_style = """
             {
                 background-color: #ffffff;
                 border: 1px solid #E5E7EB;
-                border-radius: 12px;       /* Větší zaoblení */
-                padding: 16px 20px;        /* Větší padding (bylo 10px) = Větší výška */
-                margin-bottom: 12px;       /* Větší mezera mezi kartami */
-                box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                border-radius: 12px;
+                padding: 12px 20px;       /* Symetrický padding nahoře/dole */
+                margin-bottom: 10px;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.05);
             }
             """
             
             with stylable_container(key=f"card_row_{unique_key}_{i}", css_styles=card_style):
                 
-                c1, c2, c3, c4, c5, c6 = st.columns(cols_ratio)
+                # === ZMĚNA: vertical_alignment="center" ===
+                # Toto řekne Streamlitu: "Srovnej mi ty sloupce k sobě na střed"
+                c1, c2, c3, c4, c5, c6 = st.columns(cols_ratio, vertical_alignment="center")
                 
                 # 1. Číslo
                 c1.markdown(f"<span style='color: #9CA3AF; font-weight: bold; font-size: 1rem;'>{i+1}.</span>", unsafe_allow_html=True)
                 
-                # 2. Jméno (Větší písmo)
+                # 2. Jméno
                 c2.markdown(f"<span style='font-size: 1.1rem; font-weight: 600; color: #111827;'>{row['jméno']}</span>", unsafe_allow_html=True)
                 
                 # 3. Poznámka
@@ -435,7 +438,7 @@ def vykreslit_detail_akce(akce, unique_key):
                 if poznamka_text:
                     c3.caption(f"📝 {poznamka_text}")
                 else:
-                    c3.write("")
+                    c3.write("") # Prázdný element, aby sloupec nezkolaboval
                 
                 # 4. Tlačítko DOPRAVY
                 with c4:
@@ -462,14 +465,15 @@ def vykreslit_detail_akce(akce, unique_key):
                 with c5:
                     ubyt = str(row.get('ubytování', ''))
                     if ubyt and "Ano" in ubyt:
-                        st.markdown("<div style='text-align:center; font-size: 1.2rem;'>🛏️</div>", unsafe_allow_html=True)
+                        # Emoji taky zarovnáme na střed
+                        st.markdown("<div style='text-align:center; font-size: 1.2rem; line-height: 1;'>🛏️</div>", unsafe_allow_html=True)
                 
                 # 6. Koš
                 je_k_smazani = (delete_key_state in st.session_state) and (st.session_state[delete_key_state] == row['jméno'])
                 
                 with c6:
                     if je_k_smazani:
-                        if st.button("✅", key=f"conf_del_{unique_key}_{i}", help="Potvrdit smazání"):
+                        if st.button("✅", key=f"conf_del_{unique_key}_{i}", help="Potvrdit"):
                             df_curr = conn.read(worksheet="prihlasky", ttl=0)
                             df_curr['id_akce'] = df_curr['id_akce'].astype(str).str.replace(r'\.0$', '', regex=True)
                             conn.update(worksheet="prihlasky", data=df_curr[~((df_curr['id_akce'] == akce_id_str) & (df_curr['jméno'] == row['jméno']))])
