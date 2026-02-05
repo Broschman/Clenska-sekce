@@ -360,130 +360,108 @@ def vykreslit_detail_akce(akce, unique_key):
 
     elif mapa_raw: st.warning("⚠️ Mapa se nenačetla.")
 
-    # --- SEZNAM (ROW CARDS - FINAL CENTERING) ---
+    # --- SEZNAM (EXPANDERY / ROZBALOVACÍ KARTY) ---
     st.markdown("<hr style='margin: 10px 0;'>", unsafe_allow_html=True)
     st.markdown(f"#### 👥 Zapsaní ({len(lidi)})")
 
-    # CSS pro dokonalé zarovnání
+    # CSS: Pouze drobné doladění, aby expandery nebyly nalepené na sobě
     st.markdown("""
     <style>
-        /* 1. Reset mezer uvnitř karty */
-        div[data-testid="stVerticalBlockBorderWrapper"] > div {
-             gap: 0px; 
+        .streamlit-expanderHeader {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #1f2937;
+            background-color: white;
+            border: 1px solid #E5E7EB;
+            border-radius: 8px;
         }
-        
-        /* 2. Zarovnání obsahu ve sloupcích */
-        div[data-testid="column"] {
-            display: flex !important;
-            flex-direction: column !important; /* Streamlit sloupce jsou vertikální stacky */
-            justify-content: center !important; /* Toto zarovná obsah vertikálně na střed */
-            height: 100% !important;
-        }
-        
-        /* 3. Tlačítka - reset marginů */
-        div[data-testid="stButton"] button {
-            margin: 0px !important;
-            height: auto !important;
-            min-height: 42px !important; 
-        }
-        
-        /* 4. Texty - reset marginů */
-        div[data-testid="stMarkdownContainer"] p {
-            margin: 0px !important;
-            line-height: 1.2 !important;
+        /* Zvýraznění textu v hlavičce */
+        .streamlit-expanderHeader p {
+            font-size: 1rem;
         }
     </style>
     """, unsafe_allow_html=True)
 
     if not lidi.empty:
-        # Poměry [Index, Jméno, Poznámka, Doprava, Ubytko, Koš]
-        cols_ratio = [0.4, 2.5, 2, 1.5, 0.5, 0.5]
-        
-        # Hlavička (volitelná)
-        h1, h2, h3, h4, h5, h6 = st.columns(cols_ratio)
-        h1.caption("#")
-        h2.caption("Jméno")
-        h3.caption("Poznámka")
-        h4.caption("Doprava")
-        h5.caption("🛏️")
-        
         for i, (idx, row) in enumerate(lidi.iterrows()):
             
-            # Styl karty
-            card_style = """
-            {
-                background-color: #ffffff;
-                border: 1px solid #E5E7EB;
-                border-radius: 12px;
-                padding: 12px 20px;       /* Symetrický padding nahoře/dole */
-                margin-bottom: 10px;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-            }
-            """
+            # 1. PŘÍPRAVA TEXTU PRO HLAVIČKU (Header)
+            # Musí to být jeden string, Streamlit v hlavičce expanderu nepodporuje sloupce.
             
-            with stylable_container(key=f"card_row_{unique_key}_{i}", css_styles=card_style):
+            # Jméno
+            jmeno = row['jméno']
+            
+            # Doprava (Text + Ikona)
+            dopr_raw = str(row.get('doprava', ''))
+            dopr_label = "❓ Doprava nevyřešena" # Default
+            
+            if not dopr_raw or dopr_raw == "nan":
+                dopr_label = "⚪ Bez dopravy"
+            elif "Řidič" in dopr_raw:
+                dopr_label = "🚙 Řidič"
+            elif "Spolujízda" in dopr_raw or "Jedu s" in dopr_raw:
+                clean = dopr_raw.replace("Spolujízda:", "").replace("Spolujízda", "").replace("Jedu s:", "").strip()
+                dopr_label = f"➡️ Jede s: {clean}"
+            elif "Chci" in dopr_raw or "Hledám" in dopr_raw:
+                dopr_label = "🙋‍♂️ Hledá odvoz"
+            
+            # Ubytování
+            ubyt_raw = str(row.get('ubytování', ''))
+            ubyt_icon = "🛏️" if ubyt_raw and "Ano" in ubyt_raw else ""
+            
+            # Poznámka
+            poznamka = row.get('poznámka', '')
+            poznamka_str = f" • 📝 {poznamka}" if poznamka else ""
+            
+            # FINÁLNÍ STRING HLAVIČKY
+            # Formát: 1. Jméno | Status dopravy | Ubytko | Poznámka
+            header_text = f"{i+1}. {jmeno}  |  {dopr_label} {ubyt_icon}{poznamka_str}"
+
+            # 2. VYKRESLENÍ EXPANDERU
+            # expanded=False zajistí, že jsou defaultně zavřené
+            with st.expander(header_text, expanded=False):
                 
-                # === ZMĚNA: vertical_alignment="center" ===
-                # Toto řekne Streamlitu: "Srovnej mi ty sloupce k sobě na střed"
-                c1, c2, c3, c4, c5, c6 = st.columns(cols_ratio, vertical_alignment="center")
+                # --- VNITŘEK KARTY (Tady je dost místa!) ---
                 
-                # 1. Číslo
-                c1.markdown(f"<span style='color: #9CA3AF; font-weight: bold; font-size: 1rem;'>{i+1}.</span>", unsafe_allow_html=True)
+                st.caption(f"Detail přihlášky: {jmeno}")
                 
-                # 2. Jméno
-                c2.markdown(f"<span style='font-size: 1.1rem; font-weight: 600; color: #111827;'>{row['jméno']}</span>", unsafe_allow_html=True)
+                # Rozložení ovládacích prvků
+                c_btn_doprava, c_btn_delete = st.columns([3, 1], gap="medium")
                 
-                # 3. Poznámka
-                poznamka_text = row.get('poznámka', '')
-                if poznamka_text:
-                    c3.caption(f"📝 {poznamka_text}")
-                else:
-                    c3.write("") # Prázdný element, aby sloupec nezkolaboval
-                
-                # 4. Tlačítko DOPRAVY
-                with c4:
-                    dopr = str(row.get('doprava', ''))
-                    type_btn = "secondary"
+                with c_btn_doprava:
+                    # Logika pro barvu tlačítka dopravy
+                    btn_type = "primary" if "Řidič" in dopr_raw else "secondary"
+                    btn_text = "🔧 Nastavit / Změnit dopravu"
                     
-                    if not dopr or dopr == "nan": 
-                        btn_label = "➕ Doprava"
-                    elif "Řidič" in dopr: 
-                        btn_label = "🚙 Řidič"
-                        type_btn = "primary"
-                    elif "Spolujízda" in dopr or "Jedu s" in dopr: 
-                        clean = dopr.replace("Spolujízda:", "").replace("Spolujízda", "").replace("Jedu s:", "").strip()
-                        btn_label = f"➡️ {clean}"
-                    elif "Chci" in dopr or "Hledám" in dopr: 
-                        btn_label = "🙋‍♂️ Hledám"
-                    else: 
-                        btn_label = dopr
-
-                    if st.button(btn_label, key=f"btn_r_{unique_key}_{i}", use_container_width=True, type=type_btn):
-                         utils.show_doprava_dialog(akce_id_str, akce['název'], akce['datum'].strftime('%d.%m.'), row['jméno'])
-
-                # 5. Ubytování
-                with c5:
-                    ubyt = str(row.get('ubytování', ''))
-                    if ubyt and "Ano" in ubyt:
-                        # Emoji taky zarovnáme na střed
-                        st.markdown("<div style='text-align:center; font-size: 1.2rem; line-height: 1;'>🛏️</div>", unsafe_allow_html=True)
-                
-                # 6. Koš
-                je_k_smazani = (delete_key_state in st.session_state) and (st.session_state[delete_key_state] == row['jméno'])
-                
-                with c6:
+                    if st.button(btn_text, key=f"btn_exp_{unique_key}_{i}", use_container_width=True, type=btn_type):
+                        utils.show_doprava_dialog(akce_id_str, akce['název'], akce['datum'].strftime('%d.%m.'), row['jméno'])
+                        
+                with c_btn_delete:
+                    # Logika mazání
+                    je_k_smazani = (delete_key_state in st.session_state) and (st.session_state[delete_key_state] == row['jméno'])
+                    
                     if je_k_smazani:
-                        if st.button("✅", key=f"conf_del_{unique_key}_{i}", help="Potvrdit"):
+                        st.warning("Opravdu?")
+                        col_y, col_n = st.columns(2)
+                        if col_y.button("✅", key=f"yes_exp_{unique_key}_{i}", use_container_width=True):
                             df_curr = conn.read(worksheet="prihlasky", ttl=0)
                             df_curr['id_akce'] = df_curr['id_akce'].astype(str).str.replace(r'\.0$', '', regex=True)
                             conn.update(worksheet="prihlasky", data=df_curr[~((df_curr['id_akce'] == akce_id_str) & (df_curr['jméno'] == row['jméno']))])
                             utils.handle_driver_removal(conn, akce_id_str, row['jméno'])
                             del st.session_state[delete_key_state]
                             st.rerun()
+                        if col_n.button("❌", key=f"no_exp_{unique_key}_{i}", use_container_width=True):
+                            del st.session_state[delete_key_state]
+                            st.rerun()
                     elif not je_po_deadlinu:
-                        if st.button("🗑️", key=f"del_{unique_key}_{i}"):
+                         # Tlačítko smazat - červené, výrazné, když už je to rozbalené
+                         if st.button("🗑️ Smazat", key=f"del_exp_{unique_key}_{i}", use_container_width=True):
                              st.session_state[delete_key_state] = row['jméno']
                              st.rerun()
+                
+                # Zobrazení detailů (jen pro kontrolu)
+                if poznamka:
+                    st.info(f"Poznámka: {poznamka}")
 
     else:
         st.info("Zatím nikdo. Buď první!")
