@@ -360,34 +360,55 @@ def vykreslit_detail_akce(akce, unique_key):
 
     elif mapa_raw: st.warning("⚠️ Mapa se nenačetla.")
 
-    # --- SEZNAM (EXPANDERY S TABULKOVÝM ZAROVNÁNÍM) ---
+    # --- SEZNAM (EXPANDERY S TVRDÝMI MEZERAMI) ---
     st.markdown("<hr style='margin: 10px 0;'>", unsafe_allow_html=True)
     st.markdown(f"#### 👥 Zapsaní ({len(lidi)})")
 
-    # CSS: Vynutíme monospace font v hlavičce expanderu, aby zarovnání fungovalo
+    # CSS: Vynucení Monospace fontu v hlavičce
+    # Bez toho by tvrdé mezery nefungovaly přesně (kvůli různé šířce písmen)
     st.markdown("""
     <style>
-        .streamlit-expanderHeader p {
-            font-family: 'Roboto Mono', 'Courier New', monospace !important;
-            font-size: 0.9rem !important; /* Trochu menší, aby se to vešlo */
-            font-weight: 500 !important;
-            white-space: pre !important; /* Klíčové: Respektuje mezery v textu */
+        /* Cílíme přímo na element uvnitř hlavičky expanderu */
+        div[data-testid="stExpander"] summary, 
+        div[data-testid="stExpander"] summary p,
+        div[data-testid="stExpander"] summary span {
+            font-family: 'Courier New', Courier, monospace !important;
+            font-size: 0.85rem !important;
+            font-weight: 600 !important;
         }
-        /* Na mobilu to může přetékat, povolíme scrollbar */
-        .streamlit-expanderHeader {
-            overflow-x: auto !important;
+        
+        /* Skryje případné tooltipy nebo dekorace */
+        div[data-testid="stExpander"] summary:hover {
+            color: #1f2937 !important;
         }
     </style>
     """, unsafe_allow_html=True)
 
+    # --- POMOCNÁ FUNKCE PRO ZAROVNÁNÍ ---
+    def format_cell(text, width):
+        """
+        Ořízne text na max width a doplní TVRDÉ MEZERY (\u00A0) do konce.
+        """
+        text = str(text)
+        # 1. Oříznutí, pokud je moc dlouhý
+        if len(text) > width:
+            text = text[:width-2] + ".."
+        
+        # 2. Výpočet kolik mezer chybí
+        spaces_needed = width - len(text)
+        
+        # 3. Doplnění tvrdými mezerami (to je ten trik!)
+        return text + ("\u00A0" * spaces_needed)
+
     if not lidi.empty:
         # Definice šířek sloupců (počet znaků)
-        W_INDEX = 3
-        W_JMENO = 22
-        W_DOPRAVA = 25
+        W_INDEX = 4
+        W_JMENO = 20
+        W_DOPRAVA = 22
         
-        # Legenda (volitelná, jen pro info)
-        # st.caption(" #   Jméno                 Doprava")
+        # Volitelné: Legenda nad seznamem (aby bylo jasné, co je co)
+        # Použijeme code blok nebo preformatted text, aby to sedělo s fontem dole
+        # st.markdown(f"<div style='font-family: monospace; font-size: 0.8rem; color: #6B7280; padding-left: 15px; margin-bottom: 5px;'>{'#'.ljust(W_INDEX)} {'Jméno'.ljust(W_JMENO)} {'Doprava'.ljust(W_DOPRAVA)}</div>", unsafe_allow_html=True)
 
         for i, (idx, row) in enumerate(lidi.iterrows()):
             
@@ -410,15 +431,13 @@ def vykreslit_detail_akce(akce, unique_key):
             }}
             """
             
-            # 1. PŘÍPRAVA DAT
-            # Index (např. "1. ")
-            idx_str = f"{i+1}.".ljust(W_INDEX)
+            # 1. PŘÍPRAVA DAT (S POUŽITÍM TVRDÝCH MEZER)
             
-            # Jméno (Ořízneme na max šířku, kdyby bylo moc dlouhé)
-            raw_jmeno = str(row['jméno'])
-            if len(raw_jmeno) > (W_JMENO - 2):
-                raw_jmeno = raw_jmeno[:W_JMENO-2] + ".."
-            jmeno_str = raw_jmeno.ljust(W_JMENO)
+            # Index
+            idx_formatted = format_cell(f"{i+1}.", W_INDEX)
+            
+            # Jméno
+            jmeno_formatted = format_cell(row['jméno'], W_JMENO)
             
             # Doprava
             dopr_raw = str(row.get('doprava', ''))
@@ -426,32 +445,33 @@ def vykreslit_detail_akce(akce, unique_key):
             elif "Řidič" in dopr_raw: d_text = "🚙 Řidič"
             elif "Spolujízda" in dopr_raw or "Jedu s" in dopr_raw:
                 clean = dopr_raw.replace("Spolujízda:", "").replace("Spolujízda", "").replace("Jedu s:", "").strip()
-                # Zkrácení jména řidiče, aby se nerozbilo formátování
-                if len(clean) > 10: clean = clean[:9] + "."
                 d_text = f"➡️ {clean}"
             elif "Chci" in dopr_raw or "Hledám" in dopr_raw: d_text = "🙋‍♂️ Hledá odvoz"
             else: d_text = "❓ Nevyřešeno"
             
-            dopr_str = d_text.ljust(W_DOPRAVA)
+            dopr_formatted = format_cell(d_text, W_DOPRAVA)
             
-            # Ikonky a poznámka (ty už mohou "plavat" na konci)
+            # Ikony a poznámka (na konci už zarovnávat nemusíme)
             ubyt_raw = str(row.get('ubytování', ''))
-            ubyt_icon = " 🛏️" if ubyt_raw and "Ano" in ubyt_raw else "   " # Fixní šířka pro ikonu
+            ubyt_icon = "🛏️" if ubyt_raw and "Ano" in ubyt_raw else ""
             
             poznamka = row.get('poznámka', '')
-            poznamka_str = f"  📝 {poznamka}" if poznamka else ""
-            
-            # 2. SESTAVENÍ HLAVIČKY
-            # Díky CSS 'white-space: pre' a monospace fontu budou mezery fungovat jako tabulátory
-            header_text = f"{idx_str}{jmeno_str}{dopr_str}{ubyt_icon}{poznamka_str}"
+            # Pokud je poznámka, dáme ji na konec
+            extra_info = f" {ubyt_icon}"
+            if poznamka:
+                extra_info += f"  📝 {poznamka}"
+
+            # 2. FINÁLNÍ TEXT HLAVIČKY
+            # Spojíme to dohromady. Protože používáme \u00A0, Streamlit to "nesežere".
+            header_text = f"{idx_formatted}{jmeno_formatted}{dopr_formatted}{extra_info}"
 
             # 3. VYKRESLENÍ
-            with stylable_container(key=f"exp_aligned_{unique_key}_{i}", css_styles=zebra_style):
+            with stylable_container(key=f"exp_fix_{unique_key}_{i}", css_styles=zebra_style):
                 st.markdown(f"<div style='margin-bottom: 8px;'>", unsafe_allow_html=True)
                 
                 with st.expander(header_text, expanded=False):
                     
-                    st.caption(f"Celé jméno: {row['jméno']}") # Pro případ, že bylo oříznuto
+                    st.caption(f"Celé jméno: {row['jméno']}")
                     c_btn_doprava, c_btn_delete = st.columns([3, 1], gap="medium")
                     
                     with c_btn_doprava:
