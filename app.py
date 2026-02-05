@@ -379,7 +379,7 @@ def vykreslit_detail_akce(akce, unique_key):
             
             # --- ZEBRA LOGIKA ---
             # Sudé řádky bílé, liché jemně šedé
-            bg_color = "#FFFFFF" if i % 2 == 0 else "#F9FAFB"
+            bg_color = "#FFFFFF" if i % 2 == 0 else "#F1F5F9"
             border_color = "#E5E7EB"
             
             # CSS specifické pro tento jeden expander
