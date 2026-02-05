@@ -360,7 +360,7 @@ def vykreslit_detail_akce(akce, unique_key):
 
     elif mapa_raw: st.warning("⚠️ Mapa se nenačetla.")
 
-    # --- SEZNAM (ROBOTO MONO + FUNKČNÍ ŠIPKA) ---
+    # --- SEZNAM (FINAL FIX - ROBOTO MONO + FUNKČNÍ IKONA) ---
     st.markdown("<hr style='margin: 10px 0;'>", unsafe_allow_html=True)
     st.markdown(f"#### 👥 Zapsaní ({len(lidi)})")
 
@@ -369,21 +369,25 @@ def vykreslit_detail_akce(akce, unique_key):
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;600&display=swap');
 
-        /* OPRAVA: Aplikujeme font jen na 'p' (odstavec textu) a 'span', 
-           NIKOLIV na celou 'summary', abychom nerozbili ikonu šipky.
+        /* OPRAVA: Cílíme POUZE na 'p' (text uvnitř hlavičky).
+           Předchozí verze cílila i na 'span', což rozbilo ikonu šipky.
         */
-        div[data-testid="stExpander"] summary p,
-        div[data-testid="stExpander"] summary span {
+        div[data-testid="stExpander"] summary p {
             font-family: 'Roboto Mono', monospace !important;
             font-size: 0.85rem !important;
             font-weight: 500 !important;
             color: #374151 !important;
             letter-spacing: -0.5px;
+            margin-bottom: 0 !important;
         }
         
-        /* Skrytí hover efektu na textu */
-        div[data-testid="stExpander"] summary:hover p,
-        div[data-testid="stExpander"] summary:hover span {
+        /* Pojistka pro případné vnořené elementy našeho textu, ale NE pro systémové ikony */
+        div[data-testid="stExpander"] summary p span {
+             font-family: 'Roboto Mono', monospace !important;
+        }
+
+        /* Skrytí hover efektu změny barvy (volitelné) */
+        div[data-testid="stExpander"] summary:hover p {
             color: #111827 !important;
         }
     </style>
@@ -399,7 +403,7 @@ def vykreslit_detail_akce(akce, unique_key):
         return text + ("\u00A0" * spaces_needed)
 
     if not lidi.empty:
-        # Definice šířek (Ubrali jsme trochu místa, protože tam teď bude ta šipka)
+        # Definice šířek
         W_INDEX = 4
         W_JMENO = 20
         W_DOPRAVA = 22
@@ -429,7 +433,6 @@ def vykreslit_detail_akce(akce, unique_key):
             idx_formatted = format_cell(f"{i+1}.", W_INDEX)
             jmeno_formatted = format_cell(row['jméno'], W_JMENO)
             
-            # Doprava
             dopr_raw = str(row.get('doprava', ''))
             if not dopr_raw or dopr_raw == "nan": d_text = "⚪ Bez dopravy"
             elif "Řidič" in dopr_raw: d_text = "🚙 Řidič"
@@ -441,7 +444,6 @@ def vykreslit_detail_akce(akce, unique_key):
             
             dopr_formatted = format_cell(d_text, W_DOPRAVA)
             
-            # Ikony + Poznámka
             ubyt_raw = str(row.get('ubytování', ''))
             ubyt_icon = "🛏️" if ubyt_raw and "Ano" in ubyt_raw else ""
             poznamka = row.get('poznámka', '')
@@ -451,7 +453,7 @@ def vykreslit_detail_akce(akce, unique_key):
             header_text = f"{idx_formatted}{jmeno_formatted}{dopr_formatted}{extra_info}"
 
             # 2. VYKRESLENÍ
-            with stylable_container(key=f"exp_final_{unique_key}_{i}", css_styles=zebra_style):
+            with stylable_container(key=f"exp_finalfix_{unique_key}_{i}", css_styles=zebra_style):
                 st.markdown(f"<div style='margin-bottom: 8px;'>", unsafe_allow_html=True)
                 
                 with st.expander(header_text, expanded=False):
