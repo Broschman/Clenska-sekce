@@ -360,39 +360,47 @@ def vykreslit_detail_akce(akce, unique_key):
 
     elif mapa_raw: st.warning("⚠️ Mapa se nenačetla.")
 
-    # --- SEZNAM (ZEBRA EXPANDERY) ---
+    # --- SEZNAM (EXPANDERY S TABULKOVÝM ZAROVNÁNÍM) ---
     st.markdown("<hr style='margin: 10px 0;'>", unsafe_allow_html=True)
     st.markdown(f"#### 👥 Zapsaní ({len(lidi)})")
 
-    # Globální CSS úpravy pro expandery (fonty atd.)
+    # CSS: Vynutíme monospace font v hlavičce expanderu, aby zarovnání fungovalo
     st.markdown("""
     <style>
         .streamlit-expanderHeader p {
-            font-size: 1rem;
-            font-weight: 600;
+            font-family: 'Roboto Mono', 'Courier New', monospace !important;
+            font-size: 0.9rem !important; /* Trochu menší, aby se to vešlo */
+            font-weight: 500 !important;
+            white-space: pre !important; /* Klíčové: Respektuje mezery v textu */
+        }
+        /* Na mobilu to může přetékat, povolíme scrollbar */
+        .streamlit-expanderHeader {
+            overflow-x: auto !important;
         }
     </style>
     """, unsafe_allow_html=True)
 
     if not lidi.empty:
+        # Definice šířek sloupců (počet znaků)
+        W_INDEX = 3
+        W_JMENO = 22
+        W_DOPRAVA = 25
+        
+        # Legenda (volitelná, jen pro info)
+        # st.caption(" #   Jméno                 Doprava")
+
         for i, (idx, row) in enumerate(lidi.iterrows()):
             
-            # --- ZEBRA LOGIKA ---
-            # Sudé řádky bílé, liché jemně šedé
+            # --- ZEBRA BARVY ---
             bg_color = "#FFFFFF" if i % 2 == 0 else "#F1F5F9"
-            border_color = "#E5E7EB"
+            border_color = "#E5E7EB" if i % 2 == 0 else "#CBD5E1"
             
-            # CSS specifické pro tento jeden expander
-            # Musíme obarvit:
-            # 1. Samotný kontejner expanderu (div[data-testid="stExpander"])
-            # 2. Hlavičku (Header), jinak by zůstala bílá
-            # 3. Tělo (Content), jinak by zůstalo bílé
             zebra_style = f"""
             div[data-testid="stExpander"] {{
                 background-color: {bg_color} !important;
                 border: 1px solid {border_color} !important;
                 border-radius: 8px !important;
-                margin-bottom: 0px !important; /* Mezera řešena vnějším kontejnerem */
+                margin-bottom: 0px !important;
             }}
             .streamlit-expanderHeader {{
                 background-color: {bg_color} !important;
@@ -402,35 +410,48 @@ def vykreslit_detail_akce(akce, unique_key):
             }}
             """
             
-            # 1. PŘÍPRAVA TEXTU
-            jmeno = row['jméno']
-            dopr_raw = str(row.get('doprava', ''))
-            dopr_label = "❓ Doprava nevyřešena"
+            # 1. PŘÍPRAVA DAT
+            # Index (např. "1. ")
+            idx_str = f"{i+1}.".ljust(W_INDEX)
             
-            if not dopr_raw or dopr_raw == "nan": dopr_label = "⚪ Bez dopravy"
-            elif "Řidič" in dopr_raw: dopr_label = "🚙 Řidič"
+            # Jméno (Ořízneme na max šířku, kdyby bylo moc dlouhé)
+            raw_jmeno = str(row['jméno'])
+            if len(raw_jmeno) > (W_JMENO - 2):
+                raw_jmeno = raw_jmeno[:W_JMENO-2] + ".."
+            jmeno_str = raw_jmeno.ljust(W_JMENO)
+            
+            # Doprava
+            dopr_raw = str(row.get('doprava', ''))
+            if not dopr_raw or dopr_raw == "nan": d_text = "⚪ Bez dopravy"
+            elif "Řidič" in dopr_raw: d_text = "🚙 Řidič"
             elif "Spolujízda" in dopr_raw or "Jedu s" in dopr_raw:
                 clean = dopr_raw.replace("Spolujízda:", "").replace("Spolujízda", "").replace("Jedu s:", "").strip()
-                dopr_label = f"➡️ Jede s: {clean}"
-            elif "Chci" in dopr_raw or "Hledám" in dopr_raw: dopr_label = "🙋‍♂️ Hledá odvoz"
+                # Zkrácení jména řidiče, aby se nerozbilo formátování
+                if len(clean) > 10: clean = clean[:9] + "."
+                d_text = f"➡️ {clean}"
+            elif "Chci" in dopr_raw or "Hledám" in dopr_raw: d_text = "🙋‍♂️ Hledá odvoz"
+            else: d_text = "❓ Nevyřešeno"
             
+            dopr_str = d_text.ljust(W_DOPRAVA)
+            
+            # Ikonky a poznámka (ty už mohou "plavat" na konci)
             ubyt_raw = str(row.get('ubytování', ''))
-            ubyt_icon = "🛏️" if ubyt_raw and "Ano" in ubyt_raw else ""
-            poznamka = row.get('poznámka', '')
-            poznamka_str = f" • 📝 {poznamka}" if poznamka else ""
+            ubyt_icon = " 🛏️" if ubyt_raw and "Ano" in ubyt_raw else "   " # Fixní šířka pro ikonu
             
-            header_text = f"{i+1}. {jmeno}  |  {dopr_label} {ubyt_icon}{poznamka_str}"
+            poznamka = row.get('poznámka', '')
+            poznamka_str = f"  📝 {poznamka}" if poznamka else ""
+            
+            # 2. SESTAVENÍ HLAVIČKY
+            # Díky CSS 'white-space: pre' a monospace fontu budou mezery fungovat jako tabulátory
+            header_text = f"{idx_str}{jmeno_str}{dopr_str}{ubyt_icon}{poznamka_str}"
 
-            # 2. VYKRESLENÍ V OBARVENÉM KONTEJNERU
-            # Použijeme stylable_container k injektáži barvy pro tento konkrétní prvek
-            with stylable_container(key=f"exp_zebra_{unique_key}_{i}", css_styles=zebra_style):
-                
-                # Tady dáme margin-bottom vně expanderu, aby mezi nimi byla mezera
+            # 3. VYKRESLENÍ
+            with stylable_container(key=f"exp_aligned_{unique_key}_{i}", css_styles=zebra_style):
                 st.markdown(f"<div style='margin-bottom: 8px;'>", unsafe_allow_html=True)
                 
                 with st.expander(header_text, expanded=False):
                     
-                    st.caption(f"Detail přihlášky: {jmeno}")
+                    st.caption(f"Celé jméno: {row['jméno']}") # Pro případ, že bylo oříznuto
                     c_btn_doprava, c_btn_delete = st.columns([3, 1], gap="medium")
                     
                     with c_btn_doprava:
