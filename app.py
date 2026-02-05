@@ -360,56 +360,49 @@ def vykreslit_detail_akce(akce, unique_key):
 
     elif mapa_raw: st.warning("⚠️ Mapa se nenačetla.")
 
-    # --- SEZNAM (EXPANDERY S TVRDÝMI MEZERAMI) ---
+    # --- SEZNAM (EXPANDERY - ROBOTO MONO) ---
     st.markdown("<hr style='margin: 10px 0;'>", unsafe_allow_html=True)
     st.markdown(f"#### 👥 Zapsaní ({len(lidi)})")
 
-    # CSS: Vynucení Monospace fontu v hlavičce
-    # Bez toho by tvrdé mezery nefungovaly přesně (kvůli různé šířce písmen)
+    # 1. IMPORT FONTU + CSS
+    # Načteme 'Roboto Mono' - vypadá skoro jako běžné písmo, ale drží šířku.
     st.markdown("""
     <style>
-        /* Cílíme přímo na element uvnitř hlavičky expanderu */
+        @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;600&display=swap');
+
+        /* Aplikace fontu na hlavičku expanderu */
         div[data-testid="stExpander"] summary, 
         div[data-testid="stExpander"] summary p,
         div[data-testid="stExpander"] summary span {
-            font-family: 'Courier New', Courier, monospace !important;
+            font-family: 'Roboto Mono', monospace !important;
             font-size: 0.85rem !important;
-            font-weight: 600 !important;
+            font-weight: 500 !important; /* Střední tučnost, aby to nebylo moc tlusté */
+            color: #374151 !important;   /* Tmavě šedá, ne čistě černá */
+            letter-spacing: -0.5px;      /* Jemně scvrkneme, ať se tam toho vejde víc */
         }
         
-        /* Skryje případné tooltipy nebo dekorace */
+        /* Skrytí hover efektu */
         div[data-testid="stExpander"] summary:hover {
-            color: #1f2937 !important;
+            color: #111827 !important;
         }
     </style>
     """, unsafe_allow_html=True)
 
     # --- POMOCNÁ FUNKCE PRO ZAROVNÁNÍ ---
     def format_cell(text, width):
-        """
-        Ořízne text na max width a doplní TVRDÉ MEZERY (\u00A0) do konce.
-        """
+        """Ořízne text a doplní TVRDÉ MEZERY (\u00A0)."""
         text = str(text)
-        # 1. Oříznutí, pokud je moc dlouhý
         if len(text) > width:
             text = text[:width-2] + ".."
-        
-        # 2. Výpočet kolik mezer chybí
         spaces_needed = width - len(text)
-        
-        # 3. Doplnění tvrdými mezerami (to je ten trik!)
         return text + ("\u00A0" * spaces_needed)
 
     if not lidi.empty:
-        # Definice šířek sloupců (počet znaků)
+        # Definice šířek
         W_INDEX = 4
-        W_JMENO = 20
-        W_DOPRAVA = 22
+        W_JMENO = 21
+        W_DOPRAVA = 24
         
-        # Volitelné: Legenda nad seznamem (aby bylo jasné, co je co)
-        # Použijeme code blok nebo preformatted text, aby to sedělo s fontem dole
-        # st.markdown(f"<div style='font-family: monospace; font-size: 0.8rem; color: #6B7280; padding-left: 15px; margin-bottom: 5px;'>{'#'.ljust(W_INDEX)} {'Jméno'.ljust(W_JMENO)} {'Doprava'.ljust(W_DOPRAVA)}</div>", unsafe_allow_html=True)
-
         for i, (idx, row) in enumerate(lidi.iterrows()):
             
             # --- ZEBRA BARVY ---
@@ -431,12 +424,8 @@ def vykreslit_detail_akce(akce, unique_key):
             }}
             """
             
-            # 1. PŘÍPRAVA DAT (S POUŽITÍM TVRDÝCH MEZER)
-            
-            # Index
+            # 1. PŘÍPRAVA DAT
             idx_formatted = format_cell(f"{i+1}.", W_INDEX)
-            
-            # Jméno
             jmeno_formatted = format_cell(row['jméno'], W_JMENO)
             
             # Doprava
@@ -451,22 +440,17 @@ def vykreslit_detail_akce(akce, unique_key):
             
             dopr_formatted = format_cell(d_text, W_DOPRAVA)
             
-            # Ikony a poznámka (na konci už zarovnávat nemusíme)
+            # Ikony + Poznámka
             ubyt_raw = str(row.get('ubytování', ''))
             ubyt_icon = "🛏️" if ubyt_raw and "Ano" in ubyt_raw else ""
-            
             poznamka = row.get('poznámka', '')
-            # Pokud je poznámka, dáme ji na konec
             extra_info = f" {ubyt_icon}"
-            if poznamka:
-                extra_info += f"  📝 {poznamka}"
+            if poznamka: extra_info += f"  📝 {poznamka}"
 
-            # 2. FINÁLNÍ TEXT HLAVIČKY
-            # Spojíme to dohromady. Protože používáme \u00A0, Streamlit to "nesežere".
             header_text = f"{idx_formatted}{jmeno_formatted}{dopr_formatted}{extra_info}"
 
-            # 3. VYKRESLENÍ
-            with stylable_container(key=f"exp_fix_{unique_key}_{i}", css_styles=zebra_style):
+            # 2. VYKRESLENÍ
+            with stylable_container(key=f"exp_robo_{unique_key}_{i}", css_styles=zebra_style):
                 st.markdown(f"<div style='margin-bottom: 8px;'>", unsafe_allow_html=True)
                 
                 with st.expander(header_text, expanded=False):
