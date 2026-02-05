@@ -364,47 +364,60 @@ def vykreslit_detail_akce(akce, unique_key):
     st.markdown("<hr style='margin: 10px 0;'>", unsafe_allow_html=True)
     st.markdown(f"#### 👥 Zapsaní ({len(lidi)})")
     
-    # CSS pro odstranění extra mezer u tlačítek, aby to bylo kompaktní
+    # === CSS FIX PRO ZAROVNÁNÍ ===
+    # Toto srovná texty a tlačítka do jedné roviny
     st.markdown("""
     <style>
-        /* Zmenšení mezer mezi sloupci */
-        div[data-testid="column"] { padding: 0 5px !important; }
-        /* Aby text nebyl nalepený úplně nahoře */
-        p { margin-bottom: 0px; } 
+        /* 1. Vynutí vertikální centr pro všechny sloupce v seznamu */
+        div[data-testid="column"] {
+            display: flex !important;
+            align-items: center !important; /* Vertikální střed */
+            height: 100% !important;
+        }
+        
+        /* 2. Odstraní "neviditelnou mezeru" nad tlačítky */
+        div[data-testid="stButton"] {
+            padding-top: 0px !important;
+            margin-top: 0px !important;
+        }
+        div[data-testid="stButton"] button {
+            margin-top: 0px !important;
+        }
+        
+        /* 3. Zajistí, že text jména nemá zbytečné mezery */
+        div[data-testid="stMarkdownContainer"] p {
+            margin-bottom: 0px !important;
+            padding: 0px !important;
+        }
     </style>
     """, unsafe_allow_html=True)
 
     if not lidi.empty:
-        # Definice poměrů sloupců - použijeme stejné pro hlavičku i řádky
-        # [Index, Jméno, Poznámka, Doprava, Ubytko, Koš]
+        # Poměry sloupců
         cols_ratio = [0.4, 2.2, 1.8, 1.2, 0.5, 0.5]
         
-        # --- HLAVIČKA TABULKY ---
-        # vertical_alignment="bottom" zajistí, že nadpisy sedí na lince
-        h1, h2, h3, h4, h5, h6 = st.columns(cols_ratio, vertical_alignment="bottom") 
+        # --- HLAVIČKA ---
+        h1, h2, h3, h4, h5, h6 = st.columns(cols_ratio) 
         h1.markdown("<b style='color:#9CA3AF'>#</b>", unsafe_allow_html=True)
         h2.markdown("<b>Jméno</b>", unsafe_allow_html=True)
         h3.markdown("<b>Poznámka</b>", unsafe_allow_html=True)
         h4.markdown("<b>Doprava</b>", unsafe_allow_html=True)
         h5.markdown("🛏️", unsafe_allow_html=True)
         
-        st.markdown("<hr style='margin: 5px 0 10px 0; border-top: 2px solid #E5E7EB;'>", unsafe_allow_html=True)
+        st.markdown("<hr style='margin: 5px 0 5px 0; border-top: 2px solid #E5E7EB;'>", unsafe_allow_html=True)
         
-        # --- ŘÁDKY (ZEBRA) ---
+        # --- ŘÁDKY ---
         for i, (idx, row) in enumerate(lidi.iterrows()):
             
-            # Určení barvy pozadí (Lichá = Bílá, Sudá = Jemně šedá)
+            # Barva pozadí (Zebra)
             bg_color = "#FFFFFF" if i % 2 == 0 else "#F3F4F6"
             
-            # Styl kontejneru pro jeden řádek
+            # Styl řádku (nižší padding = kompaktnější vzhled)
             row_style = f"""
             {{
                 background-color: {bg_color};
-                border-radius: 5px;
-                padding-top: 5px;
-                padding-bottom: 5px;
-                padding-left: 5px;
-                padding-right: 5px;
+                border-radius: 6px;
+                padding: 4px 5px;  /* Horní/Dolní padding, Levý/Pravý padding */
                 margin-bottom: 2px;
             }}
             """
@@ -413,26 +426,25 @@ def vykreslit_detail_akce(akce, unique_key):
                 key=f"row_cont_{unique_key}_{i}",
                 css_styles=row_style
             ):
-                # ZDE JE KOUZLO: vertical_alignment="center" srovná text i tlačítka do lajny
-                c1, c2, c3, c4, c5, c6 = st.columns(cols_ratio, vertical_alignment="center")
+                # ZDE UŽ NEPOTŘEBUJEME vertical_alignment="center", PROTOŽE TO ŘEŠÍ CSS NAHOŘE
+                c1, c2, c3, c4, c5, c6 = st.columns(cols_ratio)
                 
-                # 1. Pořadové číslo
+                # 1. Číslo
                 c1.write(f"{i+1}.")
                 
-                # 2. Jméno (Tučně)
+                # 2. Jméno
                 c2.markdown(f"**{row['jméno']}**")
                 
-                # 3. Poznámka (Menším písmem/šedě)
+                # 3. Poznámka
                 poznamka_text = row.get('poznámka', '')
                 if poznamka_text:
                     c3.caption(poznamka_text)
                 else:
-                    c3.write("") # Prázdný placeholder
+                    c3.write("") 
                 
-                # 4. Tlačítko DOPRAVY (Zachováváme logiku, ale srovnáme do sloupce)
+                # 4. Tlačítko DOPRAVY
                 with c4:
                     dopr = str(row.get('doprava', ''))
-                    # Text tlačítka podle stavu
                     if not dopr or dopr == "nan": btn_label = "➕"
                     elif "Řidič" in dopr: btn_label = "🚙 Řidič"
                     elif "Spolujízda" in dopr or "Jedu s" in dopr: 
@@ -441,34 +453,29 @@ def vykreslit_detail_akce(akce, unique_key):
                     elif "Chci" in dopr or "Hledám" in dopr: btn_label = "🙋‍♂️ Hledám"
                     else: btn_label = dopr
 
-                    # Tlačítko - use_container_width zajistí, že využije celou šířku sloupce
                     if st.button(btn_label, key=f"btn_d_{unique_key}_{i}", use_container_width=True):
                          utils.show_doprava_dialog(akce_id_str, akce['název'], akce['datum'].strftime('%d.%m.'), row['jméno'])
 
-                # 5. Ubytování (Text/Ikona)
+                # 5. Ubytování
                 c5.write(row.get('ubytování', ''))
                 
-                # 6. Tlačítko KOŠE
-                # Logic pro smazání (zůstává stejná)
+                # 6. Koš
                 je_k_smazani = (delete_key_state in st.session_state) and (st.session_state[delete_key_state] == row['jméno'])
                 
-                if je_k_smazani:
-                    # Pokud je aktivní mazání, ukáže se varování místo ikonky
-                    with c6:
+                with c6:
+                    if je_k_smazani:
                         if st.button("✅", key=f"conf_del_{unique_key}_{i}"):
-                            # ... (Zde zkopíruj původní logiku mazání z tvého app.py) ...
-                            # PRO STRUČNOST ZDE UVÁDÍM JEN VOLÁNÍ:
                             df_curr = conn.read(worksheet="prihlasky", ttl=0)
                             df_curr['id_akce'] = df_curr['id_akce'].astype(str).str.replace(r'\.0$', '', regex=True)
                             conn.update(worksheet="prihlasky", data=df_curr[~((df_curr['id_akce'] == akce_id_str) & (df_curr['jméno'] == row['jméno']))])
                             utils.handle_driver_removal(conn, akce_id_str, row['jméno'])
                             del st.session_state[delete_key_state]
                             st.rerun()
-                elif not je_po_deadlinu:
-                    # Standardní koš
-                    if c6.button("🗑️", key=f"del_{unique_key}_{i}"):
-                         st.session_state[delete_key_state] = row['jméno']
-                         st.rerun()
+                    elif not je_po_deadlinu:
+                        # Tady taky use_container_width=False, aby koš nebyl roztažený
+                        if st.button("🗑️", key=f"del_{unique_key}_{i}"):
+                             st.session_state[delete_key_state] = row['jméno']
+                             st.rerun()
 
     else: 
         st.info("Zatím nikdo. Buď první!")
