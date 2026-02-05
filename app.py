@@ -360,25 +360,34 @@ def vykreslit_detail_akce(akce, unique_key):
 
     elif mapa_raw: st.warning("⚠️ Mapa se nenačetla.")
 
-    # --- SEZNAM (EXPANDERY - ROBOTO MONO) ---
+    # --- SEZNAM (EXPANDERY BEZ ŠIPKY + ROBOTO MONO) ---
     st.markdown("<hr style='margin: 10px 0;'>", unsafe_allow_html=True)
     st.markdown(f"#### 👥 Zapsaní ({len(lidi)})")
 
-    # 1. IMPORT FONTU + CSS
-    # Načteme 'Roboto Mono' - vypadá skoro jako běžné písmo, ale drží šířku.
+    # 1. IMPORT FONTU + CSS (S OPRAVOU ŠIPKY)
     st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;600&display=swap');
 
-        /* Aplikace fontu na hlavičku expanderu */
+        /* 1. Skrytí defaultní šipky (arrow_right) v expanderu */
+        div[data-testid="stExpander"] summary svg {
+            display: none !important;
+        }
+        
+        /* 2. Reset paddingu, aby text začínal hned u kraje (když tam není šipka) */
+        div[data-testid="stExpander"] summary {
+            padding-left: 10px !important; 
+        }
+
+        /* 3. Aplikace fontu na hlavičku */
         div[data-testid="stExpander"] summary, 
         div[data-testid="stExpander"] summary p,
         div[data-testid="stExpander"] summary span {
             font-family: 'Roboto Mono', monospace !important;
             font-size: 0.85rem !important;
-            font-weight: 500 !important; /* Střední tučnost, aby to nebylo moc tlusté */
-            color: #374151 !important;   /* Tmavě šedá, ne čistě černá */
-            letter-spacing: -0.5px;      /* Jemně scvrkneme, ať se tam toho vejde víc */
+            font-weight: 500 !important;
+            color: #374151 !important;
+            letter-spacing: -0.5px;
         }
         
         /* Skrytí hover efektu */
@@ -388,7 +397,7 @@ def vykreslit_detail_akce(akce, unique_key):
     </style>
     """, unsafe_allow_html=True)
 
-    # --- POMOCNÁ FUNKCE PRO ZAROVNÁNÍ ---
+    # --- POMOCNÁ FUNKCE ---
     def format_cell(text, width):
         """Ořízne text a doplní TVRDÉ MEZERY (\u00A0)."""
         text = str(text)
@@ -398,9 +407,9 @@ def vykreslit_detail_akce(akce, unique_key):
         return text + ("\u00A0" * spaces_needed)
 
     if not lidi.empty:
-        # Definice šířek
+        # Definice šířek (trochu jsem upravil šířky, když tam není šipka)
         W_INDEX = 4
-        W_JMENO = 21
+        W_JMENO = 22
         W_DOPRAVA = 24
         
         for i, (idx, row) in enumerate(lidi.iterrows()):
@@ -450,7 +459,7 @@ def vykreslit_detail_akce(akce, unique_key):
             header_text = f"{idx_formatted}{jmeno_formatted}{dopr_formatted}{extra_info}"
 
             # 2. VYKRESLENÍ
-            with stylable_container(key=f"exp_robo_{unique_key}_{i}", css_styles=zebra_style):
+            with stylable_container(key=f"exp_nopts_{unique_key}_{i}", css_styles=zebra_style):
                 st.markdown(f"<div style='margin-bottom: 8px;'>", unsafe_allow_html=True)
                 
                 with st.expander(header_text, expanded=False):
