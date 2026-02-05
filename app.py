@@ -360,30 +360,34 @@ def vykreslit_detail_akce(akce, unique_key):
 
     elif mapa_raw: st.warning("⚠️ Mapa se nenačetla.")
 
-    # --- SEZNAM (DLOUHÉ KARTY / ROW CARDS) ---
+    # --- SEZNAM (ROBUSTNÍ KARTY) ---
     st.markdown("<hr style='margin: 10px 0;'>", unsafe_allow_html=True)
     st.markdown(f"#### 👥 Zapsaní ({len(lidi)})")
 
     # CSS pro vertikální zarovnání obsahu uvnitř karty
     st.markdown("""
     <style>
+        /* Odstraní mezery mezi elementy uvnitř karty, aby nám nerozhazovaly layout */
         div[data-testid="stVerticalBlockBorderWrapper"] > div {
-             gap: 0px; /* Odstraní mezery mezi elementy uvnitř karty */
+             gap: 0px; 
         }
-        /* Zarovná texty a tlačítka na střed řádku */
+        
+        /* KLÍČOVÉ: Všechny sloupce (texty i tlačítka) zarovná přesně na střed výšky */
         div[data-testid="column"] {
             display: flex !important;
             align-items: center !important;
             height: 100% !important;
+            min-height: 50px !important; /* Pojistka pro výšku sloupce */
         }
-        /* Odstraní marginy tlačítek */
+        
+        /* Reset marginů u tlačítek, aby neuskakovala */
         div[data-testid="stButton"] button {
             margin: 0px !important;
             height: auto !important;
-            padding-top: 4px !important;
-            padding-bottom: 4px !important;
+            min-height: 42px !important; /* Tlačítko bude mít vždy solidní výšku */
         }
-        /* Odstraní marginy textů */
+        
+        /* Texty - odstranění marginů */
         div[data-testid="stMarkdownContainer"] p {
             margin: 0px !important;
         }
@@ -391,11 +395,10 @@ def vykreslit_detail_akce(akce, unique_key):
     """, unsafe_allow_html=True)
 
     if not lidi.empty:
-        # Poměry sloupců uvnitř karty
-        # [Index, Jméno, Poznámka, Doprava, Ubytko, Koš]
+        # Poměry sloupců [Index, Jméno, Poznámka, Doprava, Ubytko, Koš]
         cols_ratio = [0.4, 2.5, 2, 1.5, 0.5, 0.5]
         
-        # (Volitelné) Hlavička - pokud ji chceš schovat a nechat jen karty, smaž tuto část
+        # Hlavičku necháme pro přehlednost (volitelné)
         h1, h2, h3, h4, h5, h6 = st.columns(cols_ratio)
         h1.caption("#")
         h2.caption("Jméno")
@@ -405,31 +408,27 @@ def vykreslit_detail_akce(akce, unique_key):
         
         for i, (idx, row) in enumerate(lidi.iterrows()):
             
-            # CSS pro kartu (Row Card)
-            # Bílý box, stín, zaoblené rohy, margin mezi kartami
+            # === ZMĚNA ZDE: "TLUSTŠÍ" KARTA ===
             card_style = """
             {
                 background-color: #ffffff;
                 border: 1px solid #E5E7EB;
-                border-radius: 10px;
-                padding: 10px 15px;
-                margin-bottom: 8px; /* Mezera mezi kartami */
-                box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-                transition: transform 0.1s, box-shadow 0.1s;
+                border-radius: 12px;       /* Větší zaoblení */
+                padding: 16px 20px;        /* Větší padding (bylo 10px) = Větší výška */
+                margin-bottom: 12px;       /* Větší mezera mezi kartami */
+                box-shadow: 0 2px 4px rgba(0,0,0,0.05);
             }
             """
-            # Hover efekt (volitelné - přes Python to nejde tak snadno, ale stín stačí)
             
             with stylable_container(key=f"card_row_{unique_key}_{i}", css_styles=card_style):
                 
-                # Uvnitř karty vytvoříme sloupce
                 c1, c2, c3, c4, c5, c6 = st.columns(cols_ratio)
                 
                 # 1. Číslo
-                c1.markdown(f"<span style='color: #9CA3AF; font-weight: bold;'>{i+1}.</span>", unsafe_allow_html=True)
+                c1.markdown(f"<span style='color: #9CA3AF; font-weight: bold; font-size: 1rem;'>{i+1}.</span>", unsafe_allow_html=True)
                 
-                # 2. Jméno (Větší a výraznější)
-                c2.markdown(f"<span style='font-size: 1.05rem; font-weight: 600; color: #111827;'>{row['jméno']}</span>", unsafe_allow_html=True)
+                # 2. Jméno (Větší písmo)
+                c2.markdown(f"<span style='font-size: 1.1rem; font-weight: 600; color: #111827;'>{row['jméno']}</span>", unsafe_allow_html=True)
                 
                 # 3. Poznámka
                 poznamka_text = row.get('poznámka', '')
@@ -441,13 +440,13 @@ def vykreslit_detail_akce(akce, unique_key):
                 # 4. Tlačítko DOPRAVY
                 with c4:
                     dopr = str(row.get('doprava', ''))
-                    # Logika labelů
                     type_btn = "secondary"
+                    
                     if not dopr or dopr == "nan": 
                         btn_label = "➕ Doprava"
                     elif "Řidič" in dopr: 
                         btn_label = "🚙 Řidič"
-                        type_btn = "primary" # Zvýrazní řidiče
+                        type_btn = "primary"
                     elif "Spolujízda" in dopr or "Jedu s" in dopr: 
                         clean = dopr.replace("Spolujízda:", "").replace("Spolujízda", "").replace("Jedu s:", "").strip()
                         btn_label = f"➡️ {clean}"
@@ -463,7 +462,7 @@ def vykreslit_detail_akce(akce, unique_key):
                 with c5:
                     ubyt = str(row.get('ubytování', ''))
                     if ubyt and "Ano" in ubyt:
-                        st.markdown("<div style='text-align:center;'>🛏️</div>", unsafe_allow_html=True)
+                        st.markdown("<div style='text-align:center; font-size: 1.2rem;'>🛏️</div>", unsafe_allow_html=True)
                 
                 # 6. Koš
                 je_k_smazani = (delete_key_state in st.session_state) and (st.session_state[delete_key_state] == row['jméno'])
@@ -478,7 +477,6 @@ def vykreslit_detail_akce(akce, unique_key):
                             del st.session_state[delete_key_state]
                             st.rerun()
                     elif not je_po_deadlinu:
-                        # Uděláme koš nenápadný (secondary/flat)
                         if st.button("🗑️", key=f"del_{unique_key}_{i}"):
                              st.session_state[delete_key_state] = row['jméno']
                              st.rerun()
