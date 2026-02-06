@@ -358,9 +358,9 @@ def vykreslit_detail_akce(akce, unique_key):
     st.markdown("<hr style='margin: 10px 0;'>", unsafe_allow_html=True)
     st.markdown(f"#### 👥 Zapsaní ({len(lidi)})")
 
-    # --- NOVINKA: DASHBOARD DOPRAVY (HTML/CSS VERZE - OPRAVENO) ---
+    # --- NOVINKA: DASHBOARD DOPRAVY (FIXED VERSION) ---
     if not lidi.empty:
-        # 1. Data
+        # 1. Data (stejné jako předtím)
         df_auta_all = data_manager.load_auta()
         auta_akce = df_auta_all[df_auta_all['id_akce'] == akce_id_str]
         
@@ -381,79 +381,44 @@ def vykreslit_detail_akce(akce, unique_key):
             
         bilance = kapacita_celkem - poptavka_lidi
         
-        # 2. Logika barev a textů
+        # 2. Barvy
         if bilance >= 0:
-            status_color = "#10B981" # Zelená
-            bg_color = "#ECFDF5"     # Světle zelená
+            status_color = "#10B981"
+            bg_color = "#ECFDF5"
             border_color = "#A7F3D0"
             status_icon = "✅"
             status_text = f"Máme místo! (Volno: {bilance})"
-            
-            total_needed = poptavka_lidi if poptavka_lidi > 0 else 1
             percent = min((poptavka_lidi / kapacita_celkem) * 100, 100) if kapacita_celkem > 0 else 0
-            
         else:
-            status_color = "#EF4444" # Červená
-            bg_color = "#FEF2F2"     # Světle červená
+            status_color = "#EF4444"
+            bg_color = "#FEF2F2"
             border_color = "#FECACA"
             status_icon = "🚨"
             status_text = f"Chybí místa! (Manko: {abs(bilance)})"
             percent = 100
 
-        # 3. HTML Komponenta (S použitím textwrap.dedent pro odstranění odsazení)
-        # Tím zabráníme tomu, aby to Streamlit zobrazil jako "code block"
-        html_dashboard = textwrap.dedent(f"""
-        <div style="
-            background-color: {bg_color};
-            border: 1px solid {border_color};
-            border-radius: 12px;
-            padding: 12px 20px;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 20px;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-        ">
-            <div style="display: flex; gap: 20px; align-items: center;">
-                <div style="text-align: center;">
-                    <div style="font-size: 0.8rem; color: #6B7280; font-weight: 600; text-transform: uppercase;">Auta</div>
-                    <div style="font-size: 1.2rem; font-weight: 800; color: #1F2937;">{pocet_ridicu}</div>
-                </div>
-                
-                <div style="width: 1px; height: 30px; background-color: {border_color};"></div>
-                
-                <div>
-                    <div style="font-size: 0.9rem; font-weight: 700; color: {status_color};">
-                        {status_icon} {status_text}
-                    </div>
-                    <div style="font-size: 0.75rem; color: #6B7280;">
-                        Poptávka: {poptavka_lidi} lidí
-                    </div>
-                </div>
-            </div>
-
-            <div style="flex-grow: 1; max-width: 300px;">
-                <div style="
-                    background-color: rgba(255,255,255,0.6);
-                    border-radius: 10px;
-                    height: 12px;
-                    width: 100%;
-                    overflow: hidden;
-                    border: 1px solid {border_color};
-                ">
-                    <div style="
-                        background-color: {status_color};
-                        width: {percent}%;
-                        height: 100%;
-                        border-radius: 10px;
-                        transition: width 0.5s ease-in-out;
-                    "></div>
-                </div>
-            </div>
+        # 3. HTML Komponenta (BEZ ODSAZENÍ)
+        # Vše je zarovnané doleva, aby to Streamlit nepochopil jako kód.
+        html_dashboard = f"""
+<div style="background-color: {bg_color}; border: 1px solid {border_color}; border-radius: 12px; padding: 12px 20px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+    <div style="display: flex; gap: 20px; align-items: center;">
+        <div style="text-align: center;">
+            <div style="font-size: 0.8rem; color: #6B7280; font-weight: 600; text-transform: uppercase;">Auta</div>
+            <div style="font-size: 1.2rem; font-weight: 800; color: #1F2937;">{pocet_ridicu}</div>
         </div>
-        """)
-        
+        <div style="width: 1px; height: 30px; background-color: {border_color};"></div>
+        <div>
+            <div style="font-size: 0.9rem; font-weight: 700; color: {status_color};">{status_icon} {status_text}</div>
+            <div style="font-size: 0.75rem; color: #6B7280;">Poptávka: {poptavka_lidi} lidí</div>
+        </div>
+    </div>
+    <div style="flex-grow: 1; max-width: 300px;">
+        <div style="background-color: rgba(255,255,255,0.6); border-radius: 10px; height: 12px; width: 100%; overflow: hidden; border: 1px solid {border_color};">
+            <div style="background-color: {status_color}; width: {percent}%; height: 100%; border-radius: 10px; transition: width 0.5s ease-in-out;"></div>
+        </div>
+    </div>
+</div>
+"""
         st.markdown(html_dashboard, unsafe_allow_html=True)
         
     # 1. IMPORT FONTU + OPRAVENÉ CSS
