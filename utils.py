@@ -734,32 +734,40 @@ def show_doprava_dialog(akce_id, nazev_akce, datum_akce, pre_jmeno, in_poznamka=
 
 def handle_driver_removal(conn, akce_id, ridic_jmeno):
     """
-    Když řidič ruší auto:
-    1. Smaže auto z tabulky 'auta' (to se děje v dialogu, ale pro jistotu...)
-    2. Najde všechny jeho pasažéry v 'prihlasky'.
-    3. Resetuje jim 'id_auto' na prázdno a 'doprava' na 'Chci odvoz'.
+    Komplexní úklid po řidiči:
+    1. Smaže auto z tabulky 'auta'.
+    2. Najde jeho pasažéry v 'prihlasky' a resetuje jim stav.
     """
-    # 1. Načíst lidi
+    akce_id = str(akce_id) # Pojistka, ať porovnáváme stringy
+    
+    # --- 1. SMAZÁNÍ AUTA Z TABULKY 'auta' ---
+    # Musíme načíst aktuální stav aut, abychom nesmazali něco, co tam přibylo před vteřinou
+    df_auta = data_manager.load_auta()
+    
+    if not df_auta.empty:
+        # Najdeme řádek s tímto řidičem na této akci
+        maska_auto = (df_auta['id_akce'] == akce_id) & (df_auta['ridic'] == ridic_jmeno)
+        
+        # Pokud takové auto existuje, smažeme ho (necháme jen ty ostatní - tilda ~ znamená negaci)
+        if not df_auta[maska_auto].empty:
+            novy_seznam_aut = df_auta[~maska_auto]
+            conn.update(worksheet="auta", data=novy_seznam_aut)
+            # print(f"Auto řidiče {ridic_jmeno} smazáno.") # Debug
+
+    # --- 2. RESET PASAŽÉRŮ (Změna na "Chci odvoz") ---
     df_lidi = data_manager.load_prihlasky()
     
-    # 2. Najít pasažéry tohoto řidiče na této akci
     maska_pasazeri = (df_lidi['id_akce'] == akce_id) & (df_lidi['id_auto'] == ridic_jmeno)
     
     if df_lidi[maska_pasazeri].empty:
-        return # Nikdo s ním nejel, pohoda
+        return # Nikdo s ním nejel, hotovo.
         
-    # 3. Update pasažérů - uděláme z nich čekatele
-    # Poznámka: Google Sheets update neumí update where, musíme přepsat řádky
-    # Pro jednoduchost tady uděláme update celého datasetu (u malého klubu OK)
-    
+    # Update pasažérů
     updated_rows = df_lidi[maska_pasazeri].copy()
     updated_rows['id_auto'] = ""
     updated_rows['doprava'] = "Chci odvoz 🙋‍♂️ (zrušeno řidičem)"
     
-    # V reálu bychom to měli poslat do GSheets. 
-    # Nejjednodušší cesta v tvém setupu:
-    # Smazat staré záznamy pasažérů a nahrát upravené.
-    
+    # Spojíme nedotčené řádky s těmi upravenými a nahrajeme zpět
     df_clean = df_lidi[~maska_pasazeri]
     df_final = pd.concat([df_clean, updated_rows], ignore_index=True)
     
