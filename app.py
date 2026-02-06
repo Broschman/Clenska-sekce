@@ -197,37 +197,42 @@ def vykreslit_detail_akce(akce, unique_key):
             css_styles="{border: 1px solid #E5E7EB; border-radius: 12px; padding: 20px; background-color: #F9FAFB; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);}"
         ):
             if not je_po_deadlinu and delete_key_state not in st.session_state:
-                st.markdown("<h4 style='margin-top:0;'>✍️ Interní tabulka</h4>", unsafe_allow_html=True)
+                st.markdown("<h4 style='margin-top:0;'>✍️ Hromadná přihláška</h4>", unsafe_allow_html=True)
+                
                 if je_zavod_obecne and not je_stafeta:
                     st.markdown("""<div style="background-color: #FEF2F2; border: 1px solid #FCA5A5; color: #B91C1C; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-weight: bold; font-size: 0.9em; display: flex; align-items: center;"><span style="font-size: 1.2em; margin-right: 8px;">⚠️</span>Je nutné se přihlásit i v ORISu!</div>""", unsafe_allow_html=True)
 
                 form_key = f"form_{unique_key}"
+                
+                # Použijeme form, aby se stránka nepřenačítala po každém kliknutí
                 with st.form(key=form_key, clear_on_submit=False): 
                     if kategorie_txt and kategorie_txt.lower() != "všichni": 
                         st.warning(f"Doporučení: **{kategorie_txt}**")
                     
-                    # Inputy
-                    vybrane_jmeno = st.selectbox("Jméno", options=seznam_jmen, index=None, placeholder="Vyber ze seznamu...")
-                    nove_jmeno = st.text_input("Nebo nové jméno")
-                    poznamka_input = st.text_input("Poznámka")
+                    # --- 1. VÝBĚR LIDÍ (MULTISELECT) ---
+                    # Změna ze selectbox na multiselect pro hromadný zápis
+                    vybrana_jmena = st.multiselect(
+                        "Vyber členy (lze i více najednou)", 
+                        options=seznam_jmen,
+                        placeholder="Klikni a vyber jména..."
+                    )
                     
-                    # --- LOGIKA UBYTOVÁNÍ (Bez dopravy) ---
+                    # Možnost přidat někoho nového, kdo není v seznamu
+                    nove_jmeno = st.text_input("Nebo napiš nové jméno (pokud není v seznamu)")
+                    
+                    poznamka_input = st.text_input("Poznámka (platí pro všechny vybrané)")
+                    
+                    # --- LOGIKA UBYTOVÁNÍ ---
                     ubytovani_input = False
-                    
-                    # Ubytování řešíme jen pokud to není trénink
                     if "trénink" not in typ_udalosti:
                         deadline_ubyt = pd.to_datetime(akce.get('deadline_ubytovani'), dayfirst=True, errors='coerce')
-                        
                         zobrazit_ubyt = True
-
-                        # Pokud deadline existuje A už vypršel -> skryjeme
                         if pd.notnull(deadline_ubyt) and datetime.now() > deadline_ubyt:
                             zobrazit_ubyt = False
 
-                        st.markdown("<br>", unsafe_allow_html=True) # Malá mezera před checkboxem
-                        
+                        st.markdown("<br>", unsafe_allow_html=True)
                         if zobrazit_ubyt:
-                            ubytovani_input = st.checkbox("🛏️ Společné ubytko")
+                            ubytovani_input = st.checkbox("🛏️ Společné ubytko (pro všechny)")
                         elif pd.notnull(deadline_ubyt):
                             st.caption("🔒 Deadline ubytování uplynul")
                     
@@ -237,87 +242,112 @@ def vykreslit_detail_akce(akce, unique_key):
                     c_btn_zapis, c_btn_doprava = st.columns([1, 1], gap="small")
                     
                     with c_btn_zapis:
-                        # Hlavní tlačítko pro zápis
-                        odeslat_btn = st.form_submit_button("Zapsat se", type="primary", use_container_width=True)
+                        odeslat_btn = st.form_submit_button("Zapsat vybrané", type="primary", use_container_width=True)
                         
                     with c_btn_doprava:
-                        # Tlačítko pro dopravu
+                        # Tlačítko pro dopravu (otevírá dialog, musí být mimo form logic, ale uvnitř formu)
                         doprava_btn = st.form_submit_button("🚗 Řešit dopravu", use_container_width=True)
                     
-                    # --- LOGIKA ODESLÁNÍ ---
-                    finalni_jmeno = nove_jmeno.strip() if nove_jmeno else vybrane_jmeno
+                    # --- LOGIKA ZPRACOVÁNÍ ---
                     
-                    # === VARIANT A: Klikl na ZAPSAT SE ===
+                    # A) Klikl na ZAPSAT
                     if odeslat_btn:
-                        if finalni_jmeno:
+                        # 1. Sestavení seznamu lidí k zápisu
+                        lidi_k_zapisu = []
+                        if vybrana_jmena:
+                            lidi_k_zapisu.extend(vybrana_jmena)
+                        if nove_jmeno.strip():
+                            lidi_k_zapisu.append(nove_jmeno.strip())
+                        
+                        if not lidi_k_zapisu:
+                            st.warning("Musíš vybrat alespoň jedno jméno!")
+                        else:
                             try:
-                                # 1. Kontrola duplicity
-                                full_df = data_manager.load_prihlasky()
-                                duplicita = not full_df[(full_df['id_akce'] == akce_id_str) & (full_df['jméno'] == finalni_jmeno)].empty
+                                # Načteme data jen jednou
+                                aktualni_data = data_manager.load_prihlasky()
+                                jmena_df = conn.read(worksheet="jmena")
                                 
-                                if duplicita:
-                                    st.warning(f"⚠️ {finalni_jmeno}, na této akci už jsi!")
-                                else:
-                                    # ZDE ZMĚNA: Doprava je defaultně prázdná, checkbox zmizel
-                                    hodnota_dopravy = "" 
-                                    hodnota_ubytovani = "Ano 🛏️" if ubytovani_input else ""
-                                    cas_zapisu = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                                novy_zaznamy_list = []
+                                uspesne_zapsani = []
+                                
+                                for clovek in lidi_k_zapisu:
+                                    # Kontrola duplicity pro každého zvlášť
+                                    duplicita = not aktualni_data[
+                                        (aktualni_data['id_akce'] == akce_id_str) & 
+                                        (aktualni_data['jméno'] == clovek)
+                                    ].empty
                                     
-                                    # 2. Příprava řádku s přihláškou
-                                    novy_zaznam = pd.DataFrame([{
-                                        "id_akce": akce_id_str, 
-                                        "název": akce['název'], 
-                                        "jméno": finalni_jmeno, 
-                                        "poznámka": poznamka_input, 
-                                        "doprava": hodnota_dopravy, 
-                                        "ubytování": hodnota_ubytovani, 
-                                        "čas zápisu": cas_zapisu
-                                    }])
-                                    
-                                    # 3. Zápis přihlášky do Google Sheets
-                                    aktualni_data = data_manager.load_prihlasky()
-                                    update_data = pd.concat([aktualni_data, novy_zaznam], ignore_index=True)
-                                    conn.update(worksheet="prihlasky", data=update_data)
-                                    
-                                    # 4. ULOŽENÍ NOVÉHO JMÉNA
-                                    if finalni_jmeno not in seznam_jmen:
-                                        try:
-                                            jmena_df = conn.read(worksheet="jmena")
-                                            nove_jmeno_df = pd.DataFrame([{"jméno": finalni_jmeno}])
-                                            conn.update(worksheet="jmena", data=pd.concat([jmena_df, nove_jmeno_df], ignore_index=True))
-                                        except Exception as e:
-                                            print(f"Chyba jména: {e}")
+                                    if duplicita:
+                                        st.toast(f"⚠️ {clovek} už je přihlášen(a).")
+                                    else:
+                                        # Příprava řádku
+                                        hodnota_ubytovani = "Ano 🛏️" if ubytovani_input else ""
+                                        novy_zaznamy_list.append({
+                                            "id_akce": akce_id_str, 
+                                            "název": akce['název'], 
+                                            "jméno": clovek, 
+                                            "poznámka": poznamka_input, 
+                                            "doprava": "", # Dopravu si řeší pak individuálně nebo hromadně v dialogu
+                                            "ubytování": hodnota_ubytovani, 
+                                            "čas zápisu": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                                        })
+                                        uspesne_zapsani.append(clovek)
+                                        
+                                        # Uložení nového jména do číselníku (pokud je nové)
+                                        if clovek not in seznam_jmen:
+                                            try:
+                                                nove_jmeno_df = pd.DataFrame([{"jméno": clovek}])
+                                                jmena_df = pd.concat([jmena_df, nove_jmeno_df], ignore_index=True)
+                                            except: pass
 
-                                    # 5. Animace úspěchu
+                                # Hromadný zápis do DB (mnohem rychlejší než po jednom)
+                                if novy_zaznamy_list:
+                                    # 1. Update přihlášek
+                                    df_to_add = pd.DataFrame(novy_zaznamy_list)
+                                    final_df = pd.concat([aktualni_data, df_to_add], ignore_index=True)
+                                    conn.update(worksheet="prihlasky", data=final_df)
+                                    
+                                    # 2. Update seznamu jmen (pokud přibyla nová)
+                                    if len(jmena_df) > len(seznam_jmen):
+                                         conn.update(worksheet="jmena", data=jmena_df)
+
+                                    # Animace a refresh
                                     with st_lottie_spinner(styles.lottie_success, key=f"anim_{unique_key}"): 
                                         time.sleep(1)
                                     
-                                    st.toast(f"✅ {finalni_jmeno} zapsán(a)!")
+                                    names_str = ", ".join(uspesne_zapsani)
+                                    st.toast(f"✅ Zapsáni: {names_str}")
                                     time.sleep(1)
                                     st.rerun()
-
-                            except Exception as e: 
+                                    
+                            except Exception as e:
                                 st.error(f"Chyba zápisu: {e}")
-                        else: 
-                            st.warning("Musíš vyplnit jméno!")
 
-                    # === VARIANT B: Klikl na DOPRAVU ===
+                    # B) Klikl na DOPRAVU
                     elif doprava_btn:
-                        if finalni_jmeno:
+                        # Tady je to složitější - dialog umí řešit dopravu jen pro jednoho člověka.
+                        # Prozatím otevřeme dialog pro PRVNÍHO vybraného, nebo vyzveme k výběru.
+                        # (Hromadná doprava je UX oříšek, pro začátek stačí řešit po jednom)
+                        
+                        target = None
+                        if vybrana_jmena: target = vybrana_jmena[0]
+                        elif nove_jmeno: target = nove_jmeno
+                        
+                        if target:
                             utils.show_doprava_dialog(
                                 akce_id=akce_id_str,
                                 nazev_akce=akce['název'],
                                 datum_akce=akce['datum'].strftime('%d.%m.'),
-                                pre_jmeno=finalni_jmeno,
+                                pre_jmeno=target,
                                 in_poznamka=poznamka_input,
                                 in_ubytovani=ubytovani_input
                             )
                         else:
-                            st.warning("Nejdřív vyber nebo napiš jméno, abych věděl, pro koho tu dopravu řešíme.")
-            # --- KONEC FORMULÁŘE ---
-            # Tento elif patří k podmínce "if not je_po_deadlinu" o úroveň výš (mimo form)
+                            st.warning("Vyber alespoň jedno jméno, pro koho chceš řešit dopravu.")
+
+            # Tento elif patří k podmínce "if not je_po_deadlinu"
             elif je_po_deadlinu: 
-                st.info("🔒 Tabulka uzavřena. Kontaktuj trenéra. luckapetr@volny.cz (602 214 725)")
+                st.info("🔒 Tabulka uzavřena. Kontaktuj trenéra.")
                 
     # --- MAPA (DOLE) ---
     st.markdown("<hr style='margin: 30px 0;'>", unsafe_allow_html=True)
