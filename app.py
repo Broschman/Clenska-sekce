@@ -433,14 +433,12 @@ def vykreslit_detail_akce(akce, unique_key):
 """
         st.markdown(html_dashboard, unsafe_allow_html=True)
         
-    # 1. IMPORT FONTU + OPRAVENÉ CSS
+    # 1. IMPORT FONTU + CSS
     st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;600&display=swap');
 
-        /* OPRAVA: Cílíme POUZE na 'p' (text uvnitř hlavičky).
-           Předchozí verze cílila i na 'span', což rozbilo ikonu šipky.
-        */
+        /* Font pouze pro text v hlavičce (necháváme ikony napokoji) */
         div[data-testid="stExpander"] summary p {
             font-family: 'Roboto Mono', monospace !important;
             font-size: 0.85rem !important;
@@ -450,12 +448,10 @@ def vykreslit_detail_akce(akce, unique_key):
             margin-bottom: 0 !important;
         }
         
-        /* Pojistka pro případné vnořené elementy našeho textu, ale NE pro systémové ikony */
         div[data-testid="stExpander"] summary p span {
              font-family: 'Roboto Mono', monospace !important;
         }
 
-        /* Skrytí hover efektu změny barvy (volitelné) */
         div[data-testid="stExpander"] summary:hover p {
             color: #111827 !important;
         }
@@ -472,7 +468,7 @@ def vykreslit_detail_akce(akce, unique_key):
         return text + ("\u00A0" * spaces_needed)
 
     if not lidi.empty:
-        # Definice šířek
+        # Definice šířek sloupců
         W_INDEX = 4
         W_JMENO = 20
         W_DOPRAVA = 22
@@ -502,17 +498,41 @@ def vykreslit_detail_akce(akce, unique_key):
             idx_formatted = format_cell(f"{i+1}.", W_INDEX)
             jmeno_formatted = format_cell(row['jméno'], W_JMENO)
             
+            # --- CHYTRÉ ZPRACOVÁNÍ DOPRAVY ---
             dopr_raw = str(row.get('doprava', ''))
-            if not dopr_raw or dopr_raw == "nan": d_text = "⚪ Bez dopravy"
-            elif "Řidič" in dopr_raw: d_text = "🚙 Řidič"
+            
+            if not dopr_raw or dopr_raw == "nan": 
+                d_text = "⚪ Bez dopravy"
+            
+            elif "Řidič" in dopr_raw: 
+                d_text = "🚙 Řidič"
+            
             elif "Spolujízda" in dopr_raw or "Jedu s" in dopr_raw:
                 clean = dopr_raw.replace("Spolujízda:", "").replace("Spolujízda", "").replace("Jedu s:", "").strip()
                 d_text = f"➡️ {clean}"
-            elif "Chci" in dopr_raw or "Hledám" in dopr_raw: d_text = "🙋‍♂️ Hledá odvoz"
-            else: d_text = "❓ Nevyřešeno"
+            
+            elif "Chci" in dopr_raw or "Hledám" in dopr_raw:
+                # Zde je ta změna: Pokud je tam závorka s místem, vytáhneme ji!
+                if "(" in dopr_raw and ")" in dopr_raw:
+                    # Vytáhneme text mezi závorkami
+                    try:
+                        start = dopr_raw.find("(") + 1
+                        end = dopr_raw.find(")")
+                        misto = dopr_raw[start:end].strip()
+                        # Pokud je místo krátké, zobrazíme ho celé, jinak zkrátíme
+                        if len(misto) > 12: misto = misto[:10] + "."
+                        d_text = f"🙋‍♂️ {misto}"
+                    except:
+                        d_text = "🙋‍♂️ Hledá odvoz"
+                else:
+                    d_text = "🙋‍♂️ Hledá odvoz"
+            
+            else: 
+                d_text = "❓ Nevyřešeno"
             
             dopr_formatted = format_cell(d_text, W_DOPRAVA)
             
+            # Ikony + Poznámka
             ubyt_raw = str(row.get('ubytování', ''))
             ubyt_icon = "🛏️" if ubyt_raw and "Ano" in ubyt_raw else ""
             poznamka = row.get('poznámka', '')
@@ -522,12 +542,21 @@ def vykreslit_detail_akce(akce, unique_key):
             header_text = f"{idx_formatted}{jmeno_formatted}{dopr_formatted}{extra_info}"
 
             # 2. VYKRESLENÍ
-            with stylable_container(key=f"exp_finalfix_{unique_key}_{i}", css_styles=zebra_style):
+            with stylable_container(key=f"exp_place_{unique_key}_{i}", css_styles=zebra_style):
                 st.markdown(f"<div style='margin-bottom: 8px;'>", unsafe_allow_html=True)
                 
                 with st.expander(header_text, expanded=False):
                     
-                    st.caption(f"Celé jméno: {row['jméno']}")
+                    # Tady zobrazíme detailní info pro řidiče, pokud někdo hledá odvoz
+                    if "Hledám" in dopr_raw or "Chci" in dopr_raw:
+                        # Pokud je tam specifikované místo, zvýrazníme ho modře
+                        if "(" in dopr_raw:
+                            st.info(f"📍 **Poptávka:** {dopr_raw}")
+                        else:
+                            st.caption(f"Stav dopravy: {dopr_raw}")
+                    else:
+                        st.caption(f"Celé jméno: {row['jméno']}")
+
                     c_btn_doprava, c_btn_delete = st.columns([3, 1], gap="medium")
                     
                     with c_btn_doprava:
@@ -556,7 +585,7 @@ def vykreslit_detail_akce(akce, unique_key):
                                  st.rerun()
                     
                     if poznamka:
-                        st.info(f"Poznámka: {poznamka}")
+                        st.text(f"Poznámka: {poznamka}")
 
                 st.markdown("</div>", unsafe_allow_html=True)
 
