@@ -211,9 +211,7 @@ def vykreslit_detail_akce(akce, unique_key):
                     nove_jmeno = st.text_input("Nebo nové jméno")
                     poznamka_input = st.text_input("Poznámka")
                     
-                    # --- LOGIKA UBYTOVÁNÍ START ---
-                    # Checkbox na dopravu jsme odstranili (řeší se až v seznamu přihlášených)
-                    
+                    # --- LOGIKA UBYTOVÁNÍ (Bez dopravy) ---
                     ubytovani_input = False
                     
                     # Ubytování řešíme jen pokud to není trénink
@@ -226,23 +224,30 @@ def vykreslit_detail_akce(akce, unique_key):
                         if pd.notnull(deadline_ubyt) and datetime.now() > deadline_ubyt:
                             zobrazit_ubyt = False
 
+                        st.markdown("<br>", unsafe_allow_html=True) # Malá mezera před checkboxem
+                        
                         if zobrazit_ubyt:
-                            ubytovani_input = st.checkbox("🛏️ Společné ubytko") # Změna: už není ve sloupci c_check2
+                            ubytovani_input = st.checkbox("🛏️ Společné ubytko")
                         elif pd.notnull(deadline_ubyt):
                             st.caption("🔒 Deadline ubytování uplynul")
-                    # --- LOGIKA UBYTOVÁNÍ END ---
                     
                     st.markdown("<br>", unsafe_allow_html=True)
                     
                     # --- TLAČÍTKA ---
-                    # Protože jsme smazali checkbox dopravy, tlačítko "Řešit dopravu" tady nedává smysl.
-                    # Člověk se prvně zapíše, a pak si to nastaví v seznamu.
+                    c_btn_zapis, c_btn_doprava = st.columns([1, 1], gap="small")
                     
-                    odeslat_btn = st.form_submit_button("Zapsat se", type="primary", use_container_width=True)
+                    with c_btn_zapis:
+                        # Hlavní tlačítko pro zápis
+                        odeslat_btn = st.form_submit_button("Zapsat se", type="primary", use_container_width=True)
+                        
+                    with c_btn_doprava:
+                        # Tlačítko pro dopravu
+                        doprava_btn = st.form_submit_button("🚗 Řešit dopravu", use_container_width=True)
                     
                     # --- LOGIKA ODESLÁNÍ ---
                     finalni_jmeno = nove_jmeno.strip() if nove_jmeno else vybrane_jmeno
                     
+                    # === VARIANT A: Klikl na ZAPSAT SE ===
                     if odeslat_btn:
                         if finalni_jmeno:
                             try:
@@ -253,7 +258,7 @@ def vykreslit_detail_akce(akce, unique_key):
                                 if duplicita:
                                     st.warning(f"⚠️ {finalni_jmeno}, na této akci už jsi!")
                                 else:
-                                    # Doprava je defaultně prázdná (nebo "Nevyřešeno", záleží jak to chceš, ale prázdné je čistší)
+                                    # ZDE ZMĚNA: Doprava je defaultně prázdná, checkbox zmizel
                                     hodnota_dopravy = "" 
                                     hodnota_ubytovani = "Ano 🛏️" if ubytovani_input else ""
                                     cas_zapisu = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -266,8 +271,7 @@ def vykreslit_detail_akce(akce, unique_key):
                                         "poznámka": poznamka_input, 
                                         "doprava": hodnota_dopravy, 
                                         "ubytování": hodnota_ubytovani, 
-                                        "čas zápisu": cas_zapisu,
-                                        "id_auto": "" # Důležité: Prázdné ID auta
+                                        "čas zápisu": cas_zapisu
                                     }])
                                     
                                     # 3. Zápis přihlášky do Google Sheets
@@ -275,7 +279,7 @@ def vykreslit_detail_akce(akce, unique_key):
                                     update_data = pd.concat([aktualni_data, novy_zaznam], ignore_index=True)
                                     conn.update(worksheet="prihlasky", data=update_data)
                                     
-                                    # 4. ULOŽENÍ NOVÉHO JMÉNA (pokud je nové)
+                                    # 4. ULOŽENÍ NOVÉHO JMÉNA
                                     if finalni_jmeno not in seznam_jmen:
                                         try:
                                             jmena_df = conn.read(worksheet="jmena")
@@ -296,11 +300,10 @@ def vykreslit_detail_akce(akce, unique_key):
                                 st.error(f"Chyba zápisu: {e}")
                         else: 
                             st.warning("Musíš vyplnit jméno!")
-                            
+
                     # === VARIANT B: Klikl na DOPRAVU ===
                     elif doprava_btn:
                         if finalni_jmeno:
-                            # Zavoláme dialog a předáme mu jméno z formuláře
                             utils.show_doprava_dialog(
                                 akce_id=akce_id_str,
                                 nazev_akce=akce['název'],
@@ -311,7 +314,6 @@ def vykreslit_detail_akce(akce, unique_key):
                             )
                         else:
                             st.warning("Nejdřív vyber nebo napiš jméno, abych věděl, pro koho tu dopravu řešíme.")
-
             # --- KONEC FORMULÁŘE ---
             # Tento elif patří k podmínce "if not je_po_deadlinu" o úroveň výš (mimo form)
             elif je_po_deadlinu: 
