@@ -358,9 +358,9 @@ def vykreslit_detail_akce(akce, unique_key):
     st.markdown("<hr style='margin: 10px 0;'>", unsafe_allow_html=True)
     st.markdown(f"#### 👥 Zapsaní ({len(lidi)})")
 
-    # --- NOVINKA: DASHBOARD DOPRAVY (FIXED VERSION) ---
+    # --- NOVINKA: DASHBOARD DOPRAVY (S NEUTRÁLNÍM STAVEM) ---
     if not lidi.empty:
-        # 1. Data (stejné jako předtím)
+        # 1. Data
         df_auta_all = data_manager.load_auta()
         auta_akce = df_auta_all[df_auta_all['id_akce'] == akce_id_str]
         
@@ -381,24 +381,36 @@ def vykreslit_detail_akce(akce, unique_key):
             
         bilance = kapacita_celkem - poptavka_lidi
         
-        # 2. Barvy
-        if bilance >= 0:
-            status_color = "#10B981"
+        # 2. Logika barev a textů (TADY JE ZMĚNA)
+        
+        # A) NEUTRÁLNÍ STAV: Nic se neděje (0 aut, 0 poptávka)
+        if pocet_ridicu == 0 and poptavka_lidi == 0:
+            status_color = "#6B7280" # Šedá
+            bg_color = "#F9FAFB"     # Velmi světlá šedá
+            border_color = "#E5E7EB"
+            status_icon = "💤"       # Ikonka spánku nebo "P" jako parkoviště
+            status_text = "Zatím žádná auta"
+            percent = 0              # Prázdný bar
+            
+        # B) POZITIVNÍ STAV: Máme auta a stačí to
+        elif bilance >= 0:
+            status_color = "#10B981" # Zelená
             bg_color = "#ECFDF5"
             border_color = "#A7F3D0"
             status_icon = "✅"
             status_text = f"Máme místo! (Volno: {bilance})"
             percent = min((poptavka_lidi / kapacita_celkem) * 100, 100) if kapacita_celkem > 0 else 0
+            
+        # C) NEGATIVNÍ STAV: Nestíháme
         else:
-            status_color = "#EF4444"
+            status_color = "#EF4444" # Červená
             bg_color = "#FEF2F2"
             border_color = "#FECACA"
             status_icon = "🚨"
             status_text = f"Chybí místa! (Manko: {abs(bilance)})"
             percent = 100
 
-        # 3. HTML Komponenta (BEZ ODSAZENÍ)
-        # Vše je zarovnané doleva, aby to Streamlit nepochopil jako kód.
+        # 3. HTML Komponenta
         html_dashboard = f"""
 <div style="background-color: {bg_color}; border: 1px solid {border_color}; border-radius: 12px; padding: 12px 20px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
     <div style="display: flex; gap: 20px; align-items: center;">
