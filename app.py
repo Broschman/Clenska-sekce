@@ -1,4 +1,3 @@
-
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 from streamlit_extras.stylable_container import stylable_container
@@ -205,25 +204,49 @@ def vykreslit_detail_akce(akce, unique_key):
 
                 form_key = f"form_{unique_key}"
                 
-                # Použijeme form, aby se stránka nepřenačítala po každém kliknutí
                 with st.form(key=form_key, clear_on_submit=False): 
                     if kategorie_txt and kategorie_txt.lower() != "všichni": 
                         st.warning(f"Doporučení: **{kategorie_txt}**")
                     
-                    # --- 1. VÝBĚR LIDÍ (MULTISELECT) ---
-                    # Změna ze selectbox na multiselect pro hromadný zápis
+                    # 1. VÝBĚR LIDÍ
                     vybrana_jmena = st.multiselect(
                         "Vyber členy (lze i více najednou)", 
                         options=seznam_jmen,
                         placeholder="Klikni a vyber jména..."
                     )
+                    nove_jmeno = st.text_input("Nebo napiš nové jméno")
+                    poznamka_input = st.text_input("Poznámka (platí pro všechny)")
                     
-                    # Možnost přidat někoho nového, kdo není v seznamu
-                    nove_jmeno = st.text_input("Nebo napiš nové jméno (pokud není v seznamu)")
+                    # Sestavení seznamu jmen pro logiku formuláře (abychom věděli, co nabízet v dopravě)
+                    lidi_preview = []
+                    if vybrana_jmena: lidi_preview.extend(vybrana_jmena)
+                    if nove_jmeno.strip(): lidi_preview.append(nove_jmeno.strip())
+
+                    # --- 2. CHYTRÁ RODINNÁ DOPRAVA 🧠 ---
+                    rezim_dopravy = "Neřešit / Individuálně"
+                    ridic_rodiny = None
+                    kapacita_rodiny = 5
                     
-                    poznamka_input = st.text_input("Poznámka (platí pro všechny vybrané)")
-                    
-                    # --- LOGIKA UBYTOVÁNÍ ---
+                    if lidi_preview:
+                        st.markdown("---")
+                        st.markdown("**🚗 Doprava pro tuto skupinu:**")
+                        
+                        # Možnosti se mění podle počtu lidí
+                        moznosti_dopravy = ["Neřešit / Individuálně", "🙋‍♂️ Všichni hledáme odvoz"]
+                        if len(lidi_preview) > 0:
+                            moznosti_dopravy.append("🚙 Jedeme autem (Jeden řídí, ostatní se vezou)")
+                        
+                        rezim_dopravy = st.radio("Vyber režim:", moznosti_dopravy, label_visibility="collapsed")
+                        
+                        # Pokud zvolí AUTO, musíme vědět kdo řídí
+                        if "Jedeme autem" in rezim_dopravy:
+                            c_ridic, c_kap = st.columns([2, 1])
+                            ridic_rodiny = c_ridic.selectbox("Kdo z vybraných řídí?", options=lidi_preview)
+                            kapacita_rodiny = c_kap.number_input("Kapacita", 1, 9, 5, help="Kolik lidí se do auta vejde CELKEM (včetně řidiče)")
+                            
+                            st.caption(f"💡 *{ridic_rodiny} bude zapsán jako řidič, ostatní jako jeho pasažéři.*")
+
+                    # --- 3. UBYTOVÁNÍ ---
                     ubytovani_input = False
                     if "trénink" not in typ_udalosti:
                         deadline_ubyt = pd.to_datetime(akce.get('deadline_ubytovani'), dayfirst=True, errors='coerce')
@@ -231,7 +254,7 @@ def vykreslit_detail_akce(akce, unique_key):
                         if pd.notnull(deadline_ubyt) and datetime.now() > deadline_ubyt:
                             zobrazit_ubyt = False
 
-                        st.markdown("<br>", unsafe_allow_html=True)
+                        st.markdown("---")
                         if zobrazit_ubyt:
                             ubytovani_input = st.checkbox("🛏️ Společné ubytko (pro všechny)")
                         elif pd.notnull(deadline_ubyt):
@@ -244,35 +267,39 @@ def vykreslit_detail_akce(akce, unique_key):
                     
                     with c_btn_zapis:
                         odeslat_btn = st.form_submit_button("Zapsat vybrané", type="primary", use_container_width=True)
-                        
+                    
+                    # Tlačítko pro sólo řešení dopravy už nedává smysl v hromadném formuláři, 
+                    # ale necháme ho tam jako "escape hatch", kdyby někdo chtěl řešit dopravu jen pro jednoho člověka bokem.
                     with c_btn_doprava:
-                        # Tlačítko pro dopravu (otevírá dialog, musí být mimo form logic, ale uvnitř formu)
-                        doprava_btn = st.form_submit_button("🚗 Řešit dopravu", use_container_width=True)
+                        doprava_btn = st.form_submit_button("🚗 Řešit dopravu (Solo)", use_container_width=True)
                     
-                    # --- LOGIKA ZPRACOVÁNÍ ---
-                    
-                    # A) Klikl na ZAPSAT
+                    # --- LOGIKA ODESLÁNÍ ---
                     if odeslat_btn:
-                        # 1. Sestavení seznamu lidí k zápisu
-                        lidi_k_zapisu = []
-                        if vybrana_jmena:
-                            lidi_k_zapisu.extend(vybrana_jmena)
-                        if nove_jmeno.strip():
-                            lidi_k_zapisu.append(nove_jmeno.strip())
-                        
-                        if not lidi_k_zapisu:
+                        if not lidi_preview:
                             st.warning("Musíš vybrat alespoň jedno jméno!")
                         else:
                             try:
-                                # Načteme data jen jednou
                                 aktualni_data = data_manager.load_prihlasky()
+                                df_auta = data_manager.load_auta() # Potřebujeme pro zápis auta
                                 jmena_df = conn.read(worksheet="jmena")
                                 
                                 novy_zaznamy_list = []
                                 uspesne_zapsani = []
+                                nove_auto_row = None
                                 
-                                for clovek in lidi_k_zapisu:
-                                    # Kontrola duplicity pro každého zvlášť
+                                # A) Pokud se zakládá auto, připravíme ho
+                                if "Jedeme autem" in rezim_dopravy and ridic_rodiny:
+                                    # Smažeme staré auto tohoto řidiče, pokud existuje
+                                    df_clean_auta = df_auta[~((df_auta['id_akce'] == akce_id_str) & (df_auta['ridic'] == ridic_rodiny))]
+                                    nove_auto_row = {
+                                        "id_akce": akce_id_str, "ridic": ridic_rodiny, 
+                                        "kapacita": kapacita_rodiny, "cas": "", "misto": "", "poznamka": "Rodinné auto"
+                                    }
+                                    # Update proměnné pro pozdější zápis
+                                    df_auta = pd.concat([df_clean_auta, pd.DataFrame([nove_auto_row])], ignore_index=True)
+
+                                for clovek in lidi_preview:
+                                    # Kontrola duplicity
                                     duplicita = not aktualni_data[
                                         (aktualni_data['id_akce'] == akce_id_str) & 
                                         (aktualni_data['jméno'] == clovek)
@@ -281,38 +308,54 @@ def vykreslit_detail_akce(akce, unique_key):
                                     if duplicita:
                                         st.toast(f"⚠️ {clovek} už je přihlášen(a).")
                                     else:
-                                        # Příprava řádku
+                                        # LOGIKA DOPRAVY PRO KONKRÉTNÍ OSOBU
+                                        final_doprava = ""
+                                        final_id_auto = ""
+                                        
+                                        if "Všichni hledáme" in rezim_dopravy:
+                                            final_doprava = "Chci odvoz 🙋‍♂️"
+                                        
+                                        elif "Jedeme autem" in rezim_dopravy and ridic_rodiny:
+                                            if clovek == ridic_rodiny:
+                                                final_doprava = "Řidič 🚙"
+                                                final_id_auto = "" # Řidič nemá id_auto (sám sebe nehledá)
+                                            else:
+                                                final_doprava = f"Spolujízda: {ridic_rodiny}"
+                                                final_id_auto = ridic_rodiny
+
                                         hodnota_ubytovani = "Ano 🛏️" if ubytovani_input else ""
+                                        
                                         novy_zaznamy_list.append({
                                             "id_akce": akce_id_str, 
                                             "název": akce['název'], 
                                             "jméno": clovek, 
                                             "poznámka": poznamka_input, 
-                                            "doprava": "", # Dopravu si řeší pak individuálně nebo hromadně v dialogu
+                                            "doprava": final_doprava, 
                                             "ubytování": hodnota_ubytovani, 
-                                            "čas zápisu": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                                            "čas zápisu": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                                            "id_auto": final_id_auto
                                         })
                                         uspesne_zapsani.append(clovek)
                                         
-                                        # Uložení nového jména do číselníku (pokud je nové)
                                         if clovek not in seznam_jmen:
                                             try:
-                                                nove_jmeno_df = pd.DataFrame([{"jméno": clovek}])
-                                                jmena_df = pd.concat([jmena_df, nove_jmeno_df], ignore_index=True)
+                                                jmena_df = pd.concat([jmena_df, pd.DataFrame([{"jméno": clovek}])], ignore_index=True)
                                             except: pass
 
-                                # Hromadný zápis do DB (mnohem rychlejší než po jednom)
                                 if novy_zaznamy_list:
-                                    # 1. Update přihlášek
+                                    # 1. Zápis přihlášek
                                     df_to_add = pd.DataFrame(novy_zaznamy_list)
                                     final_df = pd.concat([aktualni_data, df_to_add], ignore_index=True)
                                     conn.update(worksheet="prihlasky", data=final_df)
                                     
-                                    # 2. Update seznamu jmen (pokud přibyla nová)
+                                    # 2. Zápis auta (pokud nějaké vzniklo)
+                                    if nove_auto_row:
+                                         conn.update(worksheet="auta", data=df_auta)
+                                    
+                                    # 3. Zápis jmen
                                     if len(jmena_df) > len(seznam_jmen):
                                          conn.update(worksheet="jmena", data=jmena_df)
 
-                                    # Animace a refresh
                                     with st_lottie_spinner(styles.lottie_success, key=f"anim_{unique_key}"): 
                                         time.sleep(1)
                                     
@@ -323,14 +366,14 @@ def vykreslit_detail_akce(akce, unique_key):
                                     
                             except Exception as e:
                                 st.error(f"Chyba zápisu: {e}")
-
+                                
                     # B) Klikl na DOPRAVU
                     elif doprava_btn:
                         # Tady je to složitější - dialog umí řešit dopravu jen pro jednoho člověka.
                         # Prozatím otevřeme dialog pro PRVNÍHO vybraného, nebo vyzveme k výběru.
                         # (Hromadná doprava je UX oříšek, pro začátek stačí řešit po jednom)
                         
-                        target = None
+                        target = lidi_preview[0] if lidi_preview else None
                         if vybrana_jmena: target = vybrana_jmena[0]
                         elif nove_jmeno: target = nove_jmeno
                         
