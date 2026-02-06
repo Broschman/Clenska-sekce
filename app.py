@@ -202,7 +202,7 @@ def vykreslit_detail_akce(akce, unique_key):
                     st.markdown("""<div style="background-color: #FEF2F2; border: 1px solid #FCA5A5; color: #B91C1C; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-weight: bold; font-size: 0.9em; display: flex; align-items: center;"><span style="font-size: 1.2em; margin-right: 8px;">⚠️</span>Je nutné se přihlásit i v ORISu!</div>""", unsafe_allow_html=True)
 
                 form_key = f"form_{unique_key}"
-                with st.form(key=form_key, clear_on_submit=False): # POZOR: clear_on_submit dej na False, jinak se jméno smaže než se otevře dialog!
+                with st.form(key=form_key, clear_on_submit=False): 
                     if kategorie_txt and kategorie_txt.lower() != "všichni": 
                         st.warning(f"Doporučení: **{kategorie_txt}**")
                     
@@ -211,15 +211,13 @@ def vykreslit_detail_akce(akce, unique_key):
                     nove_jmeno = st.text_input("Nebo nové jméno")
                     poznamka_input = st.text_input("Poznámka")
                     
-                    c_check1, c_check2 = st.columns(2)
-                    doprava_input = c_check1.checkbox("🚗 Sháním odvoz")
-                    
                     # --- LOGIKA UBYTOVÁNÍ START ---
+                    # Checkbox na dopravu jsme odstranili (řeší se až v seznamu přihlášených)
+                    
                     ubytovani_input = False
                     
                     # Ubytování řešíme jen pokud to není trénink
                     if "trénink" not in typ_udalosti:
-                        # ZDE JSME PŘIDALI dayfirst=True
                         deadline_ubyt = pd.to_datetime(akce.get('deadline_ubytovani'), dayfirst=True, errors='coerce')
                         
                         zobrazit_ubyt = True
@@ -229,30 +227,22 @@ def vykreslit_detail_akce(akce, unique_key):
                             zobrazit_ubyt = False
 
                         if zobrazit_ubyt:
-                            ubytovani_input = c_check2.checkbox("🛏️ Společné ubytko")
+                            ubytovani_input = st.checkbox("🛏️ Společné ubytko") # Změna: už není ve sloupci c_check2
                         elif pd.notnull(deadline_ubyt):
-                            # Volitelné: Informace, proč tam ten checkbox není
-                            c_check2.caption("🔒 Deadline ubytování uplynul")
+                            st.caption("🔒 Deadline ubytování uplynul")
                     # --- LOGIKA UBYTOVÁNÍ END ---
                     
                     st.markdown("<br>", unsafe_allow_html=True)
                     
-                    # --- TLAČÍTKA (uvnitř formuláře) ---
-                    c_btn_zapis, c_btn_doprava = st.columns([1, 1], gap="small")
+                    # --- TLAČÍTKA ---
+                    # Protože jsme smazali checkbox dopravy, tlačítko "Řešit dopravu" tady nedává smysl.
+                    # Člověk se prvně zapíše, a pak si to nastaví v seznamu.
                     
-                    with c_btn_zapis:
-                        # Hlavní tlačítko pro zápis
-                        odeslat_btn = st.form_submit_button("Zapsat se", type="primary", use_container_width=True)
-                        
-                    with c_btn_doprava:
-                        # Tlačítko pro dopravu
-                        doprava_btn = st.form_submit_button("🚗 Řešit dopravu", use_container_width=True)
+                    odeslat_btn = st.form_submit_button("Zapsat se", type="primary", use_container_width=True)
                     
                     # --- LOGIKA ODESLÁNÍ ---
-                    # 1. Zjistíme jméno (musí být definováno PŘED podmínkami tlačítek)
                     finalni_jmeno = nove_jmeno.strip() if nove_jmeno else vybrane_jmeno
                     
-                    # === VARIANT A: Klikl na ZAPSAT SE ===
                     if odeslat_btn:
                         if finalni_jmeno:
                             try:
@@ -263,7 +253,8 @@ def vykreslit_detail_akce(akce, unique_key):
                                 if duplicita:
                                     st.warning(f"⚠️ {finalni_jmeno}, na této akci už jsi!")
                                 else:
-                                    hodnota_dopravy = "Ano 🚗" if doprava_input else ""
+                                    # Doprava je defaultně prázdná (nebo "Nevyřešeno", záleží jak to chceš, ale prázdné je čistší)
+                                    hodnota_dopravy = "" 
                                     hodnota_ubytovani = "Ano 🛏️" if ubytovani_input else ""
                                     cas_zapisu = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                                     
@@ -275,7 +266,8 @@ def vykreslit_detail_akce(akce, unique_key):
                                         "poznámka": poznamka_input, 
                                         "doprava": hodnota_dopravy, 
                                         "ubytování": hodnota_ubytovani, 
-                                        "čas zápisu": cas_zapisu
+                                        "čas zápisu": cas_zapisu,
+                                        "id_auto": "" # Důležité: Prázdné ID auta
                                     }])
                                     
                                     # 3. Zápis přihlášky do Google Sheets
@@ -304,7 +296,7 @@ def vykreslit_detail_akce(akce, unique_key):
                                 st.error(f"Chyba zápisu: {e}")
                         else: 
                             st.warning("Musíš vyplnit jméno!")
-
+                            
                     # === VARIANT B: Klikl na DOPRAVU ===
                     elif doprava_btn:
                         if finalni_jmeno:
