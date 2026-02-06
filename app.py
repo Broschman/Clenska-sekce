@@ -358,81 +358,105 @@ def vykreslit_detail_akce(akce, unique_key):
     st.markdown("<hr style='margin: 10px 0;'>", unsafe_allow_html=True)
     st.markdown(f"#### 👥 Zapsaní ({len(lidi)})")
 
-    # --- NOVINKA: DASHBOARD DOPRAVY ---
+    # --- NOVINKA: DASHBOARD DOPRAVY (HTML/CSS VERZE) ---
     if not lidi.empty:
-        # 1. Načtení dat o autech pro tuto akci
+        # 1. Data
         df_auta_all = data_manager.load_auta()
         auta_akce = df_auta_all[df_auta_all['id_akce'] == akce_id_str]
         
-        # 2. Výpočty
         kapacita_celkem = 0
         pocet_ridicu = 0
         
-        # Sečteme kapacity aut (minus řidič, protože ten se nepočítá do "volných míst pro pasažéry")
         for _, a_row in auta_akce.iterrows():
             kap = int(a_row.get('kapacita', 4))
-            # Kapacita udává kolik lidí auto uveze. 
-            # Pokud je v kapacitě započítán i řidič, musíme odečíst 1.
-            # Předpokládám, že když někdo napíše "kapacita 4", myslí tím "já + 3 lidi".
             volna_mista_v_aute = kap - 1 
             kapacita_celkem += volna_mista_v_aute
             pocet_ridicu += 1
 
-        # Kdo potřebuje odvoz? (Všichni kromě řidičů a těch, co mají "vlastní/jinou" dopravu, pokud to sledujeme)
-        # Zjednodušeně: Počet lidí celkem mínus počet řidičů
-        # (Tohle je hrubý odhad, ideálně bychom filtrovali ty, co mají doprava="Chci" nebo "Spolujízda")
-        
         poptavka_lidi = 0
         for _, p_row in lidi.iterrows():
             d = str(p_row.get('doprava', ''))
-            # Počítáme lidi, kteří NEJSOU řidiči a CHTĚJÍ jet autem (nebo už jedou)
             if "Řidič" not in d and ("Chci" in d or "Hledám" in d or "Spolujízda" in d or "Jedu s" in d):
                 poptavka_lidi += 1
-            # Pokud má někdo "Nevyřešeno" (prázdno), taky ho asi počítáme jako potenciálního pasažéra?
-            # Záleží na logice klubu. Pro teď počítejme jen ty, co explicitně něco řeší.
             
         bilance = kapacita_celkem - poptavka_lidi
         
-        # 3. Vykreslení Dashboardu
-        with stylable_container(
-            key=f"dash_transport_{unique_key}",
-            css_styles="""
-            {
-                background-color: #F8FAFC;
-                border: 1px solid #E2E8F0;
-                border-radius: 8px;
-                padding: 10px 15px;
-                margin-bottom: 15px;
-            }
-            """
-        ):
-            c_info, c_bar = st.columns([1, 2], vertical_alignment="center")
+        # 2. Logika barev a textů
+        if bilance >= 0:
+            status_color = "#10B981" # Zelená
+            bg_color = "#ECFDF5"     # Světle zelená
+            border_color = "#A7F3D0"
+            status_icon = "✅"
+            status_text = f"Máme místo! (Volno: {bilance})"
             
-            with c_info:
-                if bilance >= 0:
-                    st.markdown(f"🚗 **Auta:** {pocet_ridicu} | ✅ **Volno:** {bilance}")
-                else:
-                    st.markdown(f"🚗 **Auta:** {pocet_ridicu} | 🚨 **Chybí:** {abs(bilance)}")
+            # Výpočet procent (pro bar)
+            # Pokud je kapacita 10, poptávka 5 -> 50% obsazeno (zelená)
+            total_needed = poptavka_lidi if poptavka_lidi > 0 else 1
+            percent = min((poptavka_lidi / kapacita_celkem) * 100, 100) if kapacita_celkem > 0 else 0
             
-            with c_bar:
-                # Progress bar
-                # 100% = Poptávka je plně pokryta. 
-                # Pokud je poptávka 0, je to 100%.
-                if poptavka_lidi > 0:
-                    ratio = min(kapacita_celkem / poptavka_lidi, 1.0)
-                else:
-                    ratio = 1.0
-                
-                bar_color = "#10B981" if ratio >= 1.0 else "#EF4444"
-                st.markdown(f"""
-                <style>
-                    .stProgress > div > div > div > div {{
-                        background-color: {bar_color};
-                    }}
-                </style>""", unsafe_allow_html=True)
-                
-                st.progress(ratio)
+        else:
+            status_color = "#EF4444" # Červená
+            bg_color = "#FEF2F2"     # Světle červená
+            border_color = "#FECACA"
+            status_icon = "🚨"
+            status_text = f"Chybí místa! (Manko: {abs(bilance)})"
+            # Pokud chybí, bar bude plný (červený)
+            percent = 100
 
+        # 3. HTML Komponenta (Flexbox Dashboard)
+        html_dashboard = f"""
+        <div style="
+            background-color: {bg_color};
+            border: 1px solid {border_color};
+            border-radius: 12px;
+            padding: 12px 20px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        ">
+            <div style="display: flex; gap: 20px; align-items: center;">
+                <div style="text-align: center;">
+                    <div style="font-size: 0.8rem; color: #6B7280; font-weight: 600; text-transform: uppercase;">Auta</div>
+                    <div style="font-size: 1.2rem; font-weight: 800; color: #1F2937;">{pocet_ridicu}</div>
+                </div>
+                
+                <div style="width: 1px; height: 30px; background-color: {border_color};"></div>
+                
+                <div>
+                    <div style="font-size: 0.9rem; font-weight: 700; color: {status_color};">
+                        {status_icon} {status_text}
+                    </div>
+                    <div style="font-size: 0.75rem; color: #6B7280;">
+                        Poptávka: {poptavka_lidi} lidí
+                    </div>
+                </div>
+            </div>
+
+            <div style="flex-grow: 1; max-width: 300px;">
+                <div style="
+                    background-color: rgba(255,255,255,0.6);
+                    border-radius: 10px;
+                    height: 12px;
+                    width: 100%;
+                    overflow: hidden;
+                    border: 1px solid {border_color};
+                ">
+                    <div style="
+                        background-color: {status_color};
+                        width: {percent}%;
+                        height: 100%;
+                        border-radius: 10px;
+                        transition: width 0.5s ease-in-out;
+                    "></div>
+                </div>
+            </div>
+        </div>
+        """
+        
+        st.markdown(html_dashboard, unsafe_allow_html=True)
     # 1. IMPORT FONTU + OPRAVENÉ CSS
     st.markdown("""
     <style>
