@@ -358,7 +358,7 @@ def vykreslit_detail_akce(akce, unique_key):
     st.markdown("<hr style='margin: 10px 0;'>", unsafe_allow_html=True)
     st.markdown(f"#### 👥 Zapsaní ({len(lidi)})")
 
-    # --- NOVINKA: DASHBOARD DOPRAVY (HTML/CSS VERZE) ---
+    # --- NOVINKA: DASHBOARD DOPRAVY (HTML/CSS VERZE - OPRAVENO) ---
     if not lidi.empty:
         # 1. Data
         df_auta_all = data_manager.load_auta()
@@ -389,8 +389,6 @@ def vykreslit_detail_akce(akce, unique_key):
             status_icon = "✅"
             status_text = f"Máme místo! (Volno: {bilance})"
             
-            # Výpočet procent (pro bar)
-            # Pokud je kapacita 10, poptávka 5 -> 50% obsazeno (zelená)
             total_needed = poptavka_lidi if poptavka_lidi > 0 else 1
             percent = min((poptavka_lidi / kapacita_celkem) * 100, 100) if kapacita_celkem > 0 else 0
             
@@ -400,11 +398,11 @@ def vykreslit_detail_akce(akce, unique_key):
             border_color = "#FECACA"
             status_icon = "🚨"
             status_text = f"Chybí místa! (Manko: {abs(bilance)})"
-            # Pokud chybí, bar bude plný (červený)
             percent = 100
 
-        # 3. HTML Komponenta (Flexbox Dashboard)
-        html_dashboard = f"""
+        # 3. HTML Komponenta (S použitím textwrap.dedent pro odstranění odsazení)
+        # Tím zabráníme tomu, aby to Streamlit zobrazil jako "code block"
+        html_dashboard = textwrap.dedent(f"""
         <div style="
             background-color: {bg_color};
             border: 1px solid {border_color};
@@ -454,9 +452,10 @@ def vykreslit_detail_akce(akce, unique_key):
                 </div>
             </div>
         </div>
-        """
+        """)
         
         st.markdown(html_dashboard, unsafe_allow_html=True)
+        
     # 1. IMPORT FONTU + OPRAVENÉ CSS
     st.markdown("""
     <style>
