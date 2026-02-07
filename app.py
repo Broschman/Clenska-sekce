@@ -198,42 +198,36 @@ def vykreslit_detail_akce(akce, unique_key):
         ):
             if not je_po_deadlinu and delete_key_state not in st.session_state:
                 
-                # --- 1. VÝBĚR LIDÍ (Mimo formulář pro okamžitou reakci) ---
-                # PŘIDÁN PARAMETR key=... ABY SE NEHÁDALY ID
-                vybrana_jmena = st.multiselect(
-                    "Vyber členy", 
-                    options=seznam_jmen, 
-                    placeholder="Klikni a vyber...",
-                    key=f"multi_select_{unique_key}" 
-                )
-                
-                # --- 2. DYNAMICKÝ NADPIS ---
-                # Pokud je vybráno více než 1 jméno, změníme text
-                pocet_vybranych = len(vybrana_jmena)
-                text_nadpisu = "✍️ Hromadná přihláška" if pocet_vybranych > 1 else "✍️ Přihláška"
-                
-                st.markdown(f"<h4 style='margin-top:0; margin-bottom: 15px;'>{text_nadpisu}</h4>", unsafe_allow_html=True)
+                # STATICKÝ NADPIS (Už se nemění = žádné blikání/načítání)
+                st.markdown("<h4 style='margin-top:0; margin-bottom: 15px;'>✍️ Přihláška</h4>", unsafe_allow_html=True)
                 
                 if je_zavod_obecne and not je_stafeta:
                     st.markdown("""<div style="background-color: #FEF2F2; border: 1px solid #FCA5A5; color: #B91C1C; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-weight: bold; font-size: 0.9em; display: flex; align-items: center;"><span style="font-size: 1.2em; margin-right: 8px;">⚠️</span>Je nutné se přihlásit i v ORISu!</div>""", unsafe_allow_html=True)
 
                 form_key = f"form_{unique_key}"
                 
-                # --- 3. ZBYTEK FORMULÁŘE ---
+                # VŠE JE TEĎ UVNITŘ FORMULÁŘE -> Stránka se nepřenačítá při výběru
                 with st.form(key=form_key, clear_on_submit=False): 
                     if kategorie_txt and kategorie_txt.lower() != "všichni": 
                         st.warning(f"Doporučení: **{kategorie_txt}**")
                     
-                    # Zbytek inputů (aby se nenačítaly při každém úhozu)
+                    # 1. VÝBĚR LIDÍ
+                    # Vrátil jsem to zpět do formu. Key už není nutný, ale pro jistotu ho necháme.
+                    vybrana_jmena = st.multiselect(
+                        "Vyber členy", 
+                        options=seznam_jmen, 
+                        placeholder="Klikni a vyber..."
+                    )
+                    
                     nove_jmeno = st.text_input("Nebo nové jméno (pokud není v seznamu)")
                     poznamka_input = st.text_input("Poznámka (společná)")
                     
-                    # Sestavení seznamu pro logiku
+                    # Sestavení seznamu (proběhne až po odeslání tlačítka)
                     lidi_k_zapisu = []
                     if vybrana_jmena: lidi_k_zapisu.extend(vybrana_jmena)
                     if nove_jmeno.strip(): lidi_k_zapisu.append(nove_jmeno.strip())
 
-                    # UBYTOVÁNÍ
+                    # 2. UBYTOVÁNÍ
                     ubytovani_input = False
                     if "trénink" not in typ_udalosti:
                         deadline_ubyt = pd.to_datetime(akce.get('deadline_ubytovani'), dayfirst=True, errors='coerce')
@@ -253,14 +247,15 @@ def vykreslit_detail_akce(akce, unique_key):
                     c_btn_zapis, c_btn_doprava = st.columns([1, 1.2], gap="small")
                     
                     with c_btn_zapis:
-                        # Měníme i text na tlačítku dynamicky podle počtu lidí v seznamu
-                        btn_label = "Zapsat skupinu" if len(lidi_k_zapisu) > 1 else "Zapsat se"
-                        odeslat_btn = st.form_submit_button(btn_label, type="primary", use_container_width=True)
+                        # Statický text tlačítka
+                        odeslat_btn = st.form_submit_button("Zapsat se", type="primary", use_container_width=True)
                         
                     with c_btn_doprava:
                         doprava_btn = st.form_submit_button("🚗 Doprava (Dialog)", use_container_width=True)
                     
-                    # --- LOGIKA ODESLÁNÍ ---
+                    # --- LOGIKA ---
+                    # Kód se vykoná až TADY, po kliknutí. Proto je to rychlé.
+                    
                     if odeslat_btn:
                         if not lidi_k_zapisu:
                             st.warning("Vyber jména.")
@@ -296,6 +291,8 @@ def vykreslit_detail_akce(akce, unique_key):
                             except Exception as e: st.error(f"Chyba: {e}")
 
                     elif doprava_btn:
+                        # I když je multiselect uvnitř formuláře, po kliknutí na toto tlačítko
+                        # máme v proměnné lidi_k_zapisu aktuální hodnoty.
                         if lidi_k_zapisu:
                             utils.show_doprava_dialog(
                                 akce_id=akce_id_str,
