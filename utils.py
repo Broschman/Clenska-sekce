@@ -315,3 +315,356 @@ def export_admin_section(lidi, nazev_akce, unique_key):
                     }
                 </script>
                 """, height=0)
+
+@st.dialog("🚗 Správa dopravy")
+def show_doprava_dialog(akce_id, nazev_akce, datum_akce, input_jmena, in_poznamka=None, in_ubytovani=None):
+    """
+    Chytrý modální dialog.
+    - Pokud dostane string (jedno jméno) -> Zobrazí detail jednotlivce.
+    - Pokud dostane list (více jmen) -> Zobrazí hromadnou správu (Rodina/Skupina).
+    """
+    conn = data_manager.get_connection()
+    
+    # 1. Normalizace vstupu na seznam
+    if isinstance(input_jmena, str):
+        target_list = [input_jmena]
+        is_group = False
+    elif isinstance(input_jmena, list):
+        target_list = [j for j in input_jmena if j] # Odstraní prázdné
+        is_group = (len(target_list) > 1)
+    else:
+        st.error("Chyba vstupu dialogu.")
+        return
+
+    if not target_list:
+        st.warning("Nebyla vybrána žádná jména.")
+        return
+
+    st.markdown(f"**{nazev_akce}** ({datum_akce})")
+    
+    # Načtení dat
+    df_auta = data_manager.load_auta()
+    df_lidi = data_manager.load_prihlasky()
+    auta_akce = df_auta[df_auta['id_akce'] == akce_id].copy()
+    
+    # ---------------------------------------------------------
+    # SCÉNÁŘ A: SKUPINA (Rodina, více lidí)
+    # ---------------------------------------------------------
+    if is_group:
+        jmena_str = ", ".join(target_list)
+        st.info(f"👥 Řešíš dopravu pro: **{jmena_str}**")
+        
+        st.markdown("### Jak pojede tato skupina?")
+        rezim = st.radio("Možnosti:", [
+            "🤷‍♂️ Neřešit (Zrušit dopravu všem)",
+            "🙋‍♂️ Hledáme odvoz (Všichni chtějí svézt)",
+            "🚙 Máme auto (Jeden řídí, ostatní se vezou)"
+        ])
+        
+        st.markdown("---")
+        
+        # 1. MÁME AUTO
+        if "Máme auto" in rezim:
+            c1, c2 = st.columns([2, 1])
+            ridic = c1.selectbox("Kdo z nich řídí?", options=target_list)
+            kapacita = c2.number_input("Kapacita (celkem)", 1, 9, 5)
+            cas = st.text_input("Čas odjezdu", placeholder="např. 17:00")
+            misto = st.text_input("Místo odjezdu", placeholder="např. Loděnice")
+            
+            st.caption(f"💡 {ridic} bude řidič, ostatní ({len(target_list)-1}) budou jeho pasažéři.")
+            
+            if st.button("💾 Uložit skupinu (Auto)", type="primary", use_container_width=True):
+                # A) Smazat stará auta všech zúčastněných
+                for osoba in target_list:
+                    handle_driver_removal(conn, akce_id, osoba)
+                
+                # B) Vytvořit nové auto
+                df_auta_curr = data_manager.load_auta() # Reload po smazání
+                nove_auto = pd.DataFrame([{
+                    "id_akce": akce_id, "ridic": ridic, 
+                    "kapacita": kapacita, "cas": cas, "misto": misto, "poznamka": "Skupina"
+                }])
+                conn.update(worksheet="auta", data=pd.concat([df_auta_curr, nove_auto], ignore_index=True))
+                
+                # C) Update lidí
+                df_lidi_curr = data_manager.load_prihlasky()
+                # Projdeme lidi a aktualizujeme je (přepisujeme řádky)
+                
+                # Nejprve odstraníme staré záznamy těchto lidí
+                maska_lidi = (df_lidi_curr['id_akce'] == akce_id) & (df_lidi_curr['jméno'].isin(target_list))
+                df_clean = df_lidi_curr[~maska_lidi]
+                
+                new_rows = []
+                # Najdeme původní záznamy kvůli poznámkám a ubytku (chceme je zachovat)
+                original_rows = df_lidi_curr[maska_lidi].set_index('jméno')
+                
+                for osoba in target_list:
+                    # Zachování původních dat
+                    orig = original_rows.loc[osoba] if osoba in original_rows.index else pd.Series()
+                    pozn = orig.get('poznámka', in_poznamka or "")
+                    ubyt = orig.get('ubytování', ("Ano 🛏️" if in_ubytovani else ""))
+                    
+                    if osoba == ridic:
+                        dopr, auto_id = "Řidič 🚙", ""
+                    else:
+                        dopr, auto_id = f"Spolujízda: {ridic}", ridic
+                        
+                    new_rows.append({
+                        "id_akce": akce_id, "název": nazev_akce, "jméno": osoba,
+                        "poznámka": pozn, "doprava": dopr, "ubytování": ubyt,
+                        "čas zápisu": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        "id_auto": auto_id
+                    })
+                
+                conn.update(worksheet="prihlasky", data=pd.concat([df_clean, pd.DataFrame(new_rows)], ignore_index=True))
+                st.rerun()
+
+        # 2. HLEDÁME ODVOZ
+        elif "Hledáme" in rezim:
+            pref_misto = st.text_input("Odkud chcete jet? (nepovinné)", placeholder="např. Brno-Lesná")
+            text_dopravy = f"Hledám odvoz 🙋‍♂️ ({pref_misto})" if pref_misto else "Chci odvoz 🙋‍♂️"
+            
+            if st.button("💾 Uložit skupinu (Pasažéři)", type="primary", use_container_width=True):
+                # Smazat případná auta, kdyby někdo z nich byl dřív řidič
+                for osoba in target_list:
+                    handle_driver_removal(conn, akce_id, osoba)
+                
+                df_lidi_curr = data_manager.load_prihlasky()
+                maska_lidi = (df_lidi_curr['id_akce'] == akce_id) & (df_lidi_curr['jméno'].isin(target_list))
+                df_clean = df_lidi_curr[~maska_lidi]
+                original_rows = df_lidi_curr[maska_lidi].set_index('jméno')
+                
+                new_rows = []
+                for osoba in target_list:
+                    orig = original_rows.loc[osoba] if osoba in original_rows.index else pd.Series()
+                    pozn = orig.get('poznámka', in_poznamka or "")
+                    ubyt = orig.get('ubytování', ("Ano 🛏️" if in_ubytovani else ""))
+                    
+                    new_rows.append({
+                        "id_akce": akce_id, "název": nazev_akce, "jméno": osoba,
+                        "poznámka": pozn, "doprava": text_dopravy, "ubytování": ubyt,
+                        "čas zápisu": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        "id_auto": ""
+                    })
+                
+                conn.update(worksheet="prihlasky", data=pd.concat([df_clean, pd.DataFrame(new_rows)], ignore_index=True))
+                st.rerun()
+
+        # 3. ZRUŠIT / NEŘEŠIT
+        else:
+            if st.button("🗑️ Vymazat dopravu všem", use_container_width=True):
+                for osoba in target_list:
+                    handle_driver_removal(conn, akce_id, osoba)
+                
+                # Prosté smazání sloupce doprava
+                df_lidi_curr = data_manager.load_prihlasky()
+                maska_lidi = (df_lidi_curr['id_akce'] == akce_id) & (df_lidi_curr['jméno'].isin(target_list))
+                df_clean = df_lidi_curr[~maska_lidi]
+                original_rows = df_lidi_curr[maska_lidi].set_index('jméno')
+                
+                new_rows = []
+                for osoba in target_list:
+                    orig = original_rows.loc[osoba] if osoba in original_rows.index else pd.Series()
+                    pozn = orig.get('poznámka', in_poznamka or "")
+                    ubyt = orig.get('ubytování', ("Ano 🛏️" if in_ubytovani else ""))
+                    
+                    new_rows.append({
+                        "id_akce": akce_id, "název": nazev_akce, "jméno": osoba,
+                        "poznámka": pozn, "doprava": "", "ubytování": ubyt,
+                        "čas zápisu": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        "id_auto": ""
+                    })
+                conn.update(worksheet="prihlasky", data=pd.concat([df_clean, pd.DataFrame(new_rows)], ignore_index=True))
+                st.rerun()
+
+    # ---------------------------------------------------------
+    # SCÉNÁŘ B: JEDNOTLIVEC (Původní logika)
+    # ---------------------------------------------------------
+    else:
+        # Tady použijeme tvůj původní kód pro jednotlivce, jen mírně upravený
+        # Vytáhneme jméno ze seznamu
+        vybrane_jmeno = target_list[0]
+        
+        # Filtry dat pro jednotlivce
+        lidi_akce = df_lidi[df_lidi['id_akce'] == akce_id].copy()
+        aktualni_zaznam = lidi_akce[lidi_akce['jméno'] == vybrane_jmeno]
+        
+        stav_dopravy = "Nevyřešeno"
+        id_auto_curr = ""
+        db_poznamka = ""
+        db_ubytovani = ""
+        
+        if not aktualni_zaznam.empty:
+            dopr_txt = str(aktualni_zaznam.iloc[0]['doprava'])
+            id_auto_curr = str(aktualni_zaznam.iloc[0].get('id_auto', ''))
+            db_poznamka = aktualni_zaznam.iloc[0]['poznámka']
+            db_ubytovani = aktualni_zaznam.iloc[0]['ubytování']
+            
+            if "Řidič" in dopr_txt: stav_dopravy = "driver"
+            elif "Jedu s" in dopr_txt or "Spolujízda" in dopr_txt: stav_dopravy = "passenger"
+            elif "Chci" in dopr_txt or "Hledám" in dopr_txt: stav_dopravy = "waiting"
+        
+        final_poznamka = in_poznamka if in_poznamka is not None else db_poznamka
+        final_ubytovani_txt = ("Ano 🛏️" if in_ubytovani else "") if in_ubytovani is not None else db_ubytovani
+
+        st.markdown(f"👤 **{vybrane_jmeno}**")
+
+        role = st.radio("Možnosti dopravy:", 
+                 ["Nic (Zrušit dopravu)", "🚙 Nabízím auto (Řidič)", "🙋‍♂️ Hledám odvoz (Pasažér)"],
+                 index=1 if stav_dopravy == "driver" else (2 if stav_dopravy in ["passenger", "waiting"] else 0)
+        )
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        obsazenost = {}
+        if not lidi_akce.empty and 'id_auto' in lidi_akce.columns:
+            obsazenost = lidi_akce[lidi_akce['id_auto'] != ""].groupby('id_auto').size().to_dict()
+
+        # --- JEDNOTLIVEC: ŘIDIČ ---
+        if "Nabízím" in role:
+            c1, c2 = st.columns(2)
+            moje_auto = auta_akce[auta_akce['ridic'] == vybrane_jmeno]
+            def_kap, def_cas, def_misto = 5, "", ""
+            if not moje_auto.empty:
+                def_kap = int(moje_auto.iloc[0]['kapacita'])
+                def_cas = str(moje_auto.iloc[0]['cas'])
+                def_misto = str(moje_auto.iloc[0]['misto'])
+
+            novy_kap = c1.number_input("Kapacita", 1, 9, def_kap)
+            novy_cas = c2.text_input("Čas", value=def_cas, placeholder="např. 17:00")
+            novy_misto = st.text_input("Místo", value=def_misto, placeholder="např. Loděnice")
+            
+            if st.button("💾 Uložit", type="primary", use_container_width=True):
+                # Update auta
+                df_clean_auta = df_auta[~((df_auta['id_akce'] == akce_id) & (df_auta['ridic'] == vybrane_jmeno))]
+                nove_auto_row = pd.DataFrame([{
+                    "id_akce": akce_id, "ridic": vybrane_jmeno, 
+                    "kapacita": novy_kap, "cas": novy_cas, "misto": novy_misto, "poznamka": ""
+                }])
+                conn.update(worksheet="auta", data=pd.concat([df_clean_auta, nove_auto_row], ignore_index=True))
+                # Update člověka
+                df_clean_lidi = df_lidi[~((df_lidi['id_akce'] == akce_id) & (df_lidi['jméno'] == vybrane_jmeno))]
+                novy_clovek = pd.DataFrame([{
+                    "id_akce": akce_id, "název": nazev_akce, "jméno": vybrane_jmeno,
+                    "poznámka": final_poznamka, "doprava": "Řidič 🚙", 
+                    "ubytování": final_ubytovani_txt,
+                    "čas zápisu": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "id_auto": ""
+                }])
+                conn.update(worksheet="prihlasky", data=pd.concat([df_clean_lidi, novy_clovek], ignore_index=True))
+                st.rerun()
+
+        # --- JEDNOTLIVEC: PASAŽÉR ---
+        elif "Hledám" in role:
+            dostupna_auta_list = []
+            for i, (_, row_auto) in enumerate(auta_akce.iterrows()):
+                ridic = str(row_auto['ridic'])
+                if ridic == vybrane_jmeno: continue 
+                kap = int(row_auto['kapacita'])
+                obs = obsazenost.get(ridic, 0)
+                volno = kap - 1 - obs 
+                
+                if volno > 0 or ridic == id_auto_curr:
+                    cas_txt = str(row_auto['cas']).strip() if pd.notna(row_auto['cas']) else ""
+                    misto_txt = str(row_auto['misto']).strip() if pd.notna(row_auto['misto']) else ""
+                    info_part = ""
+                    if cas_txt: info_part += cas_txt
+                    if misto_txt: info_part += f", {misto_txt}" if info_part else misto_txt
+                    
+                    label = f"🚙 {ridic} ({volno} volných)"
+                    if info_part: label += f" - {info_part}"
+                    dostupna_auta_list.append({ "label": label, "ridic_id": ridic, "volno": volno })
+            
+            dostupna_auta_list.sort(key=lambda x: x['volno'], reverse=True)
+            options_auta = [item['label'] for item in dostupna_auta_list]
+            mapa_aut = {item['label']: item['ridic_id'] for item in dostupna_auta_list}
+            
+            wait_label = "⏳ Čekací listina"
+            options_auta.append(wait_label)
+            mapa_aut[wait_label] = ""
+
+            idx_select = 0
+            if stav_dopravy == "waiting": idx_select = len(options_auta) - 1
+            elif stav_dopravy == "passenger" and id_auto_curr:
+                for idx, item_label in enumerate(options_auta):
+                    if mapa_aut.get(item_label) == id_auto_curr:
+                        idx_select = idx
+                        break
+
+            vybrane_label = st.selectbox("Ke komu?", options_auta, index=idx_select)
+            target_ridic = mapa_aut[vybrane_label]
+            
+            preferovane_misto = ""
+            if not target_ridic:
+                preferovane_misto = st.text_input("Odkud chceš jet?", placeholder="např. Brno")
+            
+            if st.button("💾 Uložit", type="primary", use_container_width=True):
+                if stav_dopravy == "driver":
+                    handle_driver_removal(conn, akce_id, vybrane_jmeno)
+                    df_lidi = data_manager.load_prihlasky()
+
+                df_clean_lidi = df_lidi[~((df_lidi['id_akce'] == akce_id) & (df_lidi['jméno'] == vybrane_jmeno))]
+                dopr_text = f"Spolujízda: {target_ridic}" if target_ridic else (f"Hledám odvoz 🙋‍♂️ ({preferovane_misto})" if preferovane_misto else "Chci odvoz 🙋‍♂️")
+                
+                novy_clovek = pd.DataFrame([{
+                    "id_akce": akce_id, "název": nazev_akce, "jméno": vybrane_jmeno,
+                    "poznámka": final_poznamka, "doprava": dopr_text, 
+                    "ubytování": final_ubytovani_txt,
+                    "čas zápisu": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "id_auto": target_ridic
+                }])
+                conn.update(worksheet="prihlasky", data=pd.concat([df_clean_lidi, novy_clovek], ignore_index=True))
+                st.rerun()
+        else:
+            if st.button("🗑️ Smazat dopravu", use_container_width=True):
+                if stav_dopravy == "driver":
+                    handle_driver_removal(conn, akce_id, vybrane_jmeno)
+                    df_lidi = data_manager.load_prihlasky()
+                df_clean_lidi = df_lidi[~((df_lidi['id_akce'] == akce_id) & (df_lidi['jméno'] == vybrane_jmeno))]
+                novy_clovek = pd.DataFrame([{
+                    "id_akce": akce_id, "název": nazev_akce, "jméno": vybrane_jmeno,
+                    "poznámka": final_poznamka, "doprava": "", "ubytování": final_ubytovani_txt,
+                    "čas zápisu": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "id_auto": ""
+                }])
+                conn.update(worksheet="prihlasky", data=pd.concat([df_clean_lidi, novy_clovek], ignore_index=True))
+                st.rerun()                
+def handle_driver_removal(conn, akce_id, ridic_jmeno):
+    """
+    Komplexní úklid po řidiči:
+    1. Smaže auto z tabulky 'auta'.
+    2. Najde jeho pasažéry v 'prihlasky' a resetuje jim stav.
+    """
+    akce_id = str(akce_id) # Pojistka, ať porovnáváme stringy
+    
+    # --- 1. SMAZÁNÍ AUTA Z TABULKY 'auta' ---
+    # Musíme načíst aktuální stav aut, abychom nesmazali něco, co tam přibylo před vteřinou
+    df_auta = data_manager.load_auta()
+    
+    if not df_auta.empty:
+        # Najdeme řádek s tímto řidičem na této akci
+        maska_auto = (df_auta['id_akce'] == akce_id) & (df_auta['ridic'] == ridic_jmeno)
+        
+        # Pokud takové auto existuje, smažeme ho (necháme jen ty ostatní - tilda ~ znamená negaci)
+        if not df_auta[maska_auto].empty:
+            novy_seznam_aut = df_auta[~maska_auto]
+            conn.update(worksheet="auta", data=novy_seznam_aut)
+            # print(f"Auto řidiče {ridic_jmeno} smazáno.") # Debug
+
+    # --- 2. RESET PASAŽÉRŮ (Změna na "Chci odvoz") ---
+    df_lidi = data_manager.load_prihlasky()
+    
+    maska_pasazeri = (df_lidi['id_akce'] == akce_id) & (df_lidi['id_auto'] == ridic_jmeno)
+    
+    if df_lidi[maska_pasazeri].empty:
+        return # Nikdo s ním nejel, hotovo.
+        
+    # Update pasažérů
+    updated_rows = df_lidi[maska_pasazeri].copy()
+    updated_rows['id_auto'] = ""
+    updated_rows['doprava'] = "Hledám odvoz 🙋‍♂️ (⚠️ HLEDÁM AUTO)"
+    
+    # Spojíme nedotčené řádky s těmi upravenými a nahrajeme zpět
+    df_clean = df_lidi[~maska_pasazeri]
+    df_final = pd.concat([df_clean, updated_rows], ignore_index=True)
+    
+    conn.update(worksheet="prihlasky", data=df_final)
