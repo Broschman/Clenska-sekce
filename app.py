@@ -654,62 +654,6 @@ conn = data_manager.get_connection()
 df_akce = data_manager.load_akce()
 seznam_jmen = data_manager.load_jmena()
 
-# ==========================================
-# VLOŽIT SEM: FILTR MĚSÍCŮ (NAVIGACE)
-# ==========================================
-if not df_akce.empty:
-    # 1. Převedeme datum a vytvoříme pomocný sloupec
-    # Používáme .copy(), abychom neviděli varování
-    df_akce = df_akce.copy() 
-    df_akce['datum_dt'] = pd.to_datetime(df_akce['datum'], errors='coerce')
-    df_akce['mesic_sort'] = df_akce['datum_dt'].dt.to_period('M')
-    
-    # 2. Získáme unikátní měsíce
-    dostupne_mesice = df_akce['mesic_sort'].dropna().unique()
-    dostupne_mesice = sorted(dostupne_mesice)
-    
-    # 3. Názvy měsíců
-    ceske_mesice_dict = {
-        1: "Leden", 2: "Únor", 3: "Březen", 4: "Duben", 5: "Květen", 6: "Červen",
-        7: "Červenec", 8: "Srpen", 9: "Září", 10: "Říjen", 11: "Listopad", 12: "Prosinec"
-    }
-    
-    options = ["📅 Zobrazit vše"]
-    mapa_hodnot = {"📅 Zobrazit vše": "All"}
-    
-    # Zkusíme najít index aktuálního měsíce, aby byl předvybraný (volitelné)
-    default_index = 0
-    aktualni_period = pd.Period(datetime.now(), 'M')
-    
-    for i, m in enumerate(dostupne_mesice):
-        nazev = f"{ceske_mesice_dict[m.month]} {m.year}"
-        options.append(nazev)
-        mapa_hodnot[nazev] = m
-        
-        # Pokud chceš, aby se to rovnou přeplo na aktuální měsíc:
-        # if m == aktualni_period:
-        #     default_index = i + 1
-
-    # 4. Vykreslení filtru
-    st.write("") 
-    col_filter, _ = st.columns([2, 3])
-    with col_filter:
-        vybrany_mesic_nazev = st.selectbox(
-            "Rychlý filtr měsíce:", 
-            options, 
-            index=default_index,
-            label_visibility="collapsed"
-        )
-        
-    # 5. Aplikace filtru na df_akce
-    if vybrany_mesic_nazev != "📅 Zobrazit vše":
-        vybrany_period = mapa_hodnot[vybrany_mesic_nazev]
-        df_akce = df_akce[df_akce['mesic_sort'] == vybrany_period]
-        
-        # Když filtrujeme, nastavíme session_state kalendáře na první den toho měsíce,
-        # aby se kalendář dole automaticky nalistoval na správný měsíc.
-        st.session_state.vybrany_datum = vybrany_period.start_time.date()
-            
 # --- 3. LOGIKA KALENDÁŘE ---
 if 'vybrany_datum' not in st.session_state:
     st.session_state.vybrany_datum = date.today()
@@ -897,8 +841,32 @@ if "search_date" not in st.session_state:
 def clear_search():
     st.session_state.search_query = ""
     st.session_state.search_date = []
+    # Resetujeme i filtr měsíce, pokud je nastaven (pomocí klíče widgetu)
+    if "month_filter_key" in st.session_state:
+        st.session_state.month_filter_key = "📅 Zobrazit vše"
 
-col_text, col_date, col_close, _ = st.columns([1.5, 1.5, 0.5, 4], vertical_alignment="bottom")
+# --- PŘÍPRAVA DAT PRO FILTR MĚSÍCŮ ---
+# Tohle musíme udělat před vykreslením sloupců, abychom měli možnosti pro selectbox
+mesice_options = ["📅 Zobrazit vše"]
+mapa_mesicu = {"📅 Zobrazit vše": "All"}
+
+if not df_akce.empty:
+    df_temp = df_akce.copy()
+    df_temp['datum_dt'] = pd.to_datetime(df_temp['datum'], errors='coerce')
+    df_temp['mesic_sort'] = df_temp['datum_dt'].dt.to_period('M')
+    
+    dostupne = sorted(df_temp['mesic_sort'].dropna().unique())
+    ceske_m = {1: "Leden", 2: "Únor", 3: "Březen", 4: "Duben", 5: "Květen", 6: "Červen", 
+               7: "Červenec", 8: "Srpen", 9: "Září", 10: "Říjen", 11: "Listopad", 12: "Prosinec"}
+    
+    for m in dostupne:
+        nazev = f"{ceske_m[m.month]} {m.year}"
+        mesice_options.append(nazev)
+        mapa_mesicu[nazev] = m
+
+# --- LAYOUT OVLÁDACÍ LIŠTY ---
+# Přidali jsme sloupec col_month [1.5, 1.5, 1.5, 0.5]
+col_text, col_month, col_date, col_close = st.columns([1.5, 1.5, 1.2, 0.5], gap="small", vertical_alignment="bottom")
 
 with col_text:
     search_text = st.text_input(
@@ -908,6 +876,16 @@ with col_text:
         key="search_query"
     )
 
+with col_month:
+    # NOVÝ FILTR MĚSÍCŮ VE SLOUPCI
+    vybrany_mesic_nazev = st.selectbox(
+        "Měsíc",
+        options=mesice_options,
+        index=0,
+        key="month_filter_key", # Důležité pro resetování
+        label_visibility="collapsed"
+    )
+
 with col_date:
     search_date_value = st.date_input(
         "Vyber datum",
@@ -915,13 +893,14 @@ with col_date:
         max_value=date(2030, 12, 31),
         key="search_date",
         label_visibility="collapsed",
-        help="Vyber termín (minulost nelze vybrat)"
+        help="Vyber konkrétní termín"
     )
 
 with col_close:
-    if search_text or len(st.session_state.search_date) > 0:
-        st.button("❌", on_click=clear_search, help="Zrušit filtry")
-        
+    # Tlačítko smazat se zobrazí, pokud je cokoliv aktivní
+    if search_text or len(st.session_state.search_date) > 0 or vybrany_mesic_nazev != "📅 Zobrazit vše":
+        st.button("❌", on_click=clear_search, help="Zrušit všechny filtry")
+
 # === JAVASCRIPT PRO ESCAPE KLÁVESU ===
 components.html(
     """
@@ -941,9 +920,12 @@ components.html(
 
 # === VÝHYBKA: FILTROVÁNÍ vs. KALENDÁŘ ===
 
-if search_text or len(search_date_value) > 0:
+# Aktivní filtr poznáme tak, že je zadán text, datum NEBO vybrán měsíc
+je_aktivni_filtr = search_text or len(search_date_value) > 0 or vybrany_mesic_nazev != "📅 Zobrazit vše"
+
+if je_aktivni_filtr:
     
-    # 🅰️ FILTROVÁNÍ
+    # 🅰️ REŽIM SEZNAMU (FILTROVÁNÍ)
     dnes = date.today()
     mask = pd.Series([True] * len(df_akce))
 
@@ -953,10 +935,21 @@ if search_text or len(search_date_value) > 0:
             df_akce['název'].str.contains(search_text, case=False, na=False) | 
             df_akce['místo'].str.contains(search_text, case=False, na=False)
         )
-        if len(search_date_value) == 0:
-            mask = mask & (df_akce['datum'] >= dnes)
+    
+    # 2. Filtr podle MĚSÍCE (Selectbox)
+    if vybrany_mesic_nazev != "📅 Zobrazit vše":
+        # Musíme zrekonstruovat mesic_sort i tady pro filtrování
+        temp_dates = pd.to_datetime(df_akce['datum'], errors='coerce').dt.to_period('M')
+        target_period = mapa_mesicu[vybrany_mesic_nazev]
+        mask = mask & (temp_dates == target_period)
+        
+        # Tip: Pokud uživatel vybral měsíc, přepneme i kalendář na pozadí, 
+        # aby když filtr zruší, byl na správném měsíci.
+        if isinstance(target_period, pd.Period):
+             st.session_state.vybrany_datum = target_period.start_time.date()
 
-    # 2. Filtr podle DATA
+    # 3. Filtr podle DATA (Date Input)
+    # (Aplikujeme jen pokud není vybrán měsíc v selectboxu, nebo jako doplňující filtr)
     if len(search_date_value) > 0:
         if len(search_date_value) == 1:
             vybrane_datum = search_date_value[0]
@@ -964,23 +957,29 @@ if search_text or len(search_date_value) > 0:
         elif len(search_date_value) == 2:
             start, end = search_date_value
             mask = mask & (df_akce['datum'] >= start) & (df_akce['datum'] <= end)
+    
+    # Pokud není zadáno konkrétní datum ani měsíc (jen text), filtrujeme od dneška dál
+    if not search_text and len(search_date_value) == 0 and vybrany_mesic_nazev == "📅 Zobrazit vše":
+         mask = mask & (df_akce['datum'] >= dnes)
 
     results = df_akce[mask].sort_values(by='datum')
     
+    # Informativní text
+    info_parts = []
+    if search_text: info_parts.append(f"text '{search_text}'")
+    if vybrany_mesic_nazev != "📅 Zobrazit vše": info_parts.append(f"měsíc {vybrany_mesic_nazev}")
+    if len(search_date_value) > 0: info_parts.append("vybrané datum")
+    
     info_text = f"Nalezeno {len(results)} akcí"
-    if search_text: info_text += f" pro '{search_text}'"
-    if len(search_date_value) > 0: 
-        d_str = search_date_value[0].strftime('%d.%m.')
-        if len(search_date_value) == 2: d_str += f" – {search_date_value[1].strftime('%d.%m.')}"
-        info_text += f" v termínu {d_str}"
+    if info_parts: info_text += " (" + ", ".join(info_parts) + ")"
         
     st.markdown(f"<div style='color: #4B5563; margin-bottom: 10px; font-size: 0.9rem;'>{info_text}</div>", unsafe_allow_html=True)
     
     if results.empty:
-        st.warning("Žádné budoucí akce neodpovídají zadání.")
+        st.warning("Žádné akce neodpovídají zadání.")
     else:
         for _, akce in results.iterrows():
-            # --- VYKRESLENÍ VÝSLEDKŮ ---
+            # ... (Zde voláme vykreslení stejně jako předtím) ...
             akce_id_str = str(akce['id'])
             unique_key = f"search_{akce_id_str}"
             je_po_deadlinu = dnes > akce['deadline']
@@ -1035,8 +1034,9 @@ if search_text or len(search_date_value) > 0:
                     vykreslit_detail_akce(akce, unique_key)
 
 else:
-    # 🅱️ REŽIM KALENDÁŘE
+    # 🅱️ REŽIM KALENDÁŘE (Pokud není nic vybráno)
     show_calendar_section()
+
 st.markdown("<div style='margin-bottom: 50px'></div>", unsafe_allow_html=True)
 
 
