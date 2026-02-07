@@ -712,7 +712,7 @@ if not df_akce.empty:
             
 # --- 3. LOGIKA KALENDÁŘE ---
 if 'vybrany_datum' not in st.session_state:
-    st.session_state.vybrany_datum = date.today()a
+    st.session_state.vybrany_datum = date.today()
 
 # --- DASHBOARD NEJBLIŽŠÍCH DEADLINŮ ---
 dnes = date.today()
