@@ -199,9 +199,13 @@ def vykreslit_detail_akce(akce, unique_key):
             if not je_po_deadlinu and delete_key_state not in st.session_state:
                 
                 # --- 1. VÝBĚR LIDÍ (Mimo formulář pro okamžitou reakci) ---
-                # Vytáhl jsem multiselect před form, aby se stránka přečetla hned po výběru
-                # a my mohli změnit nadpis.
-                vybrana_jmena = st.multiselect("Vyber členy", options=seznam_jmen, placeholder="Klikni a vyber...")
+                # PŘIDÁN PARAMETR key=... ABY SE NEHÁDALY ID
+                vybrana_jmena = st.multiselect(
+                    "Vyber členy", 
+                    options=seznam_jmen, 
+                    placeholder="Klikni a vyber...",
+                    key=f"multi_select_{unique_key}" 
+                )
                 
                 # --- 2. DYNAMICKÝ NADPIS ---
                 # Pokud je vybráno více než 1 jméno, změníme text
