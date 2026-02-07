@@ -256,34 +256,51 @@ def vykreslit_detail_akce(akce, unique_key):
                     # --- LOGIKA ---
                     # Kód se vykoná až TADY, po kliknutí. Proto je to rychlé.
                     
+                    # --- LOGIKA ---
                     if odeslat_btn:
                         if not lidi_k_zapisu:
-                            st.warning("Vyber jména.")
+                            st.warning("Musíš vybrat alespoň jedno jméno.")
                         else:
                             try:
                                 aktualni_data = data_manager.load_prihlasky()
-                                jmena_df = conn.read(worksheet="jmena")
-                                novy_list = []
+                                jmena_df = conn.read(worksheet="jmena", ttl=0)
+                                
+                                novy_list_prihlasek = []
+                                nova_jmena_k_ulozeni = []
                                 hodnota_ubyt = "Ano 🛏️" if ubytovani_input else ""
                                 
                                 for clovek in lidi_k_zapisu:
+                                    clovek = clovek.strip()
+                                    
+                                    # A) Zápis do přihlášek
                                     if aktualni_data[(aktualni_data['id_akce']==akce_id_str) & (aktualni_data['jméno']==clovek)].empty:
-                                        novy_list.append({
+                                        novy_list_prihlasek.append({
                                             "id_akce": akce_id_str, "název": akce['název'], "jméno": clovek, 
                                             "poznámka": poznamka_input, "doprava": "", "ubytování": hodnota_ubyt, 
                                             "čas zápisu": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                                         })
-                                        if clovek not in seznam_jmen:
-                                            try: jmena_df = pd.concat([jmena_df, pd.DataFrame([{"jméno": clovek}])], ignore_index=True)
-                                            except: pass
+                                        
+                                        # B) Kontrola nového jména (pro uložení do seznamu)
+                                        uz_v_db = clovek in jmena_df['jméno'].values
+                                        uz_v_davce = clovek in [x['jméno'] for x in nova_jmena_k_ulozeni]
+                                        
+                                        if not uz_v_db and not uz_v_davce:
+                                            nova_jmena_k_ulozeni.append({"jméno": clovek})
 
-                                if novy_list:
-                                    final_df = pd.concat([aktualni_data, pd.DataFrame(novy_list)], ignore_index=True)
-                                    conn.update(worksheet="prihlasky", data=final_df)
-                                    if len(jmena_df) > len(seznam_jmen): conn.update(worksheet="jmena", data=jmena_df)
+                                if novy_list_prihlasek:
+                                    # 1. Update přihlášek
+                                    final_df_prihlasky = pd.concat([aktualni_data, pd.DataFrame(novy_list_prihlasek)], ignore_index=True)
+                                    conn.update(worksheet="prihlasky", data=final_df_prihlasky)
+                                    
+                                    # 2. Update jmen (pokud jsou nová)
+                                    if nova_jmena_k_ulozeni:
+                                        df_novych = pd.DataFrame(nova_jmena_k_ulozeni)
+                                        final_df_jmena = pd.concat([jmena_df, df_novych], ignore_index=True).sort_values(by="jméno")
+                                        conn.update(worksheet="jmena", data=final_df_jmena)
+                                        st.cache_data.clear()
                                     
                                     with st_lottie_spinner(styles.lottie_success, key=f"anim_{unique_key}"): time.sleep(1)
-                                    st.toast(f"✅ Zapsáno {len(novy_list)} lidí.")
+                                    st.toast(f"✅ Zapsáno {len(novy_list_prihlasek)} lidí.")
                                     time.sleep(1)
                                     st.rerun()
                                 else:
@@ -291,9 +308,30 @@ def vykreslit_detail_akce(akce, unique_key):
                             except Exception as e: st.error(f"Chyba: {e}")
 
                     elif doprava_btn:
-                        # I když je multiselect uvnitř formuláře, po kliknutí na toto tlačítko
-                        # máme v proměnné lidi_k_zapisu aktuální hodnoty.
                         if lidi_k_zapisu:
+                            # --- NOVINKA: ULOŽENÍ NOVÉHO JMÉNA I PŘES DOPRAVU ---
+                            try:
+                                jmena_df = conn.read(worksheet="jmena", ttl=0)
+                                nova_jmena_k_ulozeni = []
+                                
+                                for clovek in lidi_k_zapisu:
+                                    clovek = clovek.strip()
+                                    uz_v_db = clovek in jmena_df['jméno'].values
+                                    uz_v_davce = clovek in [x['jméno'] for x in nova_jmena_k_ulozeni]
+                                    
+                                    if not uz_v_db and not uz_v_davce:
+                                        nova_jmena_k_ulozeni.append({"jméno": clovek})
+                                
+                                # Pokud jsme našli nová jména, hned je uložíme, než otevřeme dialog
+                                if nova_jmena_k_ulozeni:
+                                    df_novych = pd.DataFrame(nova_jmena_k_ulozeni)
+                                    final_df_jmena = pd.concat([jmena_df, df_novych], ignore_index=True).sort_values(by="jméno")
+                                    conn.update(worksheet="jmena", data=final_df_jmena)
+                                    st.cache_data.clear() # Reset cache, aby byla jména příště v nabídce
+                            except:
+                                pass # Když se to nepovede, nevadí, hlavně ať funguje dialog
+                            # ----------------------------------------------------
+
                             utils.show_doprava_dialog(
                                 akce_id=akce_id_str,
                                 nazev_akce=akce['název'],
