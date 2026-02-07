@@ -610,29 +610,36 @@ with col_help:
         # --- 1. FUNKCIONALITY ---
         st.markdown("""
         **1. 📅 Dva pohledy na akce**
-        * **Kalendář:** Klasický měsíční pohled. Kliknutím na den/akci otevřeš detaily.
-        * **Vyhledávání (nahoře):** Zadej text (např. "MČR") nebo vyber datum. Kalendář zmizí a uvidíš seznam vyfiltrovaných akcí.
+        * **Kalendář:** Klasický měsíční pohled. Kliknutím na den otevřeš detaily.
+        * **Seznam (Filtrování):** Použij lištu nahoře.
+            * 🆕 **Rychlý filtr měsíce:** Vyber např. "Srpen 2025" a uvidíš jen relevantní akce.
+            * **Hledání:** Piš název nebo místo (např. "MČR").
         
-        **2. ✍️ Přihlašování & Odhlašování**
-        * **Zápis:** V detailu akce vyber své jméno (nebo napiš nové), zvol dopravu/ubytko a potvrď.
+        **2. ✍️ Přihlašování**
+        * **Zápis:** V detailu akce vyber jméno.
+            * 🆕 **Hromadná přihláška:** Vyber v roletce **více lidí najednou** (např. celou rodinu) a přihlas je jedním kliknutím.
         * **Odhlášení:** V seznamu přihlášených najdi své jméno a klikni na **koš 🗑️**.
-        * ⚠️ **Pozor:** U závodů (ŽA, ŽB, MČR) je tato tabulka **pouze interní** (doprava/spaní). Na závod se musíš přihlásit přes **ORIS** (odkaz je vždy v detailu akce).
+        * ⚠️ **Závody (ŽA, ŽB, MČR):** Tabulka zde slouží jen pro dopravu/ubytování! Na závod se musíš přihlásit v **IS ORIS**.
         
-        **3. 🗺️ Mapy a Počasí**
-        * U každé akce se automaticky načítá **předpověď počasí** a čas **západu slunce 🌑** (hodí se na nočáky).
-        * Dole v detailu najdeš mapu s bodem srazu a tlačítka pro navigaci (**Waze, Google, Mapy.cz**).
+        **3. 🚗 Doprava a Ubytování**
+        * **Dashboard:** Barevný pruh nad seznamem ti hned řekne, jestli je dost aut (🟢) nebo chybí místa (🔴).
+        * **Nastavení:** Klikni na **🚗 Doprava** nebo **🔧 Změnit**.
+            * 🆕 **Čekací listina:** Pokud hledáš odvoz, můžeš dopsat místo (např. *"Brno-Lesná"*), aby řidič věděl, kde tě nabrat.
+            * 🆕 **Rodinná doprava:** V hromadné přihlášce snadno nastavíš auto pro celou skupinu.
         
-        **4. 🗓️ Export do mobilu**
-        * V záhlaví každé akce je malé tlačítko 📅. Kliknutím si stáhneš soubor `.ics`, který ti akci přidá do tvého Outlooku nebo Google Kalendáře.
+        **4. 🗺️ Mapy a Počasí**
+        * U akce se automaticky načítá **předpověď** a čas **západu slunce 🌑** (pro noční závody).
+        * Dole najdeš mapu s bodem srazu a tlačítka pro navigaci (Waze, Mapy.cz).
         
-        **5. 🔐 Pro trenéry**
-        * Pod seznamem přihlášených je tlačítko **Export**. Po zadání hesla se stáhne Excel soupiska (např. pro nahlášení ubytování).
+        **5. 🗓️ Export**
+        * **Do mobilu:** Tlačítko 📅 v záhlaví akce ti uloží termín do kalendáře.
+        * **Pro trenéry:** Tlačítko **Export** pod seznamem stáhne soupisku do Excelu.
         """)
         
         st.divider()
 
         # --- 2. LEGENDA BAREV ---
-        st.markdown("### 🎨 Legenda barev (Typ akce)")
+        st.markdown("### 🎨 Legenda barev")
         st.markdown("""
         <div style="display: grid; gap: 8px; font-size: 0.85rem;">
             <div style="display: flex; align-items: center;"><span style="width: 18px; height: 18px; border-radius: 4px; background: linear-gradient(90deg, #EF4444, #F59E0B, #10B981); margin-right: 10px;"></span><b>MČR / Mistrovství</b></div>
@@ -645,8 +652,7 @@ with col_help:
             <div style="display: flex; align-items: center;"><span style="width: 18px; height: 18px; border-radius: 4px; background: #16A34A; margin-right: 10px;"></span><b>Trénink</b></div>
              <div style="display: flex; align-items: center;"><span style="width: 18px; height: 18px; border-radius: 4px; background: #0D9488; margin-right: 10px;"></span><b>Ostatní závody</b></div>
         </div>
-        """, unsafe_allow_html=True)
-        
+        """, unsafe_allow_html=True)        
         st.divider()
         
 # --- 2. PŘIPOJENÍ A NAČTENÍ DAT ---
