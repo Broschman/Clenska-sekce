@@ -933,7 +933,10 @@ if je_aktivni_filtr:
     
     # 🅰️ REŽIM SEZNAMU (FILTROVÁNÍ)
     dnes = date.today()
-    mask = pd.Series([True] * len(df_akce))
+    
+    # ZMĚNA: Defaultně hledáme jen v BUDOUCNOSTI (včetně dneška)
+    # Tím pádem "MČR" najde jen ta budoucí, ne ta loňská.
+    mask = (df_akce['datum'] >= dnes)
 
     # 1. Filtr podle TEXTU
     if search_text:
@@ -944,30 +947,30 @@ if je_aktivni_filtr:
     
     # 2. Filtr podle MĚSÍCE (Selectbox)
     if vybrany_mesic_nazev != "📅 Zobrazit vše":
-        # Musíme zrekonstruovat mesic_sort i tady pro filtrování
+        # Pokud uživatel vybere měsíc, pravděpodobně chce vidět ten konkrétní měsíc, 
+        # i kdyby byl už z části v minulosti (např. v půlce srpna chce vidět celý srpen).
+        # Takže tady tu podmínku "budoucnosti" trochu uvolníme, aby viděl celý vybraný měsíc.
         temp_dates = pd.to_datetime(df_akce['datum'], errors='coerce').dt.to_period('M')
         target_period = mapa_mesicu[vybrany_mesic_nazev]
-        mask = mask & (temp_dates == target_period)
         
-        # Tip: Pokud uživatel vybral měsíc, přepneme i kalendář na pozadí, 
-        # aby když filtr zruší, byl na správném měsíci.
+        # Přepíšeme masku: Chceme akce z TOHOTO měsíce (bez ohledu na to, jestli už proběhly, 
+        # protože když si někdo vybere "Srpen", asi chce vidět, co všechno v srpnu je/bylo).
+        mask = (temp_dates == target_period)
+        
         if isinstance(target_period, pd.Period):
              st.session_state.vybrany_datum = target_period.start_time.date()
 
     # 3. Filtr podle DATA (Date Input)
-    # (Aplikujeme jen pokud není vybrán měsíc v selectboxu, nebo jako doplňující filtr)
     if len(search_date_value) > 0:
+        # Pokud vybere konkrétní datum, respektujeme ho (i kdyby bylo v minulosti)
         if len(search_date_value) == 1:
             vybrane_datum = search_date_value[0]
-            mask = mask & (df_akce['datum'] == vybrane_datum)
+            mask = (df_akce['datum'] == vybrane_datum)
         elif len(search_date_value) == 2:
             start, end = search_date_value
-            mask = mask & (df_akce['datum'] >= start) & (df_akce['datum'] <= end)
+            mask = (df_akce['datum'] >= start) & (df_akce['datum'] <= end)
     
-    # Pokud není zadáno konkrétní datum ani měsíc (jen text), filtrujeme od dneška dál
-    if not search_text and len(search_date_value) == 0 and vybrany_mesic_nazev == "📅 Zobrazit vše":
-         mask = mask & (df_akce['datum'] >= dnes)
-
+    # Aplikace masky
     results = df_akce[mask].sort_values(by='datum')
     
     # Informativní text
