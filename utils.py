@@ -661,7 +661,7 @@ def handle_driver_removal(conn, akce_id, ridic_jmeno):
     # Update pasažérů
     updated_rows = df_lidi[maska_pasazeri].copy()
     updated_rows['id_auto'] = ""
-    updated_rows['doprava'] = "Chci odvoz 🙋‍♂️ (zrušeno řidičem)"
+    updated_rows['doprava'] = "Hledám odvoz 🙋‍♂️ (⚠️ HLEDÁM AUTO)"
     
     # Spojíme nedotčené řádky s těmi upravenými a nahrajeme zpět
     df_clean = df_lidi[~maska_pasazeri]
