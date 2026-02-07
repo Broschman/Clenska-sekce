@@ -197,28 +197,39 @@ def vykreslit_detail_akce(akce, unique_key):
             css_styles="{border: 1px solid #E5E7EB; border-radius: 12px; padding: 20px; background-color: #F9FAFB; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);}"
         ):
             if not je_po_deadlinu and delete_key_state not in st.session_state:
-                st.markdown("<h4 style='margin-top:0;'>✍️ Hromadná přihláška</h4>", unsafe_allow_html=True)
+                
+                # --- 1. VÝBĚR LIDÍ (Mimo formulář pro okamžitou reakci) ---
+                # Vytáhl jsem multiselect před form, aby se stránka přečetla hned po výběru
+                # a my mohli změnit nadpis.
+                vybrana_jmena = st.multiselect("Vyber členy", options=seznam_jmen, placeholder="Klikni a vyber...")
+                
+                # --- 2. DYNAMICKÝ NADPIS ---
+                # Pokud je vybráno více než 1 jméno, změníme text
+                pocet_vybranych = len(vybrana_jmena)
+                text_nadpisu = "✍️ Hromadná přihláška" if pocet_vybranych > 1 else "✍️ Přihláška"
+                
+                st.markdown(f"<h4 style='margin-top:0; margin-bottom: 15px;'>{text_nadpisu}</h4>", unsafe_allow_html=True)
                 
                 if je_zavod_obecne and not je_stafeta:
                     st.markdown("""<div style="background-color: #FEF2F2; border: 1px solid #FCA5A5; color: #B91C1C; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-weight: bold; font-size: 0.9em; display: flex; align-items: center;"><span style="font-size: 1.2em; margin-right: 8px;">⚠️</span>Je nutné se přihlásit i v ORISu!</div>""", unsafe_allow_html=True)
 
                 form_key = f"form_{unique_key}"
                 
+                # --- 3. ZBYTEK FORMULÁŘE ---
                 with st.form(key=form_key, clear_on_submit=False): 
                     if kategorie_txt and kategorie_txt.lower() != "všichni": 
                         st.warning(f"Doporučení: **{kategorie_txt}**")
                     
-                    # 1. VÝBĚR LIDÍ
-                    vybrana_jmena = st.multiselect("Vyber členy", options=seznam_jmen, placeholder="Klikni a vyber...")
-                    nove_jmeno = st.text_input("Nebo nové jméno")
+                    # Zbytek inputů (aby se nenačítaly při každém úhozu)
+                    nove_jmeno = st.text_input("Nebo nové jméno (pokud není v seznamu)")
                     poznamka_input = st.text_input("Poznámka (společná)")
                     
-                    # Sestavení seznamu
+                    # Sestavení seznamu pro logiku
                     lidi_k_zapisu = []
                     if vybrana_jmena: lidi_k_zapisu.extend(vybrana_jmena)
                     if nove_jmeno.strip(): lidi_k_zapisu.append(nove_jmeno.strip())
 
-                    # 2. UBYTOVÁNÍ
+                    # UBYTOVÁNÍ
                     ubytovani_input = False
                     if "trénink" not in typ_udalosti:
                         deadline_ubyt = pd.to_datetime(akce.get('deadline_ubytovani'), dayfirst=True, errors='coerce')
@@ -238,23 +249,22 @@ def vykreslit_detail_akce(akce, unique_key):
                     c_btn_zapis, c_btn_doprava = st.columns([1, 1.2], gap="small")
                     
                     with c_btn_zapis:
-                        odeslat_btn = st.form_submit_button("Zapsat se", type="primary", use_container_width=True)
+                        # Měníme i text na tlačítku dynamicky podle počtu lidí v seznamu
+                        btn_label = "Zapsat skupinu" if len(lidi_k_zapisu) > 1 else "Zapsat se"
+                        odeslat_btn = st.form_submit_button(btn_label, type="primary", use_container_width=True)
                         
                     with c_btn_doprava:
-                        # TOTO TLAČÍTKO TEĎ OTEVŘE CHYTRÝ DIALOG
                         doprava_btn = st.form_submit_button("🚗 Doprava (Dialog)", use_container_width=True)
                     
-                    # --- LOGIKA ---
+                    # --- LOGIKA ODESLÁNÍ ---
                     if odeslat_btn:
                         if not lidi_k_zapisu:
                             st.warning("Vyber jména.")
                         else:
-                            # Hromadný zápis (Defaultně bez dopravy)
                             try:
                                 aktualni_data = data_manager.load_prihlasky()
                                 jmena_df = conn.read(worksheet="jmena")
                                 novy_list = []
-                                
                                 hodnota_ubyt = "Ano 🛏️" if ubytovani_input else ""
                                 
                                 for clovek in lidi_k_zapisu:
@@ -283,19 +293,17 @@ def vykreslit_detail_akce(akce, unique_key):
 
                     elif doprava_btn:
                         if lidi_k_zapisu:
-                            # TADY JE TO KOUZLO: Předáme celý seznam (list) do dialogu!
                             utils.show_doprava_dialog(
                                 akce_id=akce_id_str,
                                 nazev_akce=akce['název'],
                                 datum_akce=akce['datum'].strftime('%d.%m.'),
-                                input_jmena=lidi_k_zapisu, # Předáváme LIST
+                                input_jmena=lidi_k_zapisu,
                                 in_poznamka=poznamka_input,
                                 in_ubytovani=ubytovani_input
                             )
                         else:
-                            st.warning("Nejdřív vyber lidi, pro které chceš řešit dopravu.")
-                            
-            # Tento elif patří k podmínce "if not je_po_deadlinu"
+                            st.warning("Nejdřív vyber lidi.")
+
             elif je_po_deadlinu: 
                 st.info("🔒 Tabulka uzavřena. Kontaktuj trenéra.")
                 
