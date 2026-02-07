@@ -654,50 +654,53 @@ conn = data_manager.get_connection()
 df_akce = data_manager.load_akce()
 seznam_jmen = data_manager.load_jmena()
 
-# --- FILTR MĚSÍCŮ (NAVIGACE) ---
-if not df.empty:
-    # 1. Přidáme pomocný sloupec pro třídění (Rok-Měsíc)
-    df['mesic_sort'] = pd.to_datetime(df['datum']).dt.to_period('M')
+# ... (zde máš načtení df, např. df = data_manager.load_akce()) ...
+
+    # --- FILTR MĚSÍCŮ (NAVIGACE) ---
+    if not df.empty:
+        # 1. Přidáme pomocný sloupec pro třídění (Rok-Měsíc)
+        df['mesic_sort'] = pd.to_datetime(df['datum']).dt.to_period('M')
         
-    # 2. Získáme unikátní měsíce, které v datech skutečně jsou
-    dostupne_mesice = df['mesic_sort'].unique()
-    dostupne_mesice = sorted(dostupne_mesice) # Seřadíme chronologicky
+        # 2. Získáme unikátní měsíce, které v datech skutečně jsou
+        dostupne_mesice = df['mesic_sort'].unique()
+        dostupne_mesice = sorted(dostupne_mesice) # Seřadíme chronologicky
         
-    # 3. Připravíme hezké české názvy pro selectbox
-    # Mapa měsíců
-    ceske_mesice = {
-        1: "Leden", 2: "Únor", 3: "Březen", 4: "Duben", 5: "Květen", 6: "Červen",
-        7: "Červenec", 8: "Srpen", 9: "Září", 10: "Říjen", 11: "Listopad", 12: "Prosinec"
-    }
+        # 3. Připravíme hezké české názvy pro selectbox
+        # Mapa měsíců
+        ceske_mesice = {
+            1: "Leden", 2: "Únor", 3: "Březen", 4: "Duben", 5: "Květen", 6: "Červen",
+            7: "Červenec", 8: "Srpen", 9: "Září", 10: "Říjen", 11: "Listopad", 12: "Prosinec"
+        }
         
-    # Vytvoříme seznam možností: "Všechny" + "Srpen 2025" atd.
-    options = ["📅 Zobrazit vše"]
-    mapa_hodnot = {"📅 Zobrazit vše": "All"}
+        # Vytvoříme seznam možností: "Všechny" + "Srpen 2025" atd.
+        options = ["📅 Zobrazit vše"]
+        mapa_hodnot = {"📅 Zobrazit vše": "All"}
         
-    for m in dostupne_mesice:
-        nazev = f"{ceske_mesice[m.month]} {m.year}"
-        options.append(nazev)
-        mapa_hodnot[nazev] = m # Uložíme si Period objekt pro filtrování
+        for m in dostupne_mesice:
+            nazev = f"{ceske_mesice[m.month]} {m.year}"
+            options.append(nazev)
+            mapa_hodnot[nazev] = m # Uložíme si Period objekt pro filtrování
             
-    # 4. Vykreslení filtru (dáme ho do sloupce, ať není přes celou šířku)
-    col_filter, _ = st.columns([1, 2])
-    with col_filter:
-        vybrany_mesic_nazev = st.selectbox(
-            "Přejít na měsíc:", 
-            options, 
-            index=0,
-            label_visibility="collapsed" # Schováme popisek "Přejít na měsíc", ať to šetří místo
-        )
+        # 4. Vykreslení filtru (dáme ho do sloupce, ať není přes celou šířku)
+        col_filter, _ = st.columns([1, 2])
+        with col_filter:
+            vybrany_mesic_nazev = st.selectbox(
+                "Přejít na měsíc:", 
+                options, 
+                index=0,
+                label_visibility="collapsed" # Schováme popisek "Přejít na měsíc", ať to šetří místo
+            )
             
-    # 5. Aplikace filtru na DataFrame
-    if vybrany_mesic_nazev != "📅 Zobrazit vše":
-        vybrany_period = mapa_hodnot[vybrany_mesic_nazev]
-        # Vyfiltrujeme jen akce, které spadají do vybraného měsíce
-        df = df[df['mesic_sort'] == vybrany_period]
+        # 5. Aplikace filtru na DataFrame
+        if vybrany_mesic_nazev != "📅 Zobrazit vše":
+            vybrany_period = mapa_hodnot[vybrany_mesic_nazev]
+            # Vyfiltrujeme jen akce, které spadají do vybraného měsíce
+            df = df[df['mesic_sort'] == vybrany_period]
             
-        # (Volitelné) Pokud chceš zobrazit, že je filtr aktivní
-        # st.caption(f"Zobrazeny akce pro: {vybrany_mesic_nazev}")
-            
+            # (Volitelné) Pokud chceš zobrazit, že je filtr aktivní
+            # st.caption(f"Zobrazeny akce pro: {vybrany_mesic_nazev}")
+
+    # ... (zde pokračuje tvůj kód: for i, (idx, row) in enumerate(df.iterrows()): ) ...            
 # --- 3. LOGIKA KALENDÁŘE ---
 if 'vybrany_datum' not in st.session_state:
     st.session_state.vybrany_datum = date.today()a
