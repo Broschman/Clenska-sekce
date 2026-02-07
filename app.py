@@ -723,27 +723,78 @@ seznam_jmen = data_manager.load_jmena()
 if 'vybrany_datum' not in st.session_state:
     st.session_state.vybrany_datum = date.today()
 
-# --- DASHBOARD NEJBLIŽŠÍCH DEADLINŮ ---
+# --- DASHBOARD NEJBLIŽŠÍCH DEADLINŮ (FINAL - VČETNĚ UBYTOVÁNÍ) ---
 dnes = date.today()
-future_deadlines = df_akce[df_akce['deadline'] >= dnes].sort_values('deadline').head(3)
+vsechny_terminy = []
 
-if not future_deadlines.empty:
+# 1. Projdeme akce a vytaháme z nich všechny budoucí deadliny
+if not df_akce.empty:
+    for _, row in df_akce.iterrows():
+        # A) Hlavní deadline
+        if row['deadline'] >= dnes:
+            vsechny_terminy.append({
+                "datum": row['deadline'],
+                "typ": "main",
+                "nazev": row['název'],
+                "row_data": row
+            })
+            
+        # B) Deadline ubytování
+        raw_ubyt = row.get('deadline_ubytovani')
+        if pd.notnull(raw_ubyt):
+            try:
+                # Zkusíme to převést na date
+                dt_ubyt = pd.to_datetime(raw_ubyt, dayfirst=True, errors='coerce')
+                if pd.notnull(dt_ubyt):
+                    d_ubyt = dt_ubyt.date()
+                    # Pokud je deadline ubytování v budoucnu (nebo dnes)
+                    if d_ubyt >= dnes:
+                        vsechny_terminy.append({
+                            "datum": d_ubyt,
+                            "typ": "ubyt",
+                            "nazev": row['název'],
+                            "row_data": row
+                        })
+            except:
+                pass
+
+# 2. Seřadíme všechny termíny podle data a vezmeme TOP 3
+vsechny_terminy.sort(key=lambda x: x["datum"])
+top_deadlines = vsechny_terminy[:3]
+
+if top_deadlines:
     st.markdown("### 🔥 Pozor, hoří termíny!")
     
-    cols_d = st.columns(len(future_deadlines))
+    cols_d = st.columns(len(top_deadlines))
     
-    for i, (_, row) in enumerate(future_deadlines.iterrows()):
-        days_left = (row['deadline'] - dnes).days
+    for i, item in enumerate(top_deadlines):
+        row = item['row_data']
+        datum_deadline = item['datum']
+        typ = item['typ']
+        
+        days_left = (datum_deadline - dnes).days
         
         # Logika barev
         if days_left == 0:
-            bg_color, border_color, text_color, icon, time_msg = "#FEF2F2", "#EF4444", "#B91C1C", "🚨", "DNES!"
+            bg_color, border_color, text_color, icon_state, time_msg = "#FEF2F2", "#EF4444", "#B91C1C", "🚨", "DNES!"
         elif days_left <= 3:
-            bg_color, border_color, text_color, icon, time_msg = "#FFFBEB", "#F59E0B", "#B45309", "⚠️", f"Za {days_left} dny"
+            bg_color, border_color, text_color, icon_state, time_msg = "#FFFBEB", "#F59E0B", "#B45309", "⚠️", f"Za {days_left} dny"
         else:
-            bg_color, border_color, text_color, icon, time_msg = "#ECFDF5", "#10B981", "#047857", "📅", row['deadline'].strftime('%d.%m.')
+            bg_color, border_color, text_color, icon_state, time_msg = "#ECFDF5", "#10B981", "#047857", "📅", datum_deadline.strftime('%d.%m.')
 
-        unique_key_dash = f"dash_{row['id']}"
+        # Rozlišení textu (Ubytování vs Závod)
+        if typ == "ubyt":
+            # Pokud je to ubytování, přidáme ikonku postele a upřesnění
+            icon_main = "🛏️"
+            display_name = f"Ubytování: {row['název']}"
+            # Pro ubytování můžeme dát trošku jiný styl (volitelné), třeba modřejší, 
+            # ale červená pro deadline dává smysl vždy.
+        else:
+            icon_main = icon_state
+            display_name = row['název']
+
+        # Unikátní klíč musí obsahovat i typ, aby se nehádaly klíče, kdyby jedna akce měla oba deadliny
+        unique_key_dash = f"dash_{row['id']}_{typ}"
 
         with cols_d[i]:
             with stylable_container(
@@ -772,13 +823,14 @@ if not future_deadlines.empty:
                 }}
                 button p {{
                     font-family: 'Inter', sans-serif !important;
+                    text-align: center !important;
                 }}
                 """
             ):
-                label_text = f"{icon}\n{row['název']}\n{time_msg}"
+                # Složení textu na tlačítku
+                label_text = f"{icon_main}\n{display_name}\n{time_msg}"
                 with st.popover(label_text, use_container_width=True):
                     vykreslit_detail_akce(row, unique_key_dash)
-
     st.markdown("<div style='margin-bottom: 25px'></div>", unsafe_allow_html=True)
 
 @st.fragment  # ✅ Fragment je zpět!
