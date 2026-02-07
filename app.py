@@ -654,53 +654,62 @@ conn = data_manager.get_connection()
 df_akce = data_manager.load_akce()
 seznam_jmen = data_manager.load_jmena()
 
-# ... (zde máš načtení df, např. df = data_manager.load_akce()) ...
+# ==========================================
+# VLOŽIT SEM: FILTR MĚSÍCŮ (NAVIGACE)
+# ==========================================
+if not df_akce.empty:
+    # 1. Převedeme datum a vytvoříme pomocný sloupec
+    # Používáme .copy(), abychom neviděli varování
+    df_akce = df_akce.copy() 
+    df_akce['datum_dt'] = pd.to_datetime(df_akce['datum'], errors='coerce')
+    df_akce['mesic_sort'] = df_akce['datum_dt'].dt.to_period('M')
+    
+    # 2. Získáme unikátní měsíce
+    dostupne_mesice = df_akce['mesic_sort'].dropna().unique()
+    dostupne_mesice = sorted(dostupne_mesice)
+    
+    # 3. Názvy měsíců
+    ceske_mesice_dict = {
+        1: "Leden", 2: "Únor", 3: "Březen", 4: "Duben", 5: "Květen", 6: "Červen",
+        7: "Červenec", 8: "Srpen", 9: "Září", 10: "Říjen", 11: "Listopad", 12: "Prosinec"
+    }
+    
+    options = ["📅 Zobrazit vše"]
+    mapa_hodnot = {"📅 Zobrazit vše": "All"}
+    
+    # Zkusíme najít index aktuálního měsíce, aby byl předvybraný (volitelné)
+    default_index = 0
+    aktualni_period = pd.Period(datetime.now(), 'M')
+    
+    for i, m in enumerate(dostupne_mesice):
+        nazev = f"{ceske_mesice_dict[m.month]} {m.year}"
+        options.append(nazev)
+        mapa_hodnot[nazev] = m
+        
+        # Pokud chceš, aby se to rovnou přeplo na aktuální měsíc:
+        # if m == aktualni_period:
+        #     default_index = i + 1
 
-    # --- FILTR MĚSÍCŮ (NAVIGACE) ---
-    if not df.empty:
-        # 1. Přidáme pomocný sloupec pro třídění (Rok-Měsíc)
-        df['mesic_sort'] = pd.to_datetime(df['datum']).dt.to_period('M')
+    # 4. Vykreslení filtru
+    st.write("") 
+    col_filter, _ = st.columns([2, 3])
+    with col_filter:
+        vybrany_mesic_nazev = st.selectbox(
+            "Rychlý filtr měsíce:", 
+            options, 
+            index=default_index,
+            label_visibility="collapsed"
+        )
         
-        # 2. Získáme unikátní měsíce, které v datech skutečně jsou
-        dostupne_mesice = df['mesic_sort'].unique()
-        dostupne_mesice = sorted(dostupne_mesice) # Seřadíme chronologicky
+    # 5. Aplikace filtru na df_akce
+    if vybrany_mesic_nazev != "📅 Zobrazit vše":
+        vybrany_period = mapa_hodnot[vybrany_mesic_nazev]
+        df_akce = df_akce[df_akce['mesic_sort'] == vybrany_period]
         
-        # 3. Připravíme hezké české názvy pro selectbox
-        # Mapa měsíců
-        ceske_mesice = {
-            1: "Leden", 2: "Únor", 3: "Březen", 4: "Duben", 5: "Květen", 6: "Červen",
-            7: "Červenec", 8: "Srpen", 9: "Září", 10: "Říjen", 11: "Listopad", 12: "Prosinec"
-        }
-        
-        # Vytvoříme seznam možností: "Všechny" + "Srpen 2025" atd.
-        options = ["📅 Zobrazit vše"]
-        mapa_hodnot = {"📅 Zobrazit vše": "All"}
-        
-        for m in dostupne_mesice:
-            nazev = f"{ceske_mesice[m.month]} {m.year}"
-            options.append(nazev)
-            mapa_hodnot[nazev] = m # Uložíme si Period objekt pro filtrování
+        # Když filtrujeme, nastavíme session_state kalendáře na první den toho měsíce,
+        # aby se kalendář dole automaticky nalistoval na správný měsíc.
+        st.session_state.vybrany_datum = vybrany_period.start_time.date()
             
-        # 4. Vykreslení filtru (dáme ho do sloupce, ať není přes celou šířku)
-        col_filter, _ = st.columns([1, 2])
-        with col_filter:
-            vybrany_mesic_nazev = st.selectbox(
-                "Přejít na měsíc:", 
-                options, 
-                index=0,
-                label_visibility="collapsed" # Schováme popisek "Přejít na měsíc", ať to šetří místo
-            )
-            
-        # 5. Aplikace filtru na DataFrame
-        if vybrany_mesic_nazev != "📅 Zobrazit vše":
-            vybrany_period = mapa_hodnot[vybrany_mesic_nazev]
-            # Vyfiltrujeme jen akce, které spadají do vybraného měsíce
-            df = df[df['mesic_sort'] == vybrany_period]
-            
-            # (Volitelné) Pokud chceš zobrazit, že je filtr aktivní
-            # st.caption(f"Zobrazeny akce pro: {vybrany_mesic_nazev}")
-
-    # ... (zde pokračuje tvůj kód: for i, (idx, row) in enumerate(df.iterrows()): ) ...            
 # --- 3. LOGIKA KALENDÁŘE ---
 if 'vybrany_datum' not in st.session_state:
     st.session_state.vybrany_datum = date.today()a
