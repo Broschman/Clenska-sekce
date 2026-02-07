@@ -1,13 +1,15 @@
+
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import timedelta, date
 
 # ... Konstanty (ID, URL) zůstávají stejné ...
-SHEET_ID = "1lW6DpUQBSm5heSO_HH9lDzm0x7t1eo8dn6FpJHh2y6U"
+SHEET_ID = "1LaojGRVAGtWmfQZ4DfDXDyiZs1TO7Fck4HRgT8Pyook"
 URL_AKCE = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=akce"
 URL_PRIHLASKY = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=prihlasky"
 URL_JMENA = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=jmena"
+URL_AUTA = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=auta"
 
 def get_connection():
     return st.connection("gsheets", type=GSheetsConnection)
@@ -68,3 +70,24 @@ def load_jmena():
         df = pd.read_csv(URL_JMENA)
         return sorted(df['jméno'].dropna().unique().tolist())
     except: return []
+
+def load_auta():
+    """
+    Načte seznam aut (řidičů) z Google Sheetu "auta".
+    """
+    try:
+        df = pd.read_csv(URL_AUTA)
+        
+        # Ošetření, aby id_akce bylo vždy string (stejně jako u přihlášek)
+        if 'id_akce' in df.columns:
+            df['id_akce'] = df['id_akce'].astype(str).str.replace(r'\.0$', '', regex=True)
+            
+        # Ošetření, aby kapacita byla číslo
+        if 'kapacita' in df.columns:
+            df['kapacita'] = pd.to_numeric(df['kapacita'], errors='coerce').fillna(4).astype(int)
+            
+        return df
+    except Exception as e:
+        # Pokud list neexistuje nebo je chyba, vrátíme prázdný DF se správnými sloupci
+        # print(f"Chyba load_auta: {e}") # Pro debug
+        return pd.DataFrame(columns=["id_akce", "ridic", "kapacita", "cas", "misto", "poznamka"])

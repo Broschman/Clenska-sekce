@@ -1,3 +1,4 @@
+
 streamlit>=1.37.0
 pandas
 st-gsheets-connection
@@ -7,3 +8,4 @@ streamlit-folium
 requests
 folium
 openpyxl
+extra_streamlit_components
