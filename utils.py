@@ -670,20 +670,47 @@ def handle_driver_removal(conn, akce_id, ridic_jmeno):
     conn.update(worksheet="prihlasky", data=df_final)
 
 @st.dialog("✏️ Úprava přihlášky")
-def show_edit_dialog(akce_id, nazev_akce, jmeno, aktualni_poznamka, aktualni_ubytovani):
+def show_edit_dialog(akce_id, nazev_akce, jmeno, aktualni_poznamka, aktualni_ubytovani, deadline_ubyt_raw):
     st.write(f"👤 **{jmeno}**")
     st.caption(f"Akce: {nazev_akce}")
     
     # 1. Poznámka
-    # Ořízneme případnou tvrdou mezeru na začátku, aby ji uživatel neviděl při editaci
     def_poznamka = str(aktualni_poznamka).replace('\u00A0', '').strip()
     nova_poznamka = st.text_input("Poznámka", value=def_poznamka)
     
-    # 2. Ubytování
-    # V databázi je to text "Ano 🛏️" nebo "", převedeme na bool pro checkbox
+    # 2. Ubytování (s kontrolou deadlinu)
     is_ubyt = "Ano" in str(aktualni_ubytovani)
-    nove_ubytovani = st.checkbox("🛏️ Společné ubytko", value=is_ubyt)
     
+    # Zpracování deadlinu
+    je_po_deadline_ubyt = False
+    deadline_info = ""
+    
+    if deadline_ubyt_raw:
+        try:
+            d_ubyt = pd.to_datetime(deadline_ubyt_raw, dayfirst=True, errors='coerce')
+            if pd.notnull(d_ubyt):
+                if datetime.now() > d_ubyt:
+                    je_po_deadline_ubyt = True
+                    deadline_info = d_ubyt.strftime('%d.%m. %H:%M')
+        except:
+            pass
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # --- LOGIKA ZOBRAZENÍ CHECKBOXU ---
+    if je_po_deadline_ubyt:
+        st.markdown(f"🔒 **Ubytování uzavřeno** ({deadline_info})")
+        
+        if is_ubyt:
+            st.info("✅ Máš objednáno (nelze zrušit).")
+            nove_ubytovani = True # Musíme zachovat stávající stav
+        else:
+            st.warning("❌ Nemáš objednáno (nelze přidat).")
+            nove_ubytovani = False # Musíme zachovat stávající stav
+    else:
+        # Jsme před deadlinem -> můžeme měnit
+        nove_ubytovani = st.checkbox("🛏️ Společné ubytko", value=is_ubyt)
+
     st.markdown("<br>", unsafe_allow_html=True)
     
     if st.button("💾 Uložit změny", type="primary", use_container_width=True):
@@ -701,12 +728,8 @@ def show_edit_dialog(akce_id, nazev_akce, jmeno, aktualni_poznamka, aktualni_uby
         maska = (df['id_akce'] == str(akce_id)) & (df['jméno'] == jmeno)
         
         if not df[maska].empty:
-            # Aktualizace hodnot v DataFrame
             df.loc[maska, 'poznámka'] = clean_poznamka
             df.loc[maska, 'ubytování'] = final_ubyt_text
-            # Aktualizujeme čas zápisu, ať je vidět změna? Necháme původní, nebo aktuální?
-            # Spíš necháme původní čas zápisu, nebo aktualizujeme jen pokud chceš.
-            # df.loc[maska, 'čas zápisu'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S") 
             
             conn.update(worksheet="prihlasky", data=df)
             st.toast("✅ Údaje aktualizovány")
