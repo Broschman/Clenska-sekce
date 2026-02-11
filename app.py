@@ -293,10 +293,13 @@ def vykreslit_detail_akce(akce, unique_key):
                                 novy_list_prihlasek = []
                                 hodnota_ubyt = "Ano 🛏️" if ubytovani_input else ""
 
-                                # --- OŠETŘENÍ POZNÁMKY PROTI #NAME? ---
+                                # --- OŠETŘENÍ POZNÁMKY (METODA MEZERA) ---
                                 clean_poznamka = str(poznamka_input).strip()
+                                
+                                # Pokud to začíná na rizikové znaky, dáme před to mezeru.
+                                # Mezera zaručeně vypne vzorec a Google ji zobrazí jako text.
                                 if clean_poznamka.startswith(("=", "+", "-", "@")):
-                                    clean_poznamka = "'" + clean_poznamka
+                                    clean_poznamka = " " + clean_poznamka
                                 
                                 for clovek in lidi_k_zapisu:
                                     # I tady pro jistotu .title()
