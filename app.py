@@ -447,34 +447,45 @@ def vykreslit_detail_akce(akce, unique_key):
             
         bilance = kapacita_celkem - poptavka_lidi
         
-        # 2. Logika barev a textů (TADY JE ZMĚNA)
+        # 2. Logika barev a textů (UPRAVENO)
         
         # A) NEUTRÁLNÍ STAV: Nic se neděje (0 aut, 0 poptávka)
         if pocet_ridicu == 0 and poptavka_lidi == 0:
             status_color = "#6B7280" # Šedá
             bg_color = "#F9FAFB"     # Velmi světlá šedá
             border_color = "#E5E7EB"
-            status_icon = "💤"       # Ikonka spánku nebo "P" jako parkoviště
+            status_icon = "💤"       # Nebo "🅿️"
             status_text = "Zatím žádná auta"
-            percent = 0              # Prázdný bar
+            percent = 0
             
-        # B) POZITIVNÍ STAV: Máme auta a stačí to
-        elif bilance >= 0:
-            status_color = "#10B981" # Zelená
-            bg_color = "#ECFDF5"
-            border_color = "#A7F3D0"
-            status_icon = "✅"
-            status_text = f"Máme místo! (Volno: {bilance})"
-            percent = min((poptavka_lidi / kapacita_celkem) * 100, 100) if kapacita_celkem > 0 else 0
-            
-        # C) NEGATIVNÍ STAV: Nestíháme
-        else:
+        # B) NEGATIVNÍ STAV: Nestíháme (Chybí místa)
+        elif bilance < 0:
             status_color = "#EF4444" # Červená
             bg_color = "#FEF2F2"
             border_color = "#FECACA"
             status_icon = "🚨"
             status_text = f"Chybí místa! (Manko: {abs(bilance)})"
             percent = 100
+
+        # C) PŘESNÝ STAV: Plno, ale vychází to (Bilance 0)
+        # Tady už nedáváme zelenou "Máme volno", ale varovnou oranžovou "Plno"
+        elif bilance == 0:
+            status_color = "#F59E0B" # Oranžová/Zlatá
+            bg_color = "#FFFBEB"
+            border_color = "#FDE68A"
+            status_icon = "👌"       # Nebo "🤝"
+            status_text = "Plně obsazeno (0 volných)"
+            percent = 100
+
+        # D) POZITIVNÍ STAV: Máme rezervu (Bilance > 0)
+        else:
+            status_color = "#10B981" # Zelená
+            bg_color = "#ECFDF5"
+            border_color = "#A7F3D0"
+            status_icon = "✅"
+            status_text = f"Máme místo! (Volno: {bilance})"
+            # Procentuální zaplnění (aby bar nebyl plný, když je volno)
+            percent = min((poptavka_lidi / kapacita_celkem) * 100, 100) if kapacita_celkem > 0 else 0
 
         # 3. HTML Komponenta
         html_dashboard = f"""
