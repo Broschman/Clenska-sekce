@@ -253,13 +253,13 @@ def vykreslit_detail_akce(akce, unique_key):
                     with c_btn_doprava:
                         doprava_btn = st.form_submit_button("🚗 Doprava (Dialog)", use_container_width=True)
                     
-                    # --- LOGIKA ---
+                    # --- LOGIKA ODESLÁNÍ ---
                     if odeslat_btn:
                         if not lidi_k_zapisu:
                             st.warning("Musíš vybrat alespoň jedno jméno.")
                         else:
                             # -----------------------------------------------------
-                            # KROK 1: ULOŽENÍ NOVÝCH JMEN DO DATABÁZE (JMENA)
+                            # KROK 1: ULOŽENÍ NOVÝCH JMEN
                             # -----------------------------------------------------
                             try:
                                 df_jmena_db = conn.read(worksheet="jmena", ttl=0)
@@ -268,9 +268,7 @@ def vykreslit_detail_akce(akce, unique_key):
                                 
                                 nova_jmena_list = []
                                 for clovek in lidi_k_zapisu:
-                                    # Pojistka: Pro jistotu i tady dáme .title()
                                     cist_jmeno = str(clovek).strip().title()
-                                    
                                     if cist_jmeno and cist_jmeno not in existujici:
                                         if cist_jmeno not in [x[col_name] for x in nova_jmena_list]:
                                             nova_jmena_list.append({col_name: cist_jmeno})
@@ -283,32 +281,35 @@ def vykreslit_detail_akce(akce, unique_key):
                                     st.cache_data.clear()
                                     st.toast(f"💾 Uložena nová jména: {len(nova_jmena_list)}", icon="✅")
                             except Exception as e:
-                                print(f"Chyba jmena: {e}") 
+                                print(f"Chyba při ukládání jmen: {e}") 
 
                             # -----------------------------------------------------
-                            # KROK 2: PŘIHLÁŠKA NA AKCI (PRIHLASKY)
+                            # KROK 2: PŘIHLÁŠKA NA AKCI
                             # -----------------------------------------------------
                             try:
                                 aktualni_data = data_manager.load_prihlasky()
                                 novy_list_prihlasek = []
                                 hodnota_ubyt = "Ano 🛏️" if ubytovani_input else ""
-
-                                # --- OŠETŘENÍ POZNÁMKY (METODA MEZERA) ---
+                                
+                                # --- OŠETŘENÍ POZNÁMKY (TVRDÁ MEZERA) ---
                                 clean_poznamka = str(poznamka_input).strip()
                                 
-                                # Pokud to začíná na rizikové znaky, dáme před to mezeru.
-                                # Mezera zaručeně vypne vzorec a Google ji zobrazí jako text.
+                                # Pokud to začíná na rizikové znaky, dáme před to "tvrdou mezeru" (\u00A0).
+                                # Tu Google Sheets neumí smazat ani vyhodnotit jako vzorec.
                                 if clean_poznamka.startswith(("=", "+", "-", "@")):
-                                    clean_poznamka = " " + clean_poznamka
+                                    clean_poznamka = "\u00A0" + clean_poznamka
                                 
                                 for clovek in lidi_k_zapisu:
-                                    # I tady pro jistotu .title()
                                     clovek = str(clovek).strip().title()
                                     
                                     if aktualni_data[(aktualni_data['id_akce']==akce_id_str) & (aktualni_data['jméno']==clovek)].empty:
                                         novy_list_prihlasek.append({
-                                            "id_akce": akce_id_str, "název": akce['název'], "jméno": clovek, 
-                                            "poznámka": poznamka_input, "doprava": "", "ubytování": hodnota_ubyt, 
+                                            "id_akce": akce_id_str, 
+                                            "název": akce['název'], 
+                                            "jméno": clovek, 
+                                            "poznámka": clean_poznamka, 
+                                            "doprava": "", 
+                                            "ubytování": hodnota_ubyt, 
                                             "čas zápisu": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                                         })
 
@@ -329,7 +330,7 @@ def vykreslit_detail_akce(akce, unique_key):
                     elif doprava_btn:
                         if lidi_k_zapisu:
                             # -----------------------------------------------------
-                            # KROK 1: ULOŽENÍ NOVÝCH JMEN (STEJNÉ JAKO VÝŠE)
+                            # KROK 1: ULOŽENÍ NOVÝCH JMEN
                             # -----------------------------------------------------
                             try:
                                 df_jmena_db = conn.read(worksheet="jmena", ttl=0)
@@ -338,9 +339,7 @@ def vykreslit_detail_akce(akce, unique_key):
                                 nova_jmena_list = []
                                 
                                 for clovek in lidi_k_zapisu:
-                                    # Opět .title()
                                     cist_jmeno = str(clovek).strip().title()
-                                    
                                     if cist_jmeno and cist_jmeno not in existujici:
                                         if cist_jmeno not in [x[col_name] for x in nova_jmena_list]:
                                             nova_jmena_list.append({col_name: cist_jmeno})
@@ -356,22 +355,26 @@ def vykreslit_detail_akce(akce, unique_key):
                                 print(f"Chyba jmena: {e}")
 
                             # -----------------------------------------------------
-                            # KROK 2: OTEVŘÍT DIALOG
+                            # KROK 2: OTEVŘÍT DIALOG (S OŠETŘENOU POZNÁMKOU)
                             # -----------------------------------------------------
-                            # I do dialogu musíme poslat jména s velkými písmeny
+                            # I tady musíme ošetřit poznámku, pokud ji posíláme do dialogu
+                            clean_poznamka_dialog = str(poznamka_input).strip()
+                            if clean_poznamka_dialog.startswith(("=", "+", "-", "@")):
+                                clean_poznamka_dialog = "\u00A0" + clean_poznamka_dialog
+                                
                             lidi_clean = [str(x).strip().title() for x in lidi_k_zapisu]
                             
                             utils.show_doprava_dialog(
                                 akce_id=akce_id_str,
                                 nazev_akce=akce['název'],
                                 datum_akce=akce['datum'].strftime('%d.%m.'),
-                                input_jmena=lidi_clean, # Posíláme opravený seznam
-                                in_poznamka=poznamka_input,
+                                input_jmena=lidi_clean,
+                                in_poznamka=clean_poznamka_dialog,
                                 in_ubytovani=ubytovani_input
                             )
                         else:
                             st.warning("Nejdřív vyber lidi.")
-
+                            
             elif je_po_deadlinu: 
                 st.info("🔒 Tabulka uzavřena. Kontaktuj trenéra.")
                 
