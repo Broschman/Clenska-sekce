@@ -616,20 +616,41 @@ def vykreslit_detail_akce(akce, unique_key):
                     else:
                         st.caption(f"Celé jméno: {row['jméno']}")
 
-                    c_btn_doprava, c_btn_delete = st.columns([3, 1], gap="medium")
+                    # Upravili jsme poměry sloupců, aby se tam vešla 3 tlačítka
+                    c_btn_doprava, c_btn_edit, c_btn_delete = st.columns([2.2, 1, 0.8], gap="small")
                     
                     with c_btn_doprava:
                         btn_type = "primary" if "Řidič" in dopr_raw else "secondary"
-                        if st.button("🔧 Nastavit / Změnit dopravu", key=f"btn_exp_{unique_key}_{i}", use_container_width=True, type=btn_type):
-                            utils.show_doprava_dialog(akce_id_str, akce['název'], akce['datum'].strftime('%d.%m.'), row['jméno'])
+                        if st.button("🔧 Doprava", key=f"btn_dopr_{unique_key}_{i}", use_container_width=True, type=btn_type, help="Nastavit nebo změnit dopravu"):
+                            utils.show_doprava_dialog(
+                                akce_id_str, 
+                                akce['název'], 
+                                akce['datum'].strftime('%d.%m.'), 
+                                row['jméno']
+                            )
+                            
+                    with c_btn_edit:
+                        # NOVÉ TLAČÍTKO PRO ÚPRAVU
+                        if st.button("✏️ Upravit", key=f"btn_edit_{unique_key}_{i}", use_container_width=True, help="Změnit poznámku nebo ubytování"):
+                            utils.show_edit_dialog(
+                                akce_id=akce_id_str,
+                                nazev_akce=akce['název'],
+                                jmeno=row['jméno'],
+                                aktualni_poznamka=row['poznámka'],
+                                aktualni_ubytovani=row['ubytování']
+                            )
                             
                     with c_btn_delete:
                         je_k_smazani = (delete_key_state in st.session_state) and (st.session_state[delete_key_state] == row['jméno'])
                         if je_k_smazani:
-                            st.warning("Opravdu?")
+                            # ... logika mazání (tady jsem to zkrátil pro přehlednost, nech tam tvůj původní kód pro YES/NO) ...
+                            # Pokud chceš, můžu ti sem poslat i ten full kód pro mazání, 
+                            # ale stačí obalit ten tvůj původní kód do 'with c_btn_delete:'
+                            st.warning("?")
                             col_y, col_n = st.columns(2)
                             if col_y.button("✅", key=f"yes_exp_{unique_key}_{i}", use_container_width=True):
                                 df_curr = conn.read(worksheet="prihlasky", ttl=0)
+                                # Fix pro id_akce float/str
                                 df_curr['id_akce'] = df_curr['id_akce'].astype(str).str.replace(r'\.0$', '', regex=True)
                                 conn.update(worksheet="prihlasky", data=df_curr[~((df_curr['id_akce'] == akce_id_str) & (df_curr['jméno'] == row['jméno']))])
                                 utils.handle_driver_removal(conn, akce_id_str, row['jméno'])
@@ -639,7 +660,7 @@ def vykreslit_detail_akce(akce, unique_key):
                                 del st.session_state[delete_key_state]
                                 st.rerun()
                         elif not je_po_deadlinu:
-                             if st.button("🗑️ Smazat", key=f"del_exp_{unique_key}_{i}", use_container_width=True):
+                             if st.button("🗑️", key=f"del_exp_{unique_key}_{i}", use_container_width=True, help="Odhlásit se"):
                                  st.session_state[delete_key_state] = row['jméno']
                                  st.rerun()
                     
