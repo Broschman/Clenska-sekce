@@ -650,28 +650,57 @@ def vykreslit_detail_akce(akce, unique_key):
                             )
                             
                     with c_btn_delete:
+                        # Zjistíme, jestli je zrovna tento řádek ve stavu "Potvrzení smazání"
                         je_k_smazani = (delete_key_state in st.session_state) and (st.session_state[delete_key_state] == row['jméno'])
+
                         if je_k_smazani:
-                            # ... logika mazání (tady jsem to zkrátil pro přehlednost, nech tam tvůj původní kód pro YES/NO) ...
-                            # Pokud chceš, můžu ti sem poslat i ten full kód pro mazání, 
-                            # ale stačí obalit ten tvůj původní kód do 'with c_btn_delete:'
-                            st.warning("?")
-                            col_y, col_n = st.columns(2)
-                            if col_y.button("✅", key=f"yes_exp_{unique_key}_{i}", use_container_width=True):
-                                df_curr = conn.read(worksheet="prihlasky", ttl=0)
-                                # Fix pro id_akce float/str
-                                df_curr['id_akce'] = df_curr['id_akce'].astype(str).str.replace(r'\.0$', '', regex=True)
-                                conn.update(worksheet="prihlasky", data=df_curr[~((df_curr['id_akce'] == akce_id_str) & (df_curr['jméno'] == row['jméno']))])
-                                utils.handle_driver_removal(conn, akce_id_str, row['jméno'])
-                                del st.session_state[delete_key_state]
-                                st.rerun()
-                            if col_n.button("❌", key=f"no_exp_{unique_key}_{i}", use_container_width=True):
-                                del st.session_state[delete_key_state]
-                                st.rerun()
+                            # --- STAV: POTVRZENÍ (Opravdu smazat?) ---
+                            # Malý text "Opravdu?" místo velkého warningu, aby se to vešlo
+                            st.markdown("<div style='text-align: center; color: #EF4444; font-weight: bold; font-size: 0.8rem; margin-bottom: 2px;'>Opravdu?</div>", unsafe_allow_html=True)
+                            
+                            col_y, col_n = st.columns(2, gap="small")
+                            
+                            # Tlačítko ANO
+                            with col_y:
+                                if st.button("✅", key=f"yes_exp_{unique_key}_{i}", use_container_width=True, type="primary"):
+                                    try:
+                                        # 1. Načteme aktuální data (čerstvá)
+                                        df_curr = conn.read(worksheet="prihlasky", ttl=0)
+                                        
+                                        # 2. Fix formátu ID akce (aby sedělo str vs float)
+                                        if 'id_akce' in df_curr.columns:
+                                            df_curr['id_akce'] = df_curr['id_akce'].astype(str).str.replace(r'\.0$', '', regex=True)
+                                        
+                                        # 3. Vyfiltrujeme řádek, který chceme smazat
+                                        # (Necháme všechno, co NENÍ (tato akce A toto jméno))
+                                        df_to_keep = df_curr[~((df_curr['id_akce'] == akce_id_str) & (df_curr['jméno'] == row['jméno']))]
+                                        
+                                        # 4. Uložíme zpět do Google Sheets
+                                        conn.update(worksheet="prihlasky", data=df_to_keep)
+                                        
+                                        # 5. Pokud to byl řidič, musíme vyřešit jeho pasažéry (aby tam nezůstali viset)
+                                        utils.handle_driver_removal(conn, akce_id_str, row['jméno'])
+                                        
+                                        # 6. Vyčistíme stav a obnovíme stránku
+                                        del st.session_state[delete_key_state]
+                                        st.toast("✅ Odhlášeno.")
+                                        time.sleep(0.5)
+                                        st.rerun()
+                                    except Exception as e:
+                                        st.error(f"Chyba při mazání: {e}")
+
+                            # Tlačítko NE (Zrušit)
+                            with col_n:
+                                if st.button("❌", key=f"no_exp_{unique_key}_{i}", use_container_width=True):
+                                    del st.session_state[delete_key_state]
+                                    st.rerun()
+
                         elif not je_po_deadlinu:
-                             if st.button("🗑️", key=f"del_exp_{unique_key}_{i}", use_container_width=True, help="Odhlásit se"):
-                                 st.session_state[delete_key_state] = row['jméno']
-                                 st.rerun()
+                            # --- STAV: IKONA KOŠE (Standardní zobrazení) ---
+                            # Zobrazí se jen pokud ještě není po deadlinu
+                            if st.button("🗑️", key=f"del_exp_{unique_key}_{i}", use_container_width=True, help="Odhlásit se"):
+                                st.session_state[delete_key_state] = row['jméno']
+                                st.rerun()
                     
                     if poznamka:
                         st.text(f"Poznámka: {poznamka}")
