@@ -292,6 +292,11 @@ def vykreslit_detail_akce(akce, unique_key):
                                 aktualni_data = data_manager.load_prihlasky()
                                 novy_list_prihlasek = []
                                 hodnota_ubyt = "Ano 🛏️" if ubytovani_input else ""
+
+                                # --- OŠETŘENÍ POZNÁMKY PROTI #NAME? ---
+                                clean_poznamka = str(poznamka_input).strip()
+                                if clean_poznamka.startswith(("=", "+", "-", "@")):
+                                    clean_poznamka = "'" + clean_poznamka
                                 
                                 for clovek in lidi_k_zapisu:
                                     # I tady pro jistotu .title()
