@@ -630,14 +630,16 @@ def vykreslit_detail_akce(akce, unique_key):
                             )
                             
                     with c_btn_edit:
-                        # NOVÉ TLAČÍTKO PRO ÚPRAVU
+                        # TLAČÍTKO PRO ÚPRAVU
                         if st.button("✏️ Upravit", key=f"btn_edit_{unique_key}_{i}", use_container_width=True, help="Změnit poznámku nebo ubytování"):
                             utils.show_edit_dialog(
                                 akce_id=akce_id_str,
                                 nazev_akce=akce['název'],
                                 jmeno=row['jméno'],
                                 aktualni_poznamka=row['poznámka'],
-                                aktualni_ubytovani=row['ubytování']
+                                aktualni_ubytovani=row['ubytování'],
+                                # TENTO ŘÁDEK TAM CHYBĚL:
+                                deadline_ubyt_raw=akce.get('deadline_ubytovani') 
                             )
                             
                     with c_btn_delete:
