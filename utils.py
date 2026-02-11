@@ -668,3 +668,49 @@ def handle_driver_removal(conn, akce_id, ridic_jmeno):
     df_final = pd.concat([df_clean, updated_rows], ignore_index=True)
     
     conn.update(worksheet="prihlasky", data=df_final)
+
+@st.dialog("✏️ Úprava přihlášky")
+def show_edit_dialog(akce_id, nazev_akce, jmeno, aktualni_poznamka, aktualni_ubytovani):
+    st.write(f"👤 **{jmeno}**")
+    st.caption(f"Akce: {nazev_akce}")
+    
+    # 1. Poznámka
+    # Ořízneme případnou tvrdou mezeru na začátku, aby ji uživatel neviděl při editaci
+    def_poznamka = str(aktualni_poznamka).replace('\u00A0', '').strip()
+    nova_poznamka = st.text_input("Poznámka", value=def_poznamka)
+    
+    # 2. Ubytování
+    # V databázi je to text "Ano 🛏️" nebo "", převedeme na bool pro checkbox
+    is_ubyt = "Ano" in str(aktualni_ubytovani)
+    nove_ubytovani = st.checkbox("🛏️ Společné ubytko", value=is_ubyt)
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    if st.button("💾 Uložit změny", type="primary", use_container_width=True):
+        conn = data_manager.get_connection()
+        df = data_manager.load_prihlasky()
+        
+        # Ošetření poznámky (tvrdá mezera proti #NAME?)
+        clean_poznamka = nova_poznamka.strip()
+        if clean_poznamka.startswith(("=", "+", "-", "@")):
+            clean_poznamka = "\u00A0" + clean_poznamka
+            
+        final_ubyt_text = "Ano 🛏️" if nove_ubytovani else ""
+        
+        # Najdeme řádek a upravíme ho
+        maska = (df['id_akce'] == str(akce_id)) & (df['jméno'] == jmeno)
+        
+        if not df[maska].empty:
+            # Aktualizace hodnot v DataFrame
+            df.loc[maska, 'poznámka'] = clean_poznamka
+            df.loc[maska, 'ubytování'] = final_ubyt_text
+            # Aktualizujeme čas zápisu, ať je vidět změna? Necháme původní, nebo aktuální?
+            # Spíš necháme původní čas zápisu, nebo aktualizujeme jen pokud chceš.
+            # df.loc[maska, 'čas zápisu'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S") 
+            
+            conn.update(worksheet="prihlasky", data=df)
+            st.toast("✅ Údaje aktualizovány")
+            time.sleep(0.5)
+            st.rerun()
+        else:
+            st.error("Chyba: Přihláška nenalezena.")
