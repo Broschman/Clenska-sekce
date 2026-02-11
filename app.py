@@ -206,13 +206,12 @@ def vykreslit_detail_akce(akce, unique_key):
 
                 form_key = f"form_{unique_key}"
                 
-                # VŠE JE TEĎ UVNITŘ FORMULÁŘE -> Stránka se nepřenačítá při výběru
-                with st.form(key=form_key, clear_on_submit=False): 
+                # VŠE JE TEĎ UVNITŘ FORMULÁŘE (clear_on_submit=True pro vyčištění po odeslání)
+                with st.form(key=form_key, clear_on_submit=True): 
                     if kategorie_txt and kategorie_txt.lower() != "všichni": 
                         st.warning(f"Doporučení: **{kategorie_txt}**")
                     
                     # 1. VÝBĚR LIDÍ
-                    # Vrátil jsem to zpět do formu. Key už není nutný, ale pro jistotu ho necháme.
                     vybrana_jmena = st.multiselect(
                         "Vyber členy", 
                         options=seznam_jmen, 
@@ -222,24 +221,38 @@ def vykreslit_detail_akce(akce, unique_key):
                     nove_jmeno = st.text_input("Nebo nové jméno (pokud není v seznamu)")
                     poznamka_input = st.text_input("Poznámka (společná)")
                     
-                    # Sestavení seznamu (proběhne až po odeslání tlačítka)
+                    # Sestavení seznamu
                     lidi_k_zapisu = []
                     if vybrana_jmena: lidi_k_zapisu.extend(vybrana_jmena)
-                    if nove_jmeno.strip(): lidi_k_zapisu.append(nove_jmeno.strip())
+                    if nove_jmeno.strip(): 
+                        # .title() pro hezká velká písmena
+                        lidi_k_zapisu.append(nove_jmeno.strip().title())
 
-                    # 2. UBYTOVÁNÍ
+                    st.markdown("<br>", unsafe_allow_html=True)
+
+                    # --- CHECKBOXY (UBYTOVÁNÍ + DOPRAVA) VEDLE SEBE ---
+                    c_ubyt, c_dopr = st.columns(2)
+                    
+                    # A) Ubytování
                     ubytovani_input = False
-                    if "trénink" not in typ_udalosti:
-                        deadline_ubyt = pd.to_datetime(akce.get('deadline_ubytovani'), dayfirst=True, errors='coerce')
-                        zobrazit_ubyt = True
-                        if pd.notnull(deadline_ubyt) and datetime.now() > deadline_ubyt:
-                            zobrazit_ubyt = False
+                    with c_ubyt:
+                        if "trénink" not in typ_udalosti:
+                            deadline_ubyt = pd.to_datetime(akce.get('deadline_ubytovani'), dayfirst=True, errors='coerce')
+                            zobrazit_ubyt = True
+                            if pd.notnull(deadline_ubyt) and datetime.now() > deadline_ubyt:
+                                zobrazit_ubyt = False
 
-                        st.markdown("<br>", unsafe_allow_html=True)
-                        if zobrazit_ubyt:
-                            ubytovani_input = st.checkbox("🛏️ Společné ubytko")
-                        elif pd.notnull(deadline_ubyt):
-                            st.caption("🔒 Deadline ubytování uplynul")
+                            if zobrazit_ubyt:
+                                ubytovani_input = st.checkbox("🛏️ Společné ubytko")
+                            elif pd.notnull(deadline_ubyt):
+                                st.caption("🔒 Deadline ubytování uplynul")
+                        else:
+                            st.write("") # Prázdné místo u tréninků
+
+                    # B) Rychlá doprava (NOVINKA)
+                    with c_dopr:
+                        # Tento checkbox rovnou hodí člověka na "Waiting list"
+                        rychla_doprava_input = st.checkbox("🚗 Chci odvoz")
                     
                     st.markdown("<br>", unsafe_allow_html=True)
                     
@@ -247,7 +260,6 @@ def vykreslit_detail_akce(akce, unique_key):
                     c_btn_zapis, c_btn_doprava = st.columns([1, 1.2], gap="small")
                     
                     with c_btn_zapis:
-                        # Statický text tlačítka
                         odeslat_btn = st.form_submit_button("Zapsat se", type="primary", use_container_width=True)
                         
                     with c_btn_doprava:
@@ -291,11 +303,11 @@ def vykreslit_detail_akce(akce, unique_key):
                                 novy_list_prihlasek = []
                                 hodnota_ubyt = "Ano 🛏️" if ubytovani_input else ""
                                 
-                                # --- OŠETŘENÍ POZNÁMKY (TVRDÁ MEZERA) ---
+                                # Nastavení dopravy podle checkboxu
+                                hodnota_dopravy = "Hledám odvoz 🙋‍♂️" if rychla_doprava_input else ""
+
+                                # Ošetření poznámky (tvrdá mezera proti #NAME?)
                                 clean_poznamka = str(poznamka_input).strip()
-                                
-                                # Pokud to začíná na rizikové znaky, dáme před to "tvrdou mezeru" (\u00A0).
-                                # Tu Google Sheets neumí smazat ani vyhodnotit jako vzorec.
                                 if clean_poznamka.startswith(("=", "+", "-", "@")):
                                     clean_poznamka = "\u00A0" + clean_poznamka
                                 
@@ -308,7 +320,7 @@ def vykreslit_detail_akce(akce, unique_key):
                                             "název": akce['název'], 
                                             "jméno": clovek, 
                                             "poznámka": clean_poznamka, 
-                                            "doprava": "", 
+                                            "doprava": hodnota_dopravy, # ZDE SE Zapíše "Hledám odvoz"
                                             "ubytování": hodnota_ubyt, 
                                             "čas zápisu": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                                         })
@@ -329,9 +341,7 @@ def vykreslit_detail_akce(akce, unique_key):
 
                     elif doprava_btn:
                         if lidi_k_zapisu:
-                            # -----------------------------------------------------
-                            # KROK 1: ULOŽENÍ NOVÝCH JMEN
-                            # -----------------------------------------------------
+                            # 1. Uložení jmen
                             try:
                                 df_jmena_db = conn.read(worksheet="jmena", ttl=0)
                                 col_name = 'jméno' if 'jméno' in df_jmena_db.columns else 'Jméno'
@@ -354,10 +364,7 @@ def vykreslit_detail_akce(akce, unique_key):
                             except Exception as e:
                                 print(f"Chyba jmena: {e}")
 
-                            # -----------------------------------------------------
-                            # KROK 2: OTEVŘÍT DIALOG (S OŠETŘENOU POZNÁMKOU)
-                            # -----------------------------------------------------
-                            # I tady musíme ošetřit poznámku, pokud ji posíláme do dialogu
+                            # 2. Dialog
                             clean_poznamka_dialog = str(poznamka_input).strip()
                             if clean_poznamka_dialog.startswith(("=", "+", "-", "@")):
                                 clean_poznamka_dialog = "\u00A0" + clean_poznamka_dialog
