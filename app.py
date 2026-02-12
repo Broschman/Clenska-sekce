@@ -424,65 +424,55 @@ def vykreslit_detail_akce(akce, unique_key):
     st.markdown("<hr style='margin: 10px 0;'>", unsafe_allow_html=True)
     st.markdown(f"#### 👥 Zapsaní ({len(lidi)})")
 
-    # --- DASHBOARD DOPRAVY (DETAILNÍ KARTY AUT) ---
-    st.markdown("### 🚗 Stav dopravy")
-    
-    # 1. PŘÍPRAVA DAT
-    ridici_data = []  # Seznam slovníků: {jmeno, kapacita, cas, pasazeri: []}
-    cekaliste = []    # Seznam jmen
-    nereseno = []     # Lidi co nemají nic
-    
-    import re # Pro jistotu importujeme regex tady
-
-    # A) Najdeme řidiče
-    # Procházíme tabulku lidí (musí být definovaná proměnná 'lidi')
-    for _, r in lidi.iterrows():
-        dopr = str(r['doprava'])
+    # --- DASHBOARD DOPRAVY (OPRAVENO: SEPARACE DAT A GRAFIKY) ---
+        st.markdown("### 🚗 Stav dopravy")
         
-        # Pokud je řidič
-        if "Řidič" in dopr:
-            # Pokus o vytažení kapacity z textu "Řidič (4 místa, 17:00)"
-            kapacita = 4 # Defaultní hodnota
-            match_kap = re.search(r'(\d+)\s*míst', dopr)
-            if match_kap:
-                kapacita = int(match_kap.group(1))
-            
-            # Vytažení času/poznámky (vše za čárkou)
-            info_text = ""
-            if "," in dopr:
-                info_text = dopr.split(",", 1)[1].strip().replace(")", "")
-            
-            ridici_data.append({
-                "jmeno": r['jméno'],
-                "kapacita": kapacita,
-                "info": info_text,
-                "pasazeri": []
-            })
+        # ==========================================
+        # FÁZE 1: PŘÍPRAVA DAT (JEN POČÍTÁNÍ)
+        # ==========================================
+        ridici_data = [] 
+        cekaliste = []    
+        nereseno = []     
         
-        # Pokud hledá odvoz
-        elif "Hledám odvoz" in dopr:
-            cekaliste.append(r['jméno'])
-            
-        # Pokud nemá nic
-        elif not dopr or dopr == "nan" or dopr == "":
-            nereseno.append(r['jméno'])
+        import re 
 
-    # B) Přiřadíme pasažéry k řidičům
-    # Projdeme lidi znovu, abychom našli ty, co už mají řidiče vybraného
-    for _, r in lidi.iterrows():
-        dopr = str(r['doprava'])
-        # Ignorujeme řidiče a hledající (ty už máme nahoře)
-        if "Řidič" in dopr or "Hledám" in dopr or not dopr or dopr == "nan":
-            continue
-            
-        # Zkusíme najít, ke komu patří
-        for ridic in ridici_data:
-            # Pokud je jméno řidiče v textu dopravy pasažéra (např. "Jedu s: Franta")
-            if ridic['jmeno'] in dopr:
-                ridic['pasazeri'].append(r['jméno'])
-                break
+        # A) Najdeme řidiče
+        for _, r in lidi.iterrows():
+            dopr = str(r['doprava'])
+            if "Řidič" in dopr:
+                kapacita = 4 
+                match_kap = re.search(r'(\d+)\s*míst', dopr)
+                if match_kap:
+                    kapacita = int(match_kap.group(1))
+                
+                info_text = ""
+                if "," in dopr:
+                    info_text = dopr.split(",", 1)[1].strip().replace(")", "")
+                
+                ridici_data.append({
+                    "jmeno": r['jméno'],
+                    "kapacita": kapacita,
+                    "info": info_text,
+                    "pasazeri": []
+                })
+            elif "Hledám odvoz" in dopr:
+                cekaliste.append(r['jméno'])
+            elif not dopr or dopr == "nan" or dopr == "":
+                nereseno.append(r['jméno'])
 
-    # 2. VYKRESLENÍ DASHBOARDU (TVŮJ HTML DESIGN)
+        # B) Přiřadíme pasažéry k řidičům
+        for _, r in lidi.iterrows():
+            dopr = str(r['doprava'])
+            if "Řidič" in dopr or "Hledám" in dopr or not dopr or dopr == "nan":
+                continue
+            for ridic in ridici_data:
+                if ridic['jmeno'] in dopr:
+                    ridic['pasazeri'].append(r['jméno'])
+                    break
+        
+        # ==========================================
+        # FÁZE 2: VYKRESLENÍ (GRAFIKA)
+        # ==========================================
         
         # A) VAROVÁNÍ - ČEKACÍ LISTINA
         if cekaliste:
@@ -492,41 +482,34 @@ def vykreslit_detail_akce(akce, unique_key):
             st.info("Zatím není řešena doprava.")
         
         # B) KARTY AUT (HTML STYL)
-        # Použijeme 2 sloupce, aby ty karty měly dost místa na šířku
         cols = st.columns(2)
         
         for i, auto in enumerate(ridici_data):
-            # 1. Výpočty
+            # 1. Výpočty stavu
             obsazeno = len(auto['pasazeri'])
             celkem_mist = auto['kapacita']
             
-            # Procenta pro progress bar (musí být 0-100 pro HTML styl)
             if celkem_mist > 0:
                 percent = min((obsazeno / celkem_mist) * 100, 100)
             else:
                 percent = 0
             
-            # 2. BARVY A TEXTY (Přesně pro tvůj HTML design)
+            # 2. Určení barev
             if obsazeno > celkem_mist:
-                # ČERVENÁ (Přeplněno)
                 status_color = "#EF4444"
                 bg_color = "#FEF2F2"
                 border_color = "#FECACA"
                 status_icon = "🚨"
                 status_text = "Přeplněno!"
                 detail_text = f"{obsazeno} z {celkem_mist}"
-                
             elif obsazeno == celkem_mist:
-                # ORANŽOVÁ (Plno)
                 status_color = "#F59E0B"
                 bg_color = "#FFFBEB"
                 border_color = "#FDE68A"
                 status_icon = "👌"
                 status_text = "Plno"
                 detail_text = f"{obsazeno} z {celkem_mist}"
-                
             else:
-                # ZELENÁ (Volno)
                 volno = celkem_mist - obsazeno
                 status_color = "#10B981"
                 bg_color = "#ECFDF5"
@@ -536,30 +519,30 @@ def vykreslit_detail_akce(akce, unique_key):
                 detail_text = f"{obsazeno} z {celkem_mist}"
 
             info_label = auto['info'] if auto['info'] else "Řidič"
-
-            # 3. HTML ŠABLONA (DŮLEŽITÉ: Musí být zarovnána doleva, bez mezer na začátku řádků!)
+            
+            # 3. HTML ŠABLONA (Bez odsazení, aby se vykreslila správně)
             html_card = f"""
 <div style="background-color: {bg_color}; border: 1px solid {border_color}; border-radius: 12px; padding: 10px 15px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; gap: 15px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
-    <div style="display: flex; gap: 15px; align-items: center; min-width: 120px;">
-        <div style="text-align: left;">
-            <div style="font-size: 0.75rem; color: #6B7280; font-weight: 600; text-transform: uppercase;">{info_label}</div>
-            <div style="font-size: 1.0rem; font-weight: 800; color: #1F2937; white-space: nowrap;">{auto['jmeno']}</div>
-        </div>
-    </div>
-    <div style="width: 1px; height: 30px; background-color: {border_color};"></div>
-    <div style="text-align: center; min-width: 80px;">
-        <div style="font-size: 0.85rem; font-weight: 700; color: {status_color}; white-space: nowrap;">{status_icon} {status_text}</div>
-        <div style="font-size: 0.7rem; color: #6B7280;">Obsazeno: {detail_text}</div>
-    </div>
-    <div style="flex-grow: 1; max-width: 150px;">
-        <div style="background-color: rgba(255,255,255,0.6); border-radius: 10px; height: 8px; width: 100%; overflow: hidden; border: 1px solid {border_color};">
-            <div style="background-color: {status_color}; width: {percent}%; height: 100%; border-radius: 10px; transition: width 0.5s ease-in-out;"></div>
-        </div>
-    </div>
+<div style="display: flex; gap: 15px; align-items: center; min-width: 120px;">
+<div style="text-align: left;">
+<div style="font-size: 0.75rem; color: #6B7280; font-weight: 600; text-transform: uppercase;">{info_label}</div>
+<div style="font-size: 1.0rem; font-weight: 800; color: #1F2937; white-space: nowrap;">{auto['jmeno']}</div>
+</div>
+</div>
+<div style="width: 1px; height: 30px; background-color: {border_color};"></div>
+<div style="text-align: center; min-width: 80px;">
+<div style="font-size: 0.85rem; font-weight: 700; color: {status_color}; white-space: nowrap;">{status_icon} {status_text}</div>
+<div style="font-size: 0.7rem; color: #6B7280;">Obsazeno: {detail_text}</div>
+</div>
+<div style="flex-grow: 1; max-width: 150px;">
+<div style="background-color: rgba(255,255,255,0.6); border-radius: 10px; height: 8px; width: 100%; overflow: hidden; border: 1px solid {border_color};">
+<div style="background-color: {status_color}; width: {percent}%; height: 100%; border-radius: 10px; transition: width 0.5s ease-in-out;"></div>
+</div>
+</div>
 </div>
 """
             
-            # 4. Vykreslení
+            # 4. Samotné vykreslení do sloupce
             col_index = i % 2
             with cols[col_index]:
                 st.markdown(html_card, unsafe_allow_html=True)
