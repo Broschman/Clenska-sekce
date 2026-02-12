@@ -566,28 +566,6 @@ def vykreslit_detail_akce(akce, unique_key):
                     else:
                         st.caption("Zatím prázdné auto")
         
-        # 3. HTML Komponenta
-        html_dashboard = f"""
-<div style="background-color: {bg_color}; border: 1px solid {border_color}; border-radius: 12px; padding: 12px 20px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
-    <div style="display: flex; gap: 20px; align-items: center;">
-        <div style="text-align: center;">
-            <div style="font-size: 0.8rem; color: #6B7280; font-weight: 600; text-transform: uppercase;">Auta</div>
-            <div style="font-size: 1.2rem; font-weight: 800; color: #1F2937;">{pocet_ridicu}</div>
-        </div>
-        <div style="width: 1px; height: 30px; background-color: {border_color};"></div>
-        <div>
-            <div style="font-size: 0.9rem; font-weight: 700; color: {status_color};">{status_icon} {status_text}</div>
-            <div style="font-size: 0.75rem; color: #6B7280;">Poptávka: {poptavka_lidi} lidí</div>
-        </div>
-    </div>
-    <div style="flex-grow: 1; max-width: 300px;">
-        <div style="background-color: rgba(255,255,255,0.6); border-radius: 10px; height: 12px; width: 100%; overflow: hidden; border: 1px solid {border_color};">
-            <div style="background-color: {status_color}; width: {percent}%; height: 100%; border-radius: 10px; transition: width 0.5s ease-in-out;"></div>
-        </div>
-    </div>
-</div>
-"""
-        st.markdown(html_dashboard, unsafe_allow_html=True)
         
     # 1. IMPORT FONTU + CSS
     st.markdown("""
