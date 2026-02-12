@@ -482,7 +482,7 @@ def vykreslit_detail_akce(akce, unique_key):
                 ridic['pasazeri'].append(r['jméno'])
                 break
 
-    # 2. VYKRESLENÍ DASHBOARDU (S BAREVNOU DEFINICÍ)
+    # 2. VYKRESLENÍ DASHBOARDU (TVŮJ HTML DESIGN)
         
         # A) VAROVÁNÍ - ČEKACÍ LISTINA
         if cekaliste:
@@ -491,80 +491,91 @@ def vykreslit_detail_akce(akce, unique_key):
         if not ridici_data and not cekaliste:
             st.info("Zatím není řešena doprava.")
         
-        # B) KARTY AUT (GRID LAYOUT)
-        cols = st.columns(3)
+        # B) KARTY AUT (HTML STYL)
+        # Použijeme 2 sloupce, aby ty karty měly dost místa na šířku
+        cols = st.columns(2)
         
         for i, auto in enumerate(ridici_data):
-            # 1. Výpočet obsazenosti
+            # 1. Výpočty
             obsazeno = len(auto['pasazeri'])
             celkem_mist = auto['kapacita']
             
+            # Procenta pro progress bar (musí být 0-100 pro HTML styl)
             if celkem_mist > 0:
-                procento = min(obsazeno / celkem_mist, 1.0)
+                percent = min((obsazeno / celkem_mist) * 100, 100)
             else:
-                procento = 0
+                percent = 0
             
-            # 2. DEFINICE BAREV (To, co ti chybělo)
-            # Tady určujeme styl pro konkrétní auto
-            
+            # 2. BARVY A TEXTY (Přesně pro tvůj HTML design)
             if obsazeno > celkem_mist:
-                # STAV: Přeplněno (Červená)
+                # ČERVENÁ (Přeplněno)
                 status_color = "#EF4444"
                 bg_color = "#FEF2F2"
-                stav_icon = "🚨"
-                stav_txt = f"Přeplněno! ({obsazeno}/{celkem_mist})"
+                border_color = "#FECACA"
+                status_icon = "🚨"
+                status_text = "Přeplněno!"
+                detail_text = f"{obsazeno} z {celkem_mist}"
                 
             elif obsazeno == celkem_mist:
-                # STAV: Plno (Oranžová/Zlatá)
+                # ORANŽOVÁ (Plno)
                 status_color = "#F59E0B"
                 bg_color = "#FFFBEB"
-                stav_icon = "👌"
-                stav_txt = "Plno (0 volných)"
+                border_color = "#FDE68A"
+                status_icon = "👌"
+                status_text = "Plno"
+                detail_text = f"{obsazeno} z {celkem_mist}"
                 
             else:
-                # STAV: Volno (Zelená)
+                # ZELENÁ (Volno)
                 volno = celkem_mist - obsazeno
                 status_color = "#10B981"
                 bg_color = "#ECFDF5"
-                stav_icon = "✅"
-                stav_txt = f"Volno: **{volno}**"
+                border_color = "#A7F3D0"
+                status_icon = "✅"
+                status_text = f"Volno: {volno}"
+                detail_text = f"{obsazeno} z {celkem_mist}"
 
-            # 3. Vykreslení karty
-            col_index = i % 3
+            # 3. HTML ŠABLONA (Upravená pro jedno auto)
+            # Místo 'Auta' a 'pocet' zobrazujeme 'Řidič' a 'Jméno'
+            info_label = auto['info'] if auto['info'] else "Řidič"
+            
+            html_card = f"""
+            <div style="background-color: {bg_color}; border: 1px solid {border_color}; border-radius: 12px; padding: 10px 15px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; gap: 15px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                <div style="display: flex; gap: 15px; align-items: center; min-width: 120px;">
+                    <div style="text-align: left;">
+                        <div style="font-size: 0.75rem; color: #6B7280; font-weight: 600; text-transform: uppercase;">{info_label}</div>
+                        <div style="font-size: 1.0rem; font-weight: 800; color: #1F2937; white-space: nowrap;">{auto['jmeno']}</div>
+                    </div>
+                </div>
+                
+                <div style="width: 1px; height: 30px; background-color: {border_color};"></div>
+                
+                <div style="text-align: center; min-width: 80px;">
+                    <div style="font-size: 0.85rem; font-weight: 700; color: {status_color}; white-space: nowrap;">{status_icon} {status_text}</div>
+                    <div style="font-size: 0.7rem; color: #6B7280;">Obsazeno: {detail_text}</div>
+                </div>
+                
+                <div style="flex-grow: 1; max-width: 150px;">
+                    <div style="background-color: rgba(255,255,255,0.6); border-radius: 10px; height: 8px; width: 100%; overflow: hidden; border: 1px solid {border_color};">
+                        <div style="background-color: {status_color}; width: {percent}%; height: 100%; border-radius: 10px; transition: width 0.5s ease-in-out;"></div>
+                    </div>
+                </div>
+            </div>
+            """
+            
+            # 4. Vykreslení
+            col_index = i % 2
             with cols[col_index]:
-                with st.container(border=True):
-                    # Hlavička s jménem
-                    st.markdown(f"**🚙 {auto['jmeno']}**")
-                    if auto['info']:
-                        st.caption(f"🕒 {auto['info']}")
-                    
-                    # Progress bar
-                    st.progress(procento)
-                    
-                    # Barevný štítek stavu (HTML injection pro background color)
-                    st.markdown(f"""
-                        <div style="
-                            background-color: {bg_color};
-                            border: 1px solid {status_color};
-                            color: {status_color};
-                            padding: 4px 8px;
-                            border-radius: 6px;
-                            text-align: center;
-                            font-size: 0.85rem;
-                            font-weight: 500;
-                            margin-top: 5px;
-                            margin-bottom: 10px;">
-                            {stav_icon} {stav_txt}
-                        </div>
-                        """, unsafe_allow_html=True)
-                    
-                    # Seznam pasažérů
-                    if auto['pasazeri']:
-                        with st.expander(f"Pasažéři ({len(auto['pasazeri'])})"):
-                            for p in auto['pasazeri']:
-                                st.text(f"• {p}")
-                    else:
-                        st.caption("Zatím prázdné auto")
+                st.markdown(html_card, unsafe_allow_html=True)
+                
+                # Seznam pasažérů pod kartou
+                if auto['pasazeri']:
+                    with st.expander(f"Seznam cestujících ({len(auto['pasazeri'])})"):
+                        for p in auto['pasazeri']:
+                            st.caption(f"• {p}")
+                else:
+                    # Aby to vypadalo zarovnaně, přidáme malou mezeru, když je auto prázdné
+                    st.markdown("<div style='margin-bottom: 10px'></div>", unsafe_allow_html=True)
         
         
     # 1. IMPORT FONTU + CSS
