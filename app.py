@@ -482,64 +482,89 @@ def vykreslit_detail_akce(akce, unique_key):
                 ridic['pasazeri'].append(r['jméno'])
                 break
 
-    # 2. VYKRESLENÍ DASHBOARDU
-    
-    # A) VAROVÁNÍ - ČEKACÍ LISTINA
-    if cekaliste:
-        st.error(f"🚨 **Hledají odvoz ({len(cekaliste)}):** {', '.join(cekaliste)}")
-    
-    if not ridici_data and not cekaliste:
-        st.info("Zatím není řešena doprava.")
-    
-    # B) KARTY AUT (GRID LAYOUT)
-    # Uděláme mřížku po 3 autech na řádek
-    cols = st.columns(3)
-    
-    for i, auto in enumerate(ridici_data):
-        # Výpočet obsazenosti
-        obsazeno = len(auto['pasazeri'])
-        celkem_mist = auto['kapacita']
+    # 2. VYKRESLENÍ DASHBOARDU (S BAREVNOU DEFINICÍ)
         
-        # Abychom nedělili nulou
-        if celkem_mist > 0:
-            procento = min(obsazeno / celkem_mist, 1.0)
-        else:
-            procento = 0
+        # A) VAROVÁNÍ - ČEKACÍ LISTINA
+        if cekaliste:
+            st.error(f"🚨 **Hledají odvoz ({len(cekaliste)}):** {', '.join(cekaliste)}")
         
-        # Barvy podle stavu
-        if obsazeno > celkem_mist:
-            bar_color = "#EF4444" # Červená (přeplněno)
-            stav_txt = f"Přeplněno! ({obsazeno}/{celkem_mist})"
-        elif obsazeno == celkem_mist:
-            bar_color = "#F59E0B" # Oranžová (plno)
-            stav_txt = "Plno (0 volných)"
-        else:
-            bar_color = "#10B981" # Zelená (místo je)
-            volno = celkem_mist - obsazeno
-            stav_txt = f"Volno: **{volno}**"
+        if not ridici_data and not cekaliste:
+            st.info("Zatím není řešena doprava.")
+        
+        # B) KARTY AUT (GRID LAYOUT)
+        cols = st.columns(3)
+        
+        for i, auto in enumerate(ridici_data):
+            # 1. Výpočet obsazenosti
+            obsazeno = len(auto['pasazeri'])
+            celkem_mist = auto['kapacita']
+            
+            if celkem_mist > 0:
+                procento = min(obsazeno / celkem_mist, 1.0)
+            else:
+                procento = 0
+            
+            # 2. DEFINICE BAREV (To, co ti chybělo)
+            # Tady určujeme styl pro konkrétní auto
+            
+            if obsazeno > celkem_mist:
+                # STAV: Přeplněno (Červená)
+                status_color = "#EF4444"
+                bg_color = "#FEF2F2"
+                stav_icon = "🚨"
+                stav_txt = f"Přeplněno! ({obsazeno}/{celkem_mist})"
+                
+            elif obsazeno == celkem_mist:
+                # STAV: Plno (Oranžová/Zlatá)
+                status_color = "#F59E0B"
+                bg_color = "#FFFBEB"
+                stav_icon = "👌"
+                stav_txt = "Plno (0 volných)"
+                
+            else:
+                # STAV: Volno (Zelená)
+                volno = celkem_mist - obsazeno
+                status_color = "#10B981"
+                bg_color = "#ECFDF5"
+                stav_icon = "✅"
+                stav_txt = f"Volno: **{volno}**"
 
-        # Vykreslení do sloupce (používáme modulo operátor pro střídání sloupců)
-        col_index = i % 3
-        with cols[col_index]:
-            with st.container(border=True):
-                # Hlavička karty
-                st.markdown(f"**🚙 {auto['jmeno']}**")
-                if auto['info']:
-                    st.caption(f"🕒 {auto['info']}")
-                
-                # Progress bar
-                st.progress(procento)
-                
-                # Text stavu (zarovnaný doprava, barevný)
-                st.markdown(f"<div style='text-align:right; font-size: 0.8rem; color: {bar_color};'>{stav_txt}</div>", unsafe_allow_html=True)
-                
-                # Seznam pasažérů (expandér, aby to nezabíralo místo)
-                if auto['pasazeri']:
-                    with st.expander(f"Pasažéři ({len(auto['pasazeri'])})"):
-                        for p in auto['pasazeri']:
-                            st.text(f"• {p}")
-                else:
-                    st.caption("Zatím prázdné auto")
+            # 3. Vykreslení karty
+            col_index = i % 3
+            with cols[col_index]:
+                with st.container(border=True):
+                    # Hlavička s jménem
+                    st.markdown(f"**🚙 {auto['jmeno']}**")
+                    if auto['info']:
+                        st.caption(f"🕒 {auto['info']}")
+                    
+                    # Progress bar
+                    st.progress(procento)
+                    
+                    # Barevný štítek stavu (HTML injection pro background color)
+                    st.markdown(f"""
+                        <div style="
+                            background-color: {bg_color};
+                            border: 1px solid {status_color};
+                            color: {status_color};
+                            padding: 4px 8px;
+                            border-radius: 6px;
+                            text-align: center;
+                            font-size: 0.85rem;
+                            font-weight: 500;
+                            margin-top: 5px;
+                            margin-bottom: 10px;">
+                            {stav_icon} {stav_txt}
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
+                    # Seznam pasažérů
+                    if auto['pasazeri']:
+                        with st.expander(f"Pasažéři ({len(auto['pasazeri'])})"):
+                            for p in auto['pasazeri']:
+                                st.text(f"• {p}")
+                    else:
+                        st.caption("Zatím prázdné auto")
         
         # 3. HTML Komponenta
         html_dashboard = f"""
