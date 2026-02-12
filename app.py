@@ -424,22 +424,26 @@ def vykreslit_detail_akce(akce, unique_key):
     st.markdown("<hr style='margin: 10px 0;'>", unsafe_allow_html=True)
     st.markdown(f"#### 👥 Zapsaní ({len(lidi)})")
 
-# ---------------------------------------------------------
-    # 1. NAČTENÍ DAT (TOTO ZDE CHYBĚLO)
+akce_id_str = str(akce['id_akce']).replace('.0', '')
+    
     # ---------------------------------------------------------
-    # Načteme všechny přihlášky
-    df_reg = data_manager.load_prihlasky()
-    
-    # Oprava formátu ID (aby to byl string bez .0)
-    if 'id_akce' in df_reg.columns:
-        df_reg['id_akce'] = df_reg['id_akce'].astype(str).str.replace(r'\.0$', '', regex=True)
-    
-    akce_id_str = str(akce['id_akce']).replace('.0', '')
-    
-    # TADY DEFINUJEME PROMĚNNOU 'lidi' - filtrujeme jen pro tuto akci
-    lidi = df_reg[df_reg['id_akce'] == akce_id_str]
+    # 1. BEZPEČNÉ NAČTENÍ DAT (POJISTKA PROTI PRÁZDNÉ DB)
+    # ---------------------------------------------------------
+    try:
+        df_reg = data_manager.load_prihlasky()
+    except:
+        df_reg = pd.DataFrame()
 
-    # Zjistíme deadline (pro pozdější použití)
+    # Pokud je databáze prázdná nebo chybí klíčový sloupec, vytvoříme prázdnou strukturu
+    if df_reg.empty or 'id_akce' not in df_reg.columns:
+        lidi = pd.DataFrame(columns=['id_akce', 'jméno', 'doprava', 'poznámka', 'ubytování'])
+    else:
+        # Standardní načtení a filtrace
+        # Převedeme id_akce na string pro jistotu
+        df_reg['id_akce'] = df_reg['id_akce'].astype(str).str.replace(r'\.0$', '', regex=True)
+        lidi = df_reg[df_reg['id_akce'] == akce_id_str]
+
+    # Zjistíme deadline (pro pozdější použití u tlačítek)
     je_po_deadlinu = False
     if akce.get('deadline'):
         try:
