@@ -424,7 +424,7 @@ def vykreslit_detail_akce(akce, unique_key):
     st.markdown("<hr style='margin: 10px 0;'>", unsafe_allow_html=True)
     st.markdown(f"#### 👥 Zapsaní ({len(lidi)})")
 
-akce_id_str = str(akce['id_akce']).replace('.0', '')
+    akce_id_str = str(akce['id_akce']).replace('.0', '')
     
     # ---------------------------------------------------------
     # 1. BEZPEČNÉ NAČTENÍ DAT (POJISTKA PROTI PRÁZDNÉ DB)
