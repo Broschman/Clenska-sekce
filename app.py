@@ -1,3 +1,4 @@
+
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 from streamlit_extras.stylable_container import stylable_container
@@ -424,167 +425,91 @@ def vykreslit_detail_akce(akce, unique_key):
     st.markdown("<hr style='margin: 10px 0;'>", unsafe_allow_html=True)
     st.markdown(f"#### 👥 Zapsaní ({len(lidi)})")
 
-    akce_id_str = str(akce['id_akce']).replace('.0', '')
-    
-    # ---------------------------------------------------------
-    # 1. BEZPEČNÉ NAČTENÍ DAT (POJISTKA PROTI PRÁZDNÉ DB)
-    # ---------------------------------------------------------
-    try:
-        df_reg = data_manager.load_prihlasky()
-    except:
-        df_reg = pd.DataFrame()
-
-    # Pokud je databáze prázdná nebo chybí klíčový sloupec, vytvoříme prázdnou strukturu
-    if df_reg.empty or 'id_akce' not in df_reg.columns:
-        lidi = pd.DataFrame(columns=['id_akce', 'jméno', 'doprava', 'poznámka', 'ubytování'])
-    else:
-        # Standardní načtení a filtrace
-        # Převedeme id_akce na string pro jistotu
-        df_reg['id_akce'] = df_reg['id_akce'].astype(str).str.replace(r'\.0$', '', regex=True)
-        lidi = df_reg[df_reg['id_akce'] == akce_id_str]
-
-    # Zjistíme deadline (pro pozdější použití u tlačítek)
-    je_po_deadlinu = False
-    if akce.get('deadline'):
-        try:
-            d_deadline = pd.to_datetime(akce['deadline'], dayfirst=True, errors='coerce')
-            if pd.notnull(d_deadline) and datetime.now() > d_deadline:
-                je_po_deadlinu = True
-        except:
-            pass
-
-    # ---------------------------------------------------------
-    # 2. DASHBOARD DOPRAVY (OPRAVENÝ)
-    # ---------------------------------------------------------
-    st.markdown("### 🚗 Stav dopravy")
-    
-    # ==========================================
-    # FÁZE 1: PŘÍPRAVA DAT
-    # ==========================================
-    ridici_data = [] 
-    cekaliste = []    
-    nereseno = []     
-    
-    import re 
-
-    # A) Najdeme řidiče
-    # Teď už proměnná 'lidi' existuje, takže to nespadne
-    for _, r in lidi.iterrows():
-        dopr = str(r['doprava'])
-        if "Řidič" in dopr:
-            kapacita = 4 
-            match_kap = re.search(r'(\d+)\s*míst', dopr)
-            if match_kap:
-                kapacita = int(match_kap.group(1))
-            
-            info_text = ""
-            if "," in dopr:
-                info_text = dopr.split(",", 1)[1].strip().replace(")", "")
-            
-            ridici_data.append({
-                "jmeno": r['jméno'],
-                "kapacita": kapacita,
-                "info": info_text,
-                "pasazeri": []
-            })
-        elif "Hledám odvoz" in dopr:
-            cekaliste.append(r['jméno'])
-        elif not dopr or dopr == "nan" or dopr == "":
-            nereseno.append(r['jméno'])
-
-    # B) Přiřadíme pasažéry k řidičům
-    for _, r in lidi.iterrows():
-        dopr = str(r['doprava'])
-        if "Řidič" in dopr or "Hledám" in dopr or not dopr or dopr == "nan":
-            continue
-        for ridic in ridici_data:
-            if ridic['jmeno'] in dopr:
-                ridic['pasazeri'].append(r['jméno'])
-                break
-
-    # ==========================================
-    # FÁZE 2: VYKRESLENÍ GRAFIKY
-    # ==========================================
-    
-    # A) VAROVÁNÍ - ČEKACÍ LISTINA
-    if cekaliste:
-        st.error(f"🚨 **Hledají odvoz ({len(cekaliste)}):** {', '.join(cekaliste)}")
-    
-    if not ridici_data and not cekaliste:
-        st.info("Zatím není řešena doprava.")
-    
-    # B) KARTY AUT
-    cols = st.columns(2)
-    
-    for i, auto in enumerate(ridici_data):
-        # 1. Výpočty stavu
-        obsazeno = len(auto['pasazeri'])
-        celkem_mist = auto['kapacita']
+    # --- NOVINKA: DASHBOARD DOPRAVY (S NEUTRÁLNÍM STAVEM) ---
+    if not lidi.empty:
+        # 1. Data
+        df_auta_all = data_manager.load_auta()
+        auta_akce = df_auta_all[df_auta_all['id_akce'] == akce_id_str]
         
-        if celkem_mist > 0:
-            percent = min((obsazeno / celkem_mist) * 100, 100)
-        else:
+        kapacita_celkem = 0
+        pocet_ridicu = 0
+        
+        for _, a_row in auta_akce.iterrows():
+            kap = int(a_row.get('kapacita', 4))
+            volna_mista_v_aute = kap - 1 
+            kapacita_celkem += volna_mista_v_aute
+            pocet_ridicu += 1
+
+        poptavka_lidi = 0
+        for _, p_row in lidi.iterrows():
+            d = str(p_row.get('doprava', ''))
+            if "Řidič" not in d and ("Chci" in d or "Hledám" in d or "Spolujízda" in d or "Jedu s" in d):
+                poptavka_lidi += 1
+            
+        bilance = kapacita_celkem - poptavka_lidi
+        
+        # 2. Logika barev a textů (UPRAVENO)
+        
+        # A) NEUTRÁLNÍ STAV: Nic se neděje (0 aut, 0 poptávka)
+        if pocet_ridicu == 0 and poptavka_lidi == 0:
+            status_color = "#6B7280" # Šedá
+            bg_color = "#F9FAFB"     # Velmi světlá šedá
+            border_color = "#E5E7EB"
+            status_icon = "💤"       # Nebo "🅿️"
+            status_text = "Zatím žádná auta"
             percent = 0
-        
-        # 2. Určení barev
-        if obsazeno > celkem_mist:
-            status_color = "#EF4444"
+            
+        # B) NEGATIVNÍ STAV: Nestíháme (Chybí místa)
+        elif bilance < 0:
+            status_color = "#EF4444" # Červená
             bg_color = "#FEF2F2"
             border_color = "#FECACA"
             status_icon = "🚨"
-            status_text = "Přeplněno!"
-            detail_text = f"{obsazeno} z {celkem_mist}"
-        elif obsazeno == celkem_mist:
-            status_color = "#F59E0B"
+            status_text = f"Chybí místa! (Manko: {abs(bilance)})"
+            percent = 100
+
+        # C) PŘESNÝ STAV: Plno, ale vychází to (Bilance 0)
+        # Tady už nedáváme zelenou "Máme volno", ale varovnou oranžovou "Plno"
+        elif bilance == 0:
+            status_color = "#F59E0B" # Oranžová/Zlatá
             bg_color = "#FFFBEB"
             border_color = "#FDE68A"
-            status_icon = "👌"
-            status_text = "Plno"
-            detail_text = f"{obsazeno} z {celkem_mist}"
+            status_icon = "👌"       # Nebo "🤝"
+            status_text = "Plně obsazeno (0 volných)"
+            percent = 100
+
+        # D) POZITIVNÍ STAV: Máme rezervu (Bilance > 0)
         else:
-            volno = celkem_mist - obsazeno
-            status_color = "#10B981"
+            status_color = "#10B981" # Zelená
             bg_color = "#ECFDF5"
             border_color = "#A7F3D0"
             status_icon = "✅"
-            status_text = f"Volno: {volno}"
-            detail_text = f"{obsazeno} z {celkem_mist}"
+            status_text = f"Máme místo! (Volno: {bilance})"
+            # Procentuální zaplnění (aby bar nebyl plný, když je volno)
+            percent = min((poptavka_lidi / kapacita_celkem) * 100, 100) if kapacita_celkem > 0 else 0
 
-        info_label = auto['info'] if auto['info'] else "Řidič"
-        
-        # 3. HTML ŠABLONA
-        html_card = f"""
-<div style="background-color: {bg_color}; border: 1px solid {border_color}; border-radius: 12px; padding: 10px 15px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; gap: 15px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
-<div style="display: flex; gap: 15px; align-items: center; min-width: 120px;">
-<div style="text-align: left;">
-<div style="font-size: 0.75rem; color: #6B7280; font-weight: 600; text-transform: uppercase;">{info_label}</div>
-<div style="font-size: 1.0rem; font-weight: 800; color: #1F2937; white-space: nowrap;">{auto['jmeno']}</div>
-</div>
-</div>
-<div style="width: 1px; height: 30px; background-color: {border_color};"></div>
-<div style="text-align: center; min-width: 80px;">
-<div style="font-size: 0.85rem; font-weight: 700; color: {status_color}; white-space: nowrap;">{status_icon} {status_text}</div>
-<div style="font-size: 0.7rem; color: #6B7280;">Obsazeno: {detail_text}</div>
-</div>
-<div style="flex-grow: 1; max-width: 150px;">
-<div style="background-color: rgba(255,255,255,0.6); border-radius: 10px; height: 8px; width: 100%; overflow: hidden; border: 1px solid {border_color};">
-<div style="background-color: {status_color}; width: {percent}%; height: 100%; border-radius: 10px; transition: width 0.5s ease-in-out;"></div>
-</div>
-</div>
+        # 3. HTML Komponenta
+        html_dashboard = f"""
+<div style="background-color: {bg_color}; border: 1px solid {border_color}; border-radius: 12px; padding: 12px 20px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+    <div style="display: flex; gap: 20px; align-items: center;">
+        <div style="text-align: center;">
+            <div style="font-size: 0.8rem; color: #6B7280; font-weight: 600; text-transform: uppercase;">Auta</div>
+            <div style="font-size: 1.2rem; font-weight: 800; color: #1F2937;">{pocet_ridicu}</div>
+        </div>
+        <div style="width: 1px; height: 30px; background-color: {border_color};"></div>
+        <div>
+            <div style="font-size: 0.9rem; font-weight: 700; color: {status_color};">{status_icon} {status_text}</div>
+            <div style="font-size: 0.75rem; color: #6B7280;">Poptávka: {poptavka_lidi} lidí</div>
+        </div>
+    </div>
+    <div style="flex-grow: 1; max-width: 300px;">
+        <div style="background-color: rgba(255,255,255,0.6); border-radius: 10px; height: 12px; width: 100%; overflow: hidden; border: 1px solid {border_color};">
+            <div style="background-color: {status_color}; width: {percent}%; height: 100%; border-radius: 10px; transition: width 0.5s ease-in-out;"></div>
+        </div>
+    </div>
 </div>
 """
-        
-        # 4. Samotné vykreslení
-        col_index = i % 2
-        with cols[col_index]:
-            st.markdown(html_card, unsafe_allow_html=True)
-            
-            if auto['pasazeri']:
-                with st.expander(f"Seznam cestujících ({len(auto['pasazeri'])})"):
-                    for p in auto['pasazeri']:
-                        st.caption(f"• {p}")
-            else:
-                st.markdown("<div style='margin-bottom: 10px'></div>", unsafe_allow_html=True)        
+        st.markdown(html_dashboard, unsafe_allow_html=True)
         
     # 1. IMPORT FONTU + CSS
     st.markdown("""
