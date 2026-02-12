@@ -425,113 +425,121 @@ def vykreslit_detail_akce(akce, unique_key):
     st.markdown(f"#### 👥 Zapsaní ({len(lidi)})")
 
     # --- DASHBOARD DOPRAVY (DETAILNÍ KARTY AUT) ---
-        st.markdown("### 🚗 Stav dopravy")
-        
-        # 1. PŘÍPRAVA DAT (Kdo je řidič, kdo pasažér, kdo hledá)
-        ridici_data = []  # Seznam slovníků: {jmeno, kapacita, cas, pasazeri: []}
-        cekaliste = []    # Seznam jmen
-        nereseno = []     # Lidi co nemají nic
-        
-        # A) Najdeme řidiče
-        for _, r in lidi.iterrows():
-            dopr = str(r['doprava'])
-            if "Řidič" in dopr:
-                # Pokus o vytažení kapacity z textu "Řidič (4 místa, 17:00)"
-                kapacita = 4 # Default
-                import re
-                match_kap = re.search(r'(\d+)\s*míst', dopr)
-                if match_kap:
-                    kapacita = int(match_kap.group(1))
-                
-                # Vytažení času/poznámky (vše za čárkou)
-                info_text = ""
-                if "," in dopr:
-                    info_text = dopr.split(",", 1)[1].strip().replace(")", "")
-                
-                ridici_data.append({
-                    "jmeno": r['jméno'],
-                    "kapacita": kapacita,
-                    "info": info_text,
-                    "pasazeri": []
-                })
-            elif "Hledám odvoz" in dopr:
-                cekaliste.append(r['jméno'])
-            elif not dopr or dopr == "nan":
-                nereseno.append(r['jméno'])
+    st.markdown("### 🚗 Stav dopravy")
+    
+    # 1. PŘÍPRAVA DAT
+    ridici_data = []  # Seznam slovníků: {jmeno, kapacita, cas, pasazeri: []}
+    cekaliste = []    # Seznam jmen
+    nereseno = []     # Lidi co nemají nic
+    
+    import re # Pro jistotu importujeme regex tady
 
-        # B) Přiřadíme pasažéry k řidičům
-        # Projdeme lidi znovu a podíváme se, jestli jejich "doprava" obsahuje jméno řidiče
-        for _, r in lidi.iterrows():
-            dopr = str(r['doprava'])
-            # Ignorujeme řidiče a hledající (už máme)
-            if "Řidič" in dopr or "Hledám" in dopr or not dopr or dopr == "nan":
-                continue
-                
-            # Zkusíme najít, ke komu patří
-            for ridic in ridici_data:
-                # Pokud je jméno řidiče v textu dopravy pasažéra (např. "Jedu s: Franta")
-                if ridic['jmeno'] in dopr:
-                    ridic['pasazeri'].append(r['jméno'])
-                    break
-
-        # 2. VYKRESLENÍ DASHBOARDU
+    # A) Najdeme řidiče
+    # Procházíme tabulku lidí (musí být definovaná proměnná 'lidi')
+    for _, r in lidi.iterrows():
+        dopr = str(r['doprava'])
         
-        # A) VAROVÁNÍ - ČEKACÍ LISTINA
-        if cekaliste:
-            st.error(f"🚨 **Hledají odvoz ({len(cekaliste)}):** {', '.join(cekaliste)}")
-        
-        if not ridici_data and not cekaliste:
-            st.info("Zatím není řešena doprava.")
-        
-        # B) KARTY AUT (GRID LAYOUT)
-        # Uděláme mřížku po 2 nebo 3 autech na řádek
-        cols = st.columns(3) # 3 sloupce pro desktop, na mobilu se to přeskládá
-        
-        for i, auto in enumerate(ridici_data):
-            # Výpočet obsazenosti
-            obsazeno = len(auto['pasazeri'])
-            celkem_mist = auto['kapacita']
+        # Pokud je řidič
+        if "Řidič" in dopr:
+            # Pokus o vytažení kapacity z textu "Řidič (4 místa, 17:00)"
+            kapacita = 4 # Defaultní hodnota
+            match_kap = re.search(r'(\d+)\s*míst', dopr)
+            if match_kap:
+                kapacita = int(match_kap.group(1))
             
-            # Abychom nedělili nulou
-            if celkem_mist > 0:
-                procento = min(obsazeno / celkem_mist, 1.0)
-            else:
-                procento = 0
+            # Vytažení času/poznámky (vše za čárkou)
+            info_text = ""
+            if "," in dopr:
+                info_text = dopr.split(",", 1)[1].strip().replace(")", "")
             
-            # Barvy podle stavu
-            if obsazeno > celkem_mist:
-                bar_color = "#EF4444" # Červená (přeplněno)
-                stav_txt = f"Přeplněno! ({obsazeno}/{celkem_mist})"
-            elif obsazeno == celkem_mist:
-                bar_color = "#F59E0B" # Oranžová (plno)
-                stav_txt = "Plno (0 volných)"
-            else:
-                bar_color = "#10B981" # Zelená (místo je)
-                volno = celkem_mist - obsazeno
-                stav_txt = f"Volno: **{volno}**"
+            ridici_data.append({
+                "jmeno": r['jméno'],
+                "kapacita": kapacita,
+                "info": info_text,
+                "pasazeri": []
+            })
+        
+        # Pokud hledá odvoz
+        elif "Hledám odvoz" in dopr:
+            cekaliste.append(r['jméno'])
+            
+        # Pokud nemá nic
+        elif not dopr or dopr == "nan" or dopr == "":
+            nereseno.append(r['jméno'])
 
-            # Vykreslení do sloupce
-            col_index = i % 3
-            with cols[col_index]:
-                with st.container(border=True):
-                    # Hlavička karty
-                    st.markdown(f"**🚙 {auto['jmeno']}**")
-                    if auto['info']:
-                        st.caption(f"🕒 {auto['info']}")
-                    
-                    # Progress bar
-                    st.progress(procento)
-                    
-                    # Text stavu
-                    st.markdown(f"<div style='text-align:right; font-size: 0.8rem; color: {bar_color};'>{stav_txt}</div>", unsafe_allow_html=True)
-                    
-                    # Seznam pasažérů (expandér, aby to nezabíralo místo)
-                    if auto['pasazeri']:
-                        with st.expander(f"Pasažéři ({len(auto['pasazeri'])})"):
-                            for p in auto['pasazeri']:
-                                st.text(f"• {p}")
-                    else:
-                        st.caption("Zatím prázdné auto")
+    # B) Přiřadíme pasažéry k řidičům
+    # Projdeme lidi znovu, abychom našli ty, co už mají řidiče vybraného
+    for _, r in lidi.iterrows():
+        dopr = str(r['doprava'])
+        # Ignorujeme řidiče a hledající (ty už máme nahoře)
+        if "Řidič" in dopr or "Hledám" in dopr or not dopr or dopr == "nan":
+            continue
+            
+        # Zkusíme najít, ke komu patří
+        for ridic in ridici_data:
+            # Pokud je jméno řidiče v textu dopravy pasažéra (např. "Jedu s: Franta")
+            if ridic['jmeno'] in dopr:
+                ridic['pasazeri'].append(r['jméno'])
+                break
+
+    # 2. VYKRESLENÍ DASHBOARDU
+    
+    # A) VAROVÁNÍ - ČEKACÍ LISTINA
+    if cekaliste:
+        st.error(f"🚨 **Hledají odvoz ({len(cekaliste)}):** {', '.join(cekaliste)}")
+    
+    if not ridici_data and not cekaliste:
+        st.info("Zatím není řešena doprava.")
+    
+    # B) KARTY AUT (GRID LAYOUT)
+    # Uděláme mřížku po 3 autech na řádek
+    cols = st.columns(3)
+    
+    for i, auto in enumerate(ridici_data):
+        # Výpočet obsazenosti
+        obsazeno = len(auto['pasazeri'])
+        celkem_mist = auto['kapacita']
+        
+        # Abychom nedělili nulou
+        if celkem_mist > 0:
+            procento = min(obsazeno / celkem_mist, 1.0)
+        else:
+            procento = 0
+        
+        # Barvy podle stavu
+        if obsazeno > celkem_mist:
+            bar_color = "#EF4444" # Červená (přeplněno)
+            stav_txt = f"Přeplněno! ({obsazeno}/{celkem_mist})"
+        elif obsazeno == celkem_mist:
+            bar_color = "#F59E0B" # Oranžová (plno)
+            stav_txt = "Plno (0 volných)"
+        else:
+            bar_color = "#10B981" # Zelená (místo je)
+            volno = celkem_mist - obsazeno
+            stav_txt = f"Volno: **{volno}**"
+
+        # Vykreslení do sloupce (používáme modulo operátor pro střídání sloupců)
+        col_index = i % 3
+        with cols[col_index]:
+            with st.container(border=True):
+                # Hlavička karty
+                st.markdown(f"**🚙 {auto['jmeno']}**")
+                if auto['info']:
+                    st.caption(f"🕒 {auto['info']}")
+                
+                # Progress bar
+                st.progress(procento)
+                
+                # Text stavu (zarovnaný doprava, barevný)
+                st.markdown(f"<div style='text-align:right; font-size: 0.8rem; color: {bar_color};'>{stav_txt}</div>", unsafe_allow_html=True)
+                
+                # Seznam pasažérů (expandér, aby to nezabíralo místo)
+                if auto['pasazeri']:
+                    with st.expander(f"Pasažéři ({len(auto['pasazeri'])})"):
+                        for p in auto['pasazeri']:
+                            st.text(f"• {p}")
+                else:
+                    st.caption("Zatím prázdné auto")
         
         # 2. Logika barev a textů (UPRAVENO)
         
