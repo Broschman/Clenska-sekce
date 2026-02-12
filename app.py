@@ -424,104 +424,104 @@ def vykreslit_detail_akce(akce, unique_key):
     st.markdown("<hr style='margin: 10px 0;'>", unsafe_allow_html=True)
     st.markdown(f"#### 👥 Zapsaní ({len(lidi)})")
 
-    # --- DASHBOARD DOPRAVY (OPRAVENO: SEPARACE DAT A GRAFIKY) ---
-        st.markdown("### 🚗 Stav dopravy")
-        
-        # ==========================================
-        # FÁZE 1: PŘÍPRAVA DAT (JEN POČÍTÁNÍ)
-        # ==========================================
-        ridici_data = [] 
-        cekaliste = []    
-        nereseno = []     
-        
-        import re 
+    # --- DASHBOARD DOPRAVY (VLOŽIT A ZAROVNAT) ---
+st.markdown("### 🚗 Stav dopravy")
 
-        # A) Najdeme řidiče
-        for _, r in lidi.iterrows():
-            dopr = str(r['doprava'])
-            if "Řidič" in dopr:
-                kapacita = 4 
-                match_kap = re.search(r'(\d+)\s*míst', dopr)
-                if match_kap:
-                    kapacita = int(match_kap.group(1))
-                
-                info_text = ""
-                if "," in dopr:
-                    info_text = dopr.split(",", 1)[1].strip().replace(")", "")
-                
-                ridici_data.append({
-                    "jmeno": r['jméno'],
-                    "kapacita": kapacita,
-                    "info": info_text,
-                    "pasazeri": []
-                })
-            elif "Hledám odvoz" in dopr:
-                cekaliste.append(r['jméno'])
-            elif not dopr or dopr == "nan" or dopr == "":
-                nereseno.append(r['jméno'])
+# ==========================================
+# FÁZE 1: PŘÍPRAVA DAT (JEN POČÍTÁNÍ)
+# ==========================================
+ridici_data = [] 
+cekaliste = []    
+nereseno = []     
 
-        # B) Přiřadíme pasažéry k řidičům
-        for _, r in lidi.iterrows():
-            dopr = str(r['doprava'])
-            if "Řidič" in dopr or "Hledám" in dopr or not dopr or dopr == "nan":
-                continue
-            for ridic in ridici_data:
-                if ridic['jmeno'] in dopr:
-                    ridic['pasazeri'].append(r['jméno'])
-                    break
-        
-        # ==========================================
-        # FÁZE 2: VYKRESLENÍ (GRAFIKA)
-        # ==========================================
-        
-        # A) VAROVÁNÍ - ČEKACÍ LISTINA
-        if cekaliste:
-            st.error(f"🚨 **Hledají odvoz ({len(cekaliste)}):** {', '.join(cekaliste)}")
-        
-        if not ridici_data and not cekaliste:
-            st.info("Zatím není řešena doprava.")
-        
-        # B) KARTY AUT (HTML STYL)
-        cols = st.columns(2)
-        
-        for i, auto in enumerate(ridici_data):
-            # 1. Výpočty stavu
-            obsazeno = len(auto['pasazeri'])
-            celkem_mist = auto['kapacita']
-            
-            if celkem_mist > 0:
-                percent = min((obsazeno / celkem_mist) * 100, 100)
-            else:
-                percent = 0
-            
-            # 2. Určení barev
-            if obsazeno > celkem_mist:
-                status_color = "#EF4444"
-                bg_color = "#FEF2F2"
-                border_color = "#FECACA"
-                status_icon = "🚨"
-                status_text = "Přeplněno!"
-                detail_text = f"{obsazeno} z {celkem_mist}"
-            elif obsazeno == celkem_mist:
-                status_color = "#F59E0B"
-                bg_color = "#FFFBEB"
-                border_color = "#FDE68A"
-                status_icon = "👌"
-                status_text = "Plno"
-                detail_text = f"{obsazeno} z {celkem_mist}"
-            else:
-                volno = celkem_mist - obsazeno
-                status_color = "#10B981"
-                bg_color = "#ECFDF5"
-                border_color = "#A7F3D0"
-                status_icon = "✅"
-                status_text = f"Volno: {volno}"
-                detail_text = f"{obsazeno} z {celkem_mist}"
+import re 
 
-            info_label = auto['info'] if auto['info'] else "Řidič"
-            
-            # 3. HTML ŠABLONA (Bez odsazení, aby se vykreslila správně)
-            html_card = f"""
+# A) Najdeme řidiče
+for _, r in lidi.iterrows():
+    dopr = str(r['doprava'])
+    if "Řidič" in dopr:
+        kapacita = 4 
+        match_kap = re.search(r'(\d+)\s*míst', dopr)
+        if match_kap:
+            kapacita = int(match_kap.group(1))
+        
+        info_text = ""
+        if "," in dopr:
+            info_text = dopr.split(",", 1)[1].strip().replace(")", "")
+        
+        ridici_data.append({
+            "jmeno": r['jméno'],
+            "kapacita": kapacita,
+            "info": info_text,
+            "pasazeri": []
+        })
+    elif "Hledám odvoz" in dopr:
+        cekaliste.append(r['jméno'])
+    elif not dopr or dopr == "nan" or dopr == "":
+        nereseno.append(r['jméno'])
+
+# B) Přiřadíme pasažéry k řidičům
+for _, r in lidi.iterrows():
+    dopr = str(r['doprava'])
+    if "Řidič" in dopr or "Hledám" in dopr or not dopr or dopr == "nan":
+        continue
+    for ridic in ridici_data:
+        if ridic['jmeno'] in dopr:
+            ridic['pasazeri'].append(r['jméno'])
+            break
+
+# ==========================================
+# FÁZE 2: VYKRESLENÍ (GRAFIKA)
+# ==========================================
+
+# A) VAROVÁNÍ - ČEKACÍ LISTINA
+if cekaliste:
+    st.error(f"🚨 **Hledají odvoz ({len(cekaliste)}):** {', '.join(cekaliste)}")
+
+if not ridici_data and not cekaliste:
+    st.info("Zatím není řešena doprava.")
+
+# B) KARTY AUT (HTML STYL)
+cols = st.columns(2)
+
+for i, auto in enumerate(ridici_data):
+    # 1. Výpočty stavu
+    obsazeno = len(auto['pasazeri'])
+    celkem_mist = auto['kapacita']
+    
+    if celkem_mist > 0:
+        percent = min((obsazeno / celkem_mist) * 100, 100)
+    else:
+        percent = 0
+    
+    # 2. Určení barev
+    if obsazeno > celkem_mist:
+        status_color = "#EF4444"
+        bg_color = "#FEF2F2"
+        border_color = "#FECACA"
+        status_icon = "🚨"
+        status_text = "Přeplněno!"
+        detail_text = f"{obsazeno} z {celkem_mist}"
+    elif obsazeno == celkem_mist:
+        status_color = "#F59E0B"
+        bg_color = "#FFFBEB"
+        border_color = "#FDE68A"
+        status_icon = "👌"
+        status_text = "Plno"
+        detail_text = f"{obsazeno} z {celkem_mist}"
+    else:
+        volno = celkem_mist - obsazeno
+        status_color = "#10B981"
+        bg_color = "#ECFDF5"
+        border_color = "#A7F3D0"
+        status_icon = "✅"
+        status_text = f"Volno: {volno}"
+        detail_text = f"{obsazeno} z {celkem_mist}"
+
+    info_label = auto['info'] if auto['info'] else "Řidič"
+    
+    # 3. HTML ŠABLONA (ZAROVNÁNA VLEVO - NEMĚNIT ODSAZENÍ UVNITŘ)
+    html_card = f"""
 <div style="background-color: {bg_color}; border: 1px solid {border_color}; border-radius: 12px; padding: 10px 15px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; gap: 15px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
 <div style="display: flex; gap: 15px; align-items: center; min-width: 120px;">
 <div style="text-align: left;">
@@ -541,18 +541,18 @@ def vykreslit_detail_akce(akce, unique_key):
 </div>
 </div>
 """
-            
-            # 4. Samotné vykreslení do sloupce
-            col_index = i % 2
-            with cols[col_index]:
-                st.markdown(html_card, unsafe_allow_html=True)
-                
-                if auto['pasazeri']:
-                    with st.expander(f"Seznam cestujících ({len(auto['pasazeri'])})"):
-                        for p in auto['pasazeri']:
-                            st.caption(f"• {p}")
-                else:
-                    st.markdown("<div style='margin-bottom: 10px'></div>", unsafe_allow_html=True)
+    
+    # 4. Samotné vykreslení do sloupce
+    col_index = i % 2
+    with cols[col_index]:
+        st.markdown(html_card, unsafe_allow_html=True)
+        
+        if auto['pasazeri']:
+            with st.expander(f"Seznam cestujících ({len(auto['pasazeri'])})"):
+                for p in auto['pasazeri']:
+                    st.caption(f"• {p}")
+        else:
+            st.markdown("<div style='margin-bottom: 10px'></div>", unsafe_allow_html=True)
         
         
     # 1. IMPORT FONTU + CSS
