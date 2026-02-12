@@ -424,7 +424,7 @@ def vykreslit_detail_akce(akce, unique_key):
     st.markdown("<hr style='margin: 10px 0;'>", unsafe_allow_html=True)
     st.markdown(f"#### 👥 Zapsaní ({len(lidi)})")
 
-            # --- DASHBOARD DOPRAVY (DETAILNÍ KARTY AUT) ---
+    # --- DASHBOARD DOPRAVY (DETAILNÍ KARTY AUT) ---
         st.markdown("### 🚗 Stav dopravy")
         
         # 1. PŘÍPRAVA DAT (Kdo je řidič, kdo pasažér, kdo hledá)
@@ -532,7 +532,6 @@ def vykreslit_detail_akce(akce, unique_key):
                                 st.text(f"• {p}")
                     else:
                         st.caption("Zatím prázdné auto")
-
         
         # 2. Logika barev a textů (UPRAVENO)
         
