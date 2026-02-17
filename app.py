@@ -424,10 +424,8 @@ def vykreslit_detail_akce(akce, unique_key):
     st.markdown("<hr style='margin: 10px 0;'>", unsafe_allow_html=True)
     st.markdown(f"#### 👥 Zapsaní ({len(lidi)})")
 
-    # --- NOVINKA: DASHBOARD DOPRAVY (KARTY AUT) ---
+    # --- NOVINKA: DASHBOARD DOPRAVY (KARTY AUT - BEZ NADPISU) ---
     if not lidi.empty:
-        st.markdown("### 🚗 Stav dopravy")
-        
         # 1. PŘÍPRAVA DAT
         ridici_data = [] 
         cekaliste = []    
@@ -438,7 +436,7 @@ def vykreslit_detail_akce(akce, unique_key):
             
             if "Řidič" in dopr:
                 kapacita = 4 
-                # Zkusíme vytáhnout kapacitu z textu, např. "Řidič (3 místa)"
+                import re
                 match_kap = re.search(r'(\d+)\s*míst', dopr)
                 if match_kap:
                     kapacita = int(match_kap.group(1))
@@ -459,11 +457,9 @@ def vykreslit_detail_akce(akce, unique_key):
         # B) Přiřadíme pasažéry k řidičům
         for _, r in lidi.iterrows():
             dopr = str(r.get('doprava', ''))
-            # Ignorujeme řidiče a hledající (ty už máme)
             if "Řidič" in dopr or "Hledám" in dopr or "Chci" in dopr or not dopr or dopr == "nan":
                 continue
             
-            # Zkusíme najít, ke komu patří
             for ridic in ridici_data:
                 if ridic['jmeno'] in dopr:
                     ridic['pasazeri'].append(r['jméno'])
@@ -475,52 +471,48 @@ def vykreslit_detail_akce(akce, unique_key):
         if cekaliste:
             st.error(f"🚨 **Hledají odvoz ({len(cekaliste)}):** {', '.join(cekaliste)}")
         
-        if not ridici_data and not cekaliste:
-            # Pokud jsou lidi přihlášení, ale nikdo neřeší dopravu
-            st.info("Zatím není řešena doprava (žádní řidiči ani poptávka).")
-        
         # B) KARTY AUT (HTML STYL)
-        cols = st.columns(2)
-        
-        for i, auto in enumerate(ridici_data):
-            # Výpočty stavu
-            obsazeno = len(auto['pasazeri'])
-            celkem_mist = auto['kapacita']
+        if ridici_data:
+            cols = st.columns(2)
             
-            if celkem_mist > 0:
-                percent = min((obsazeno / celkem_mist) * 100, 100)
-            else:
-                percent = 0
-            
-            # Určení barev
-            if obsazeno > celkem_mist:
-                status_color = "#EF4444" # Červená
-                bg_color = "#FEF2F2"
-                border_color = "#FECACA"
-                status_icon = "🚨"
-                status_text = "Přeplněno!"
-                detail_text = f"{obsazeno} z {celkem_mist}"
-            elif obsazeno == celkem_mist:
-                status_color = "#F59E0B" # Oranžová
-                bg_color = "#FFFBEB"
-                border_color = "#FDE68A"
-                status_icon = "👌"
-                status_text = "Plno"
-                detail_text = f"{obsazeno} z {celkem_mist}"
-            else:
-                volno = celkem_mist - obsazeno
-                status_color = "#10B981" # Zelená
-                bg_color = "#ECFDF5"
-                border_color = "#A7F3D0"
-                status_icon = "✅"
-                status_text = f"Volno: {volno}"
-                detail_text = f"{obsazeno} z {celkem_mist}"
+            for i, auto in enumerate(ridici_data):
+                # Výpočty stavu
+                obsazeno = len(auto['pasazeri'])
+                celkem_mist = auto['kapacita']
+                
+                if celkem_mist > 0:
+                    percent = min((obsazeno / celkem_mist) * 100, 100)
+                else:
+                    percent = 0
+                
+                # Určení barev
+                if obsazeno > celkem_mist:
+                    status_color = "#EF4444"
+                    bg_color = "#FEF2F2"
+                    border_color = "#FECACA"
+                    status_icon = "🚨"
+                    status_text = "Přeplněno!"
+                    detail_text = f"{obsazeno} z {celkem_mist}"
+                elif obsazeno == celkem_mist:
+                    status_color = "#F59E0B"
+                    bg_color = "#FFFBEB"
+                    border_color = "#FDE68A"
+                    status_icon = "👌"
+                    status_text = "Plno"
+                    detail_text = f"{obsazeno} z {celkem_mist}"
+                else:
+                    volno = celkem_mist - obsazeno
+                    status_color = "#10B981"
+                    bg_color = "#ECFDF5"
+                    border_color = "#A7F3D0"
+                    status_icon = "✅"
+                    status_text = f"Volno: {volno}"
+                    detail_text = f"{obsazeno} z {celkem_mist}"
 
-            info_label = auto['info'] if auto['info'] else "Řidič"
-            
-            # HTML ŠABLONA
-            # Důležité: Text uvnitř f-stringu je zarovnán doleva, aby ho Streamlit nebral jako code block
-            html_card = f"""
+                info_label = auto['info'] if auto['info'] else "Řidič"
+                
+                # HTML ŠABLONA
+                html_card = f"""
 <div style="background-color: {bg_color}; border: 1px solid {border_color}; border-radius: 12px; padding: 10px 15px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; gap: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
 <div style="display: flex; gap: 10px; align-items: center; min-width: 110px;">
 <div style="text-align: left;">
@@ -540,11 +532,18 @@ def vykreslit_detail_akce(akce, unique_key):
 </div>
 </div>
 """
-            
-            # Vykreslení
-            col_index = i % 2
-            with cols[col_index]:
-                st.markdown(html_card, unsafe_allow_html=True)
+                
+                # Vykreslení
+                col_index = i % 2
+                with cols[col_index]:
+                    st.markdown(html_card, unsafe_allow_html=True)
+                    
+                    if auto['pasazeri']:
+                        with st.expander(f"Seznam ({len(auto['pasazeri'])})"):
+                            for p in auto['pasazeri']:
+                                st.caption(f"• {p}")
+                    else:
+                        st.markdown("<div style='margin-bottom: 10px'></div>", unsafe_allow_html=True)
                 
                 # Seznam pasažérů pod kartou
                 if auto['pasazeri']:
