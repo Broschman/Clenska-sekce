@@ -668,3 +668,72 @@ def handle_driver_removal(conn, akce_id, ridic_jmeno):
     df_final = pd.concat([df_clean, updated_rows], ignore_index=True)
     
     conn.update(worksheet="prihlasky", data=df_final)
+
+@st.dialog("✏️ Úprava přihlášky")
+def show_edit_dialog(akce_id, nazev_akce, jmeno, aktualni_poznamka, aktualni_ubytovani, deadline_ubyt_raw):
+    st.write(f"👤 **{jmeno}**")
+    st.caption(f"Akce: {nazev_akce}")
+    
+    # 1. Poznámka
+    def_poznamka = str(aktualni_poznamka).replace('\u00A0', '').strip()
+    nova_poznamka = st.text_input("Poznámka", value=def_poznamka)
+    
+    # 2. Ubytování (s kontrolou deadlinu)
+    is_ubyt = "Ano" in str(aktualni_ubytovani)
+    
+    # Zpracování deadlinu
+    je_po_deadline_ubyt = False
+    deadline_info = ""
+    
+    if deadline_ubyt_raw:
+        try:
+            d_ubyt = pd.to_datetime(deadline_ubyt_raw, dayfirst=True, errors='coerce')
+            if pd.notnull(d_ubyt):
+                if datetime.now() > d_ubyt:
+                    je_po_deadline_ubyt = True
+                    deadline_info = d_ubyt.strftime('%d.%m. %H:%M')
+        except:
+            pass
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # --- LOGIKA ZOBRAZENÍ CHECKBOXU ---
+    if je_po_deadline_ubyt:
+        st.markdown(f"🔒 **Ubytování uzavřeno** ({deadline_info})")
+        
+        if is_ubyt:
+            st.info("✅ Máš objednáno (nelze zrušit).")
+            nove_ubytovani = True # Musíme zachovat stávající stav
+        else:
+            st.warning("❌ Nemáš objednáno (nelze přidat).")
+            nove_ubytovani = False # Musíme zachovat stávající stav
+    else:
+        # Jsme před deadlinem -> můžeme měnit
+        nove_ubytovani = st.checkbox("🛏️ Společné ubytko", value=is_ubyt)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    if st.button("💾 Uložit změny", type="primary", use_container_width=True):
+        conn = data_manager.get_connection()
+        df = data_manager.load_prihlasky()
+        
+        # Ošetření poznámky (tvrdá mezera proti #NAME?)
+        clean_poznamka = nova_poznamka.strip()
+        if clean_poznamka.startswith(("=", "+", "-", "@")):
+            clean_poznamka = "\u00A0" + clean_poznamka
+            
+        final_ubyt_text = "Ano 🛏️" if nove_ubytovani else ""
+        
+        # Najdeme řádek a upravíme ho
+        maska = (df['id_akce'] == str(akce_id)) & (df['jméno'] == jmeno)
+        
+        if not df[maska].empty:
+            df.loc[maska, 'poznámka'] = clean_poznamka
+            df.loc[maska, 'ubytování'] = final_ubyt_text
+            
+            conn.update(worksheet="prihlasky", data=df)
+            st.toast("✅ Údaje aktualizovány")
+            time.sleep(0.5)
+            st.rerun()
+        else:
+            st.error("Chyba: Přihláška nenalezena.")
