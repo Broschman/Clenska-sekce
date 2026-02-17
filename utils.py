@@ -1,15 +1,20 @@
 import streamlit as st
 import requests
 import re
+import time
 import base64
 import os
 import pandas as pd
+import folium
+from streamlit_folium import st_folium
 from datetime import datetime, date, timedelta
 from urllib.parse import urlparse, parse_qs
 from io import BytesIO
 from streamlit_extras.stylable_container import stylable_container
 import streamlit.components.v1 as components
+from streamlit_lottie import st_lottie_spinner
 import data_manager
+import styles
 
 @st.cache_data(ttl=3600*24) # Uložíme si to na 24 hodin
 def get_coords_from_place(place_name):
