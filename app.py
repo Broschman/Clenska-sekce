@@ -538,13 +538,6 @@ def vykreslit_detail_akce(akce, unique_key):
                 with cols[col_index]:
                     st.markdown(html_card, unsafe_allow_html=True)
                     
-                    if auto['pasazeri']:
-                        with st.expander(f"Seznam ({len(auto['pasazeri'])})"):
-                            for p in auto['pasazeri']:
-                                st.caption(f"• {p}")
-                    else:
-                        st.markdown("<div style='margin-bottom: 10px'></div>", unsafe_allow_html=True)
-                
                 # Seznam pasažérů pod kartou
                 if auto['pasazeri']:
                     with st.expander(f"Seznam ({len(auto['pasazeri'])})"):
