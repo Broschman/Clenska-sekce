@@ -424,7 +424,7 @@ def vykreslit_detail_akce(akce, unique_key):
     st.markdown("<hr style='margin: 10px 0;'>", unsafe_allow_html=True)
     st.markdown(f"#### 👥 Zapsaní ({len(lidi)})")
 
-    # --- NOVINKA: DASHBOARD DOPRAVY (KARTY AUT - BEZ NADPISU) ---
+    # --- NOVINKA: DASHBOARD DOPRAVY (KARTY AUT) ---
     if not lidi.empty:
         # 1. PŘÍPRAVA DAT
         ridici_data = [] 
@@ -511,7 +511,7 @@ def vykreslit_detail_akce(akce, unique_key):
 
                 info_label = auto['info'] if auto['info'] else "Řidič"
                 
-                # HTML ŠABLONA
+                # HTML ŠABLONA (zarovnaná doleva)
                 html_card = f"""
 <div style="background-color: {bg_color}; border: 1px solid {border_color}; border-radius: 12px; padding: 10px 15px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; gap: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
 <div style="display: flex; gap: 10px; align-items: center; min-width: 110px;">
@@ -533,18 +533,18 @@ def vykreslit_detail_akce(akce, unique_key):
 </div>
 """
                 
-                # Vykreslení
+                # Vykreslení do správného sloupce
                 col_index = i % 2
                 with cols[col_index]:
                     st.markdown(html_card, unsafe_allow_html=True)
                     
-                # Seznam pasažérů pod kartou
-                if auto['pasazeri']:
-                    with st.expander(f"Seznam ({len(auto['pasazeri'])})"):
-                        for p in auto['pasazeri']:
-                            st.caption(f"• {p}")
-                else:
-                    st.markdown("<div style='margin-bottom: 10px'></div>", unsafe_allow_html=True)
+                    if auto['pasazeri']:
+                        with st.expander(f"Seznam ({len(auto['pasazeri'])})"):
+                            for p in auto['pasazeri']:
+                                st.caption(f"• {p}")
+                    else:
+                        st.markdown("<div style='margin-bottom: 10px'></div>", unsafe_allow_html=True)
+    # --- KONEC DASHBOARDU ---
         
     # 1. IMPORT FONTU + CSS
     st.markdown("""
