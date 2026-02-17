@@ -263,7 +263,7 @@ def vykreslit_detail_akce(akce, unique_key):
                         odeslat_btn = st.form_submit_button("Zapsat se", type="primary", use_container_width=True)
                         
                     with c_btn_doprava:
-                        doprava_btn = st.form_submit_button("🚗 Řesšit dopravu", use_container_width=True)
+                        doprava_btn = st.form_submit_button("🚗 Řešit dopravu", use_container_width=True)
                     
                     # --- LOGIKA ODESLÁNÍ ---
                     if odeslat_btn:
