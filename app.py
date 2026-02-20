@@ -35,8 +35,9 @@ st.set_page_config(page_title="Kalendář RBK", page_icon="🌲", layout="wide")
 if not auth.check_password():
     st.stop()
     
-    # --- HLAVIČKA S LOGEM ---
-col_dummy, col_title, col_help = st.columns([1, 10, 1], vertical_alignment="center")
+# --- HLAVIČKA S LOGEM A PROFILEM ---
+# Přidali jsme col_profile pro tvoji osobní kartu
+col_dummy, col_title, col_profile, col_help = st.columns([0.5, 7, 2, 1], vertical_alignment="center")
 
 with col_title:
     logo_path = "logo_rbk.jpg" 
@@ -53,6 +54,58 @@ with col_title:
         </h1>
     """, unsafe_allow_html=True)
 
+# --- TVŮJ OSOBNÍ PROFIL ---
+with col_profile:
+    prihlaseny = st.session_state.get("prihlaseny_uzivatel", "Závodník")
+    
+    with st.popover(f"👤 {prihlaseny}", use_container_width=True):
+        st.markdown(f"### 🏃‍♂️ Ahoj, {prihlaseny}")
+        
+        try:
+            df_p = data_manager.load_prihlasky()
+            moje_prihlasky = df_p[df_p['jméno'] == prihlaseny]
+            
+            pocet_akci = len(moje_prihlasky)
+            ridic_pocet = sum(moje_prihlasky['doprava'].astype(str).str.contains("Řidič", na=False))
+            
+            c1, c2 = st.columns(2)
+            c1.metric("Závodů", pocet_akci)
+            c2.metric("Dělám řidiče", ridic_pocet)
+            
+            st.divider()
+            st.markdown("**📅 Moje nejbližší akce**")
+            
+            if not moje_prihlasky.empty and not df_akce.empty:
+                moje_akce_id = moje_prihlasky['id_akce'].astype(str).tolist()
+                moje_budouci = df_akce[
+                    (df_akce['id'].astype(str).isin(moje_akce_id)) & 
+                    (pd.to_datetime(df_akce['datum']).dt.date >= date.today())
+                ].sort_values(by='datum').head(3)
+                
+                if moje_budouci.empty:
+                    st.caption("Zatím nic v plánu.")
+                else:
+                    for _, row in moje_budouci.iterrows():
+                        nazev = row['název']
+                        if len(nazev) > 22: nazev = nazev[:19] + "..."
+                        st.caption(f"📍 {row['datum'].strftime('%d.%m.')} | {nazev}")
+            else:
+                st.caption("Zatím nic v plánu.")
+                
+            st.divider()
+            
+            # Odhlášení
+            if st.button("🚪 Odhlásit se", use_container_width=True, type="primary"):
+                st.session_state.clear()
+                import extra_streamlit_components as stx
+                cookie_manager = stx.CookieManager(key="logout_cookie")
+                cookie_manager.delete("rbk_login_token")
+                import time
+                time.sleep(0.5)
+                st.rerun()
+                
+        except Exception as e:
+            st.caption("Načítám data...")
 with col_help:
     with st.popover("❔", help="Nápověda a Legenda"):
         # --- NADPIS ---
