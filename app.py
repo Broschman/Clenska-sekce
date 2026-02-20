@@ -62,7 +62,10 @@ with col_profile:
         st.markdown(f"### 🏃‍♂️ Ahoj, {prihlaseny}")
         
         try:
+            # 1. NAČTEME DATA PŘÍMO TADY (aby df_akce existovalo)
             df_p = data_manager.load_prihlasky()
+            df_akce = data_manager.load_akce() 
+            
             # Ochrana proti prázdné nebo nové tabulce
             if df_p.empty or 'jméno' not in df_p.columns:
                 moje_prihlasky = pd.DataFrame()
@@ -84,12 +87,14 @@ with col_profile:
             if not moje_prihlasky.empty and not df_akce.empty and 'id_akce' in moje_prihlasky.columns:
                 moje_akce_id = moje_prihlasky['id_akce'].astype(str).tolist()
                 
-                # Bezpečné filtrování budoucích akcí (často padá na formátu data)
                 df_akce_temp = df_akce.copy()
                 df_akce_temp['datum_dt'] = pd.to_datetime(df_akce_temp['datum'], errors='coerce')
                 
+                # 2. OPRAVA SLOUPCE: Použijeme tvůj správný název 'id_akce' (nebo fallback na 'id')
+                sloupec_id = 'id_akce' if 'id_akce' in df_akce_temp.columns else 'id'
+                
                 moje_budouci = df_akce_temp[
-                    (df_akce_temp['id'].astype(str).isin(moje_akce_id)) & 
+                    (df_akce_temp[sloupec_id].astype(str).isin(moje_akce_id)) & 
                     (df_akce_temp['datum_dt'] >= pd.Timestamp('today').normalize())
                 ].sort_values(by='datum_dt').head(3)
                 
@@ -105,12 +110,11 @@ with col_profile:
                 st.caption("Zatím nejsi nikde zapsaný.")
                 
         except Exception as e:
-            # Tohle ti aspoň vypíše reálnou chybu, kdyby něco selhalo!
             st.error(f"Chyba profilu: {e}")
             
         st.divider()
         
-        # ODHLÁŠENÍ (Musí být MIMO chytání chyb, aby se vykreslilo VŽDY)
+        # ODHLÁŠENÍ VŽDY VIDITELNÉ
         if st.button("🚪 Odhlásit se", use_container_width=True, type="primary"):
             st.session_state.clear()
             import extra_streamlit_components as stx
