@@ -884,20 +884,39 @@ def vykreslit_detail_akce(akce, unique_key, conn, seznam_jmen):
                     unsafe_allow_html=True
                 )
                 
-        # ORIS Link
-        if je_zavod_obecne:
-            st.caption("Přihlášky probíhají v systému ORIS.")
-            link_target = str(akce.get('odkaz', '')).strip() if pd.notna(akce.get('odkaz')) else "https://oris.orientacnisporty.cz/"
-            if je_stafeta: st.warning("⚠️ **ŠTAFETY:** Přihlaš se i ZDE (vpravo) kvůli soupiskám!")
-            
-            st.markdown(f"""
-            <a href="{link_target}" target="_blank" style="text-decoration:none;">
-                <div style="background-color: #2563EB; color: white; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold;">
-                    👉 Otevřít ORIS
-                </div>
-            </a>
-            """, unsafe_allow_html=True)
+        # --- ORIS a LIVELOX LINKY ---
+        link_oris = str(akce.get('odkaz', '')).strip() if pd.notna(akce.get('odkaz')) else ""
+        link_livelox = str(akce.get('livelox', '')).strip() if pd.notna(akce.get('livelox')) else ""
 
+        if je_zavod_obecne or (link_livelox and link_livelox != "nan"):
+            st.caption("Odkazy na systém a rozbory:")
+            if je_stafeta: 
+                st.warning("⚠️ **ŠTAFETY:** Přihlaš se i ZDE (vpravo) kvůli soupiskám!")
+            
+            # Uděláme dva sloupce pro tlačítka
+            c_oris, c_livelox = st.columns(2)
+            
+            with c_oris:
+                if je_zavod_obecne:
+                    target_oris = link_oris if link_oris else "https://oris.orientacnisporty.cz/"
+                    st.markdown(f"""
+                    <a href="{target_oris}" target="_blank" style="text-decoration:none;">
+                        <div style="background-color: #2563EB; color: white; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold; font-size: 0.9rem; transition: 0.3s;">
+                            👉 ORIS
+                        </div>
+                    </a>
+                    """, unsafe_allow_html=True)
+                    
+            with c_livelox:
+                if link_livelox and link_livelox != "nan":
+                    # Livelox má typickou růžovo-oranžovou barvu, dáme nějakou pěknou výraznou
+                    st.markdown(f"""
+                    <a href="{link_livelox}" target="_blank" style="text-decoration:none;">
+                        <div style="background-color: #db2777; color: white; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold; font-size: 0.9rem; transition: 0.3s;">
+                            🗺️ Livelox
+                        </div>
+                    </a>
+                    """, unsafe_allow_html=True)
     with col_form:
         delete_key_state = f"confirm_delete_{unique_key}"
         with stylable_container(
