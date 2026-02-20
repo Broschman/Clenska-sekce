@@ -897,7 +897,7 @@ def vykreslit_detail_akce(akce, unique_key, conn, seznam_jmen):
             if ma_oris and not ma_livelox:
                 st.caption("Přihlášky probíhají v systému ORIS.")
             elif ma_livelox and not ma_oris:
-                st.caption("🗺️ Nahrání stop a analýza postupů:")
+                st.caption("🗺️ Nahrání a analýza postupů:")
             else:
                 st.caption("Odkazy na systém a rozbory:")
 
