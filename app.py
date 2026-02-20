@@ -63,10 +63,16 @@ with col_profile:
         
         try:
             df_p = data_manager.load_prihlasky()
-            moje_prihlasky = df_p[df_p['jméno'] == prihlaseny]
+            # Ochrana proti prázdné nebo nové tabulce
+            if df_p.empty or 'jméno' not in df_p.columns:
+                moje_prihlasky = pd.DataFrame()
+            else:
+                moje_prihlasky = df_p[df_p['jméno'] == prihlaseny]
             
             pocet_akci = len(moje_prihlasky)
-            ridic_pocet = sum(moje_prihlasky['doprava'].astype(str).str.contains("Řidič", na=False))
+            ridic_pocet = 0
+            if not moje_prihlasky.empty and 'doprava' in moje_prihlasky.columns:
+                ridic_pocet = sum(moje_prihlasky['doprava'].astype(str).str.contains("Řidič", na=False))
             
             c1, c2 = st.columns(2)
             c1.metric("Závodů", pocet_akci)
@@ -75,12 +81,17 @@ with col_profile:
             st.divider()
             st.markdown("**📅 Moje nejbližší akce**")
             
-            if not moje_prihlasky.empty and not df_akce.empty:
+            if not moje_prihlasky.empty and not df_akce.empty and 'id_akce' in moje_prihlasky.columns:
                 moje_akce_id = moje_prihlasky['id_akce'].astype(str).tolist()
-                moje_budouci = df_akce[
-                    (df_akce['id'].astype(str).isin(moje_akce_id)) & 
-                    (pd.to_datetime(df_akce['datum']).dt.date >= date.today())
-                ].sort_values(by='datum').head(3)
+                
+                # Bezpečné filtrování budoucích akcí (často padá na formátu data)
+                df_akce_temp = df_akce.copy()
+                df_akce_temp['datum_dt'] = pd.to_datetime(df_akce_temp['datum'], errors='coerce')
+                
+                moje_budouci = df_akce_temp[
+                    (df_akce_temp['id'].astype(str).isin(moje_akce_id)) & 
+                    (df_akce_temp['datum_dt'] >= pd.Timestamp('today').normalize())
+                ].sort_values(by='datum_dt').head(3)
                 
                 if moje_budouci.empty:
                     st.caption("Zatím nic v plánu.")
@@ -88,24 +99,28 @@ with col_profile:
                     for _, row in moje_budouci.iterrows():
                         nazev = row['název']
                         if len(nazev) > 22: nazev = nazev[:19] + "..."
-                        st.caption(f"📍 {row['datum'].strftime('%d.%m.')} | {nazev}")
+                        d_str = row['datum_dt'].strftime('%d.%m.') if pd.notnull(row['datum_dt']) else "??"
+                        st.caption(f"📍 {d_str} | {nazev}")
             else:
-                st.caption("Zatím nic v plánu.")
-                
-            st.divider()
-            
-            # Odhlášení
-            if st.button("🚪 Odhlásit se", use_container_width=True, type="primary"):
-                st.session_state.clear()
-                import extra_streamlit_components as stx
-                cookie_manager = stx.CookieManager(key="logout_cookie")
-                cookie_manager.delete("rbk_login_token")
-                import time
-                time.sleep(0.5)
-                st.rerun()
+                st.caption("Zatím nejsi nikde zapsaný.")
                 
         except Exception as e:
-            st.caption("Načítám data...")
+            # Tohle ti aspoň vypíše reálnou chybu, kdyby něco selhalo!
+            st.error(f"Chyba profilu: {e}")
+            
+        st.divider()
+        
+        # ODHLÁŠENÍ (Musí být MIMO chytání chyb, aby se vykreslilo VŽDY)
+        if st.button("🚪 Odhlásit se", use_container_width=True, type="primary"):
+            st.session_state.clear()
+            import extra_streamlit_components as stx
+            cookie_manager = stx.CookieManager(key="logout_cookie")
+            cookie_manager.delete("rbk_login_token")
+            import time
+            time.sleep(0.5)
+            st.rerun()
+            
+            
 with col_help:
     with st.popover("❔", help="Nápověda a Legenda"):
         # --- NADPIS ---
