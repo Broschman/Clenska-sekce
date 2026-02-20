@@ -952,7 +952,11 @@ def vykreslit_detail_akce(akce, unique_key, conn, seznam_jmen):
                     if kategorie_txt and kategorie_txt.lower() != "všichni": 
                         st.warning(f"Doporučení: **{kategorie_txt}**")
                     
-                    vybrana_jmena = st.multiselect("Vyber členy", options=seznam_jmen, placeholder="Klikni a vyber...")
+                    # 1. Zjistíme, kdo drží myš a rovnou ho předvyplníme
+                    prihlaseny = st.session_state.get("prihlaseny_uzivatel", "")
+                    default_vyber = [prihlaseny] if prihlaseny and prihlaseny in seznam_jmen else []
+                    
+                    vybrana_jmena = st.multiselect("Vyber členy", options=seznam_jmen, default=default_vyber, placeholder="Klikni a vyber...")
                     nove_jmeno = st.text_input("Nebo nové jméno (pokud není v seznamu)")
                     poznamka_input = st.text_input("Poznámka (společná)")
                     
@@ -1038,7 +1042,8 @@ def vykreslit_detail_akce(akce, unique_key, conn, seznam_jmen):
                                             "poznámka": clean_poznamka, 
                                             "doprava": hodnota_dopravy,
                                             "ubytování": hodnota_ubyt, 
-                                            "čas zápisu": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                                            "čas zápisu": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                                            "zapsal_kdo": prihlaseny
                                         })
 
                                 if novy_list_prihlasek:
@@ -1280,35 +1285,43 @@ def vykreslit_detail_akce(akce, unique_key, conn, seznam_jmen):
                             show_edit_dialog(akce_id=akce_id_str, nazev_akce=akce.get('název', ''), jmeno=row['jméno'], aktualni_poznamka=row.get('poznámka', ''), aktualni_ubytovani=row.get('ubytování', ''), deadline_ubyt_raw=akce.get('deadline_ubytovani'))
                             
                     with c_btn_delete:
-                        delete_key_state = f"confirm_delete_{unique_key}"
-                        je_k_smazani = (delete_key_state in st.session_state) and (st.session_state[delete_key_state] == row['jméno'])
+                        prihlaseny = st.session_state.get("prihlaseny_uzivatel", "")
+                        zapsal = str(row.get('zapsal_kdo', '')).strip()
+                        
+                        # Může mazat, pokud to sám zapsal, NEBO pokud je to starý záznam z minula a je to on
+                        muze_mazat = (zapsal == prihlaseny) or (zapsal in ["", "nan"] and row['jméno'] == prihlaseny)
 
-                        if je_k_smazani:
-                            st.markdown("<div style='text-align: center; color: #EF4444; font-weight: bold; font-size: 0.8rem; margin-bottom: 2px;'>Opravdu?</div>", unsafe_allow_html=True)
-                            col_y, col_n = st.columns(2, gap="small")
-                            with col_y:
-                                if st.button("✅", key=f"yes_exp_{unique_key}_{i}", use_container_width=True, type="primary"):
-                                    try:
-                                        df_curr = conn.read(worksheet="prihlasky", ttl=0)
-                                        if 'id_akce' in df_curr.columns: df_curr['id_akce'] = df_curr['id_akce'].astype(str).str.replace(r'\.0$', '', regex=True)
-                                        df_to_keep = df_curr[~((df_curr['id_akce'] == akce_id_str) & (df_curr['jméno'] == row['jméno']))]
-                                        conn.update(worksheet="prihlasky", data=df_to_keep)
-                                        handle_driver_removal(conn, akce_id_str, row['jméno'])
+                        if muze_mazat:
+                            delete_key_state = f"confirm_delete_{unique_key}"
+                            je_k_smazani = (delete_key_state in st.session_state) and (st.session_state[delete_key_state] == row['jméno'])
+
+                            if je_k_smazani:
+                                st.markdown("<div style='text-align: center; color: #EF4444; font-weight: bold; font-size: 0.8rem; margin-bottom: 2px;'>Opravdu?</div>", unsafe_allow_html=True)
+                                col_y, col_n = st.columns(2, gap="small")
+                                with col_y:
+                                    if st.button("✅", key=f"yes_exp_{unique_key}_{i}", use_container_width=True, type="primary"):
+                                        try:
+                                            df_curr = conn.read(worksheet="prihlasky", ttl=0)
+                                            if 'id_akce' in df_curr.columns: df_curr['id_akce'] = df_curr['id_akce'].astype(str).str.replace(r'\.0$', '', regex=True)
+                                            df_to_keep = df_curr[~((df_curr['id_akce'] == akce_id_str) & (df_curr['jméno'] == row['jméno']))]
+                                            conn.update(worksheet="prihlasky", data=df_to_keep)
+                                            handle_driver_removal(conn, akce_id_str, row['jméno'])
+                                            del st.session_state[delete_key_state]
+                                            st.toast("✅ Odhlášeno.")
+                                            time.sleep(0.5)
+                                            st.rerun()
+                                        except Exception as e: st.error(f"Chyba při mazání: {e}")
+                                with col_n:
+                                    if st.button("❌", key=f"no_exp_{unique_key}_{i}", use_container_width=True):
                                         del st.session_state[delete_key_state]
-                                        st.toast("✅ Odhlášeno.")
-                                        time.sleep(0.5)
                                         st.rerun()
-                                    except Exception as e: st.error(f"Chyba při mazání: {e}")
-                            with col_n:
-                                if st.button("❌", key=f"no_exp_{unique_key}_{i}", use_container_width=True):
-                                    del st.session_state[delete_key_state]
+                            elif not je_po_deadlinu:
+                                if st.button("🗑️", key=f"del_exp_{unique_key}_{i}", use_container_width=True):
+                                    st.session_state[delete_key_state] = row['jméno']
                                     st.rerun()
-                        elif not je_po_deadlinu:
-                            if st.button("🗑️", key=f"del_exp_{unique_key}_{i}", use_container_width=True):
-                                st.session_state[delete_key_state] = row['jméno']
-                                st.rerun()
-                    if poznamka: st.text(f"Poznámka: {poznamka}")
-                st.markdown("</div>", unsafe_allow_html=True)
+                        else:
+                            # Cizí záznam = žádný koš, jen neutrální ikonka zámku
+                            st.markdown("<div style='text-align:center; padding-top:8px; font-size:1.2em; color:#D1D5DB;' title='Zapsal někdo jiný'>🔒</div>", unsafe_allow_html=True)
     else:
         st.info("Zatím nikdo. Buď první!")
     
