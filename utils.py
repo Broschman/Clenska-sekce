@@ -894,37 +894,47 @@ def vykreslit_detail_akce(akce, unique_key, conn, seznam_jmen):
 
         if ma_oris or ma_livelox:
             # 1. Dynamický text nad tlačítky
-            if ma_oris:
+            if ma_oris and not ma_livelox:
                 st.caption("Přihlášky probíhají v systému ORIS.")
-            elif ma_livelox:
-                st.caption("🗺️ Nahrání a analýza postupů:")
+            elif ma_livelox and not ma_oris:
+                st.caption("🗺️ Nahrání stop a analýza postupů:")
+            else:
+                st.caption("Odkazy na systém a rozbory:")
 
             if je_stafeta: 
                 st.warning("⚠️ **ŠTAFETY:** Přihlaš se i ZDE (vpravo) kvůli soupiskám!")
             
-            # 2. Vykreslení tlačítek vedle sebe
-            c_oris, c_livelox = st.columns(2)
+            # Příprava HTML kódů pro tlačítka
+            target_oris = link_oris if link_oris else "https://oris.orientacnisporty.cz/"
             
-            with c_oris:
-                if ma_oris:
-                    target_oris = link_oris if link_oris else "https://oris.orientacnisporty.cz/"
-                    st.markdown(f"""
-                    <a href="{target_oris}" target="_blank" style="text-decoration:none;">
-                        <div style="background-color: #2563EB; color: white; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold; font-size: 0.9rem; transition: 0.3s;">
-                            👉 ORIS
-                        </div>
-                    </a>
-                    """, unsafe_allow_html=True)
-                    
-            with c_livelox:
-                if ma_livelox:
-                    st.markdown(f"""
-                    <a href="{link_livelox}" target="_blank" style="text-decoration:none;">
-                        <div style="background-color: #db2777; color: white; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold; font-size: 0.9rem; transition: 0.3s;">
-                            🗺️ Livelox
-                        </div>
-                    </a>
-                    """, unsafe_allow_html=True)
+            html_oris = f"""
+            <a href="{target_oris}" target="_blank" style="text-decoration:none;">
+                <div style="background-color: #2563EB; color: white; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold; font-size: 0.9rem; transition: 0.3s;">
+                    👉 ORIS
+                </div>
+            </a>
+            """
+            
+            html_livelox = f"""
+            <a href="{link_livelox}" target="_blank" style="text-decoration:none;">
+                <div style="background-color: #db2777; color: white; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold; font-size: 0.9rem; transition: 0.3s;">
+                    🗺️ Livelox
+                </div>
+            </a>
+            """
+
+            # 2. Chytré vykreslení (2 sloupce, nebo plná šířka)
+            if ma_oris and ma_livelox:
+                c_oris, c_livelox = st.columns(2)
+                with c_oris:
+                    st.markdown(html_oris, unsafe_allow_html=True)
+                with c_livelox:
+                    st.markdown(html_livelox, unsafe_allow_html=True)
+            elif ma_oris:
+                st.markdown(html_oris, unsafe_allow_html=True)
+            elif ma_livelox:
+                st.markdown(html_livelox, unsafe_allow_html=True)
+                
     with col_form:
         delete_key_state = f"confirm_delete_{unique_key}"
         with stylable_container(
