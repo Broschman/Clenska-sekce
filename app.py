@@ -57,16 +57,19 @@ with col_title:
 # --- TVŮJ OSOBNÍ PROFIL ---
 with col_profile:
     prihlaseny = st.session_state.get("prihlaseny_uzivatel", "Závodník")
+    role = st.session_state.get("role", "")
     
-    with st.popover(f"👤 {prihlaseny}", use_container_width=True):
-        st.markdown(f"### 🏃‍♂️ Ahoj, {prihlaseny}")
+    # Korunka pro admina rovnou na zavřeném tlačítku
+    btn_text = f"👑 {prihlaseny}" if role == "admin" else f"👤 {prihlaseny}"
+    
+    with st.popover(btn_text, use_container_width=True):
+        odznak = "👑 (Admin)" if role == "admin" else ""
+        st.markdown(f"### 🏃‍♂️ Ahoj, {prihlaseny} {odznak}")
         
         try:
-            # 1. NAČTEME DATA PŘÍMO TADY (aby df_akce existovalo)
             df_p = data_manager.load_prihlasky()
             df_akce = data_manager.load_akce() 
             
-            # Ochrana proti prázdné nebo nové tabulce
             if df_p.empty or 'jméno' not in df_p.columns:
                 moje_prihlasky = pd.DataFrame()
             else:
@@ -89,8 +92,6 @@ with col_profile:
                 
                 df_akce_temp = df_akce.copy()
                 df_akce_temp['datum_dt'] = pd.to_datetime(df_akce_temp['datum'], errors='coerce')
-                
-                # 2. OPRAVA SLOUPCE: Použijeme tvůj správný název 'id_akce' (nebo fallback na 'id')
                 sloupec_id = 'id_akce' if 'id_akce' in df_akce_temp.columns else 'id'
                 
                 moje_budouci = df_akce_temp[
@@ -99,7 +100,7 @@ with col_profile:
                 ].sort_values(by='datum_dt').head(3)
                 
                 if moje_budouci.empty:
-                    st.caption("Zatím nic v plánu.")
+                    st.caption("Zatím nic v plánu. Začni trénovat!")
                 else:
                     for _, row in moje_budouci.iterrows():
                         nazev = row['název']
@@ -114,6 +115,17 @@ with col_profile:
             
         st.divider()
         
+        # --- FILTR NA MOJE AKCE ---
+        filtr_zapnuty = st.session_state.get("filtr_moje_akce", False)
+        if filtr_zapnuty:
+            if st.button("🌐 Zobrazit všechny akce", use_container_width=True):
+                st.session_state["filtr_moje_akce"] = False
+                st.rerun()
+        else:
+            if st.button("🎯 Vyfiltrovat jen moje akce", use_container_width=True):
+                st.session_state["filtr_moje_akce"] = True
+                st.rerun()
+                
         # ODHLÁŠENÍ VŽDY VIDITELNÉ
         if st.button("🚪 Odhlásit se", use_container_width=True, type="primary"):
             st.session_state.clear()
@@ -122,8 +134,7 @@ with col_profile:
             cookie_manager.delete("rbk_login_token")
             import time
             time.sleep(0.5)
-            st.rerun()
-            
+            st.rerun()            
             
 with col_help:
     with st.popover("❔", help="Nápověda a Legenda"):
