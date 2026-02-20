@@ -888,16 +888,25 @@ def vykreslit_detail_akce(akce, unique_key, conn, seznam_jmen):
         link_oris = str(akce.get('odkaz', '')).strip() if pd.notna(akce.get('odkaz')) else ""
         link_livelox = str(akce.get('livelox', '')).strip() if pd.notna(akce.get('livelox')) else ""
 
-        if je_zavod_obecne or (link_livelox and link_livelox != "nan"):
-            st.caption("Odkazy na systém a rozbory:")
+        # Zjistíme, co vlastně máme k dispozici
+        ma_oris = je_zavod_obecne or (link_oris and link_oris != "nan")
+        ma_livelox = link_livelox and link_livelox != "nan"
+
+        if ma_oris or ma_livelox:
+            # 1. Dynamický text nad tlačítky
+            if ma_oris:
+                st.caption("Přihlášky probíhají v systému ORIS.")
+            elif ma_livelox:
+                st.caption("🗺️ Nahrání a analýza postupů:")
+
             if je_stafeta: 
                 st.warning("⚠️ **ŠTAFETY:** Přihlaš se i ZDE (vpravo) kvůli soupiskám!")
             
-            # Uděláme dva sloupce pro tlačítka
+            # 2. Vykreslení tlačítek vedle sebe
             c_oris, c_livelox = st.columns(2)
             
             with c_oris:
-                if je_zavod_obecne:
+                if ma_oris:
                     target_oris = link_oris if link_oris else "https://oris.orientacnisporty.cz/"
                     st.markdown(f"""
                     <a href="{target_oris}" target="_blank" style="text-decoration:none;">
@@ -908,8 +917,7 @@ def vykreslit_detail_akce(akce, unique_key, conn, seznam_jmen):
                     """, unsafe_allow_html=True)
                     
             with c_livelox:
-                if link_livelox and link_livelox != "nan":
-                    # Livelox má typickou růžovo-oranžovou barvu, dáme nějakou pěknou výraznou
+                if ma_livelox:
                     st.markdown(f"""
                     <a href="{link_livelox}" target="_blank" style="text-decoration:none;">
                         <div style="background-color: #db2777; color: white; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold; font-size: 0.9rem; transition: 0.3s;">
