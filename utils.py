@@ -1286,10 +1286,12 @@ def vykreslit_detail_akce(akce, unique_key, conn, seznam_jmen):
                             
                     with c_btn_delete:
                         prihlaseny = st.session_state.get("prihlaseny_uzivatel", "")
+                        role = st.session_state.get("role", "")
                         zapsal = str(row.get('zapsal_kdo', '')).strip()
                         
-                        # Může mazat, pokud to sám zapsal, NEBO pokud je to starý záznam z minula a je to on
-                        muze_mazat = (zapsal == prihlaseny) or (zapsal in ["", "nan"] and row['jméno'] == prihlaseny)
+                        je_admin = role == "admin"
+                        # Může mazat admin, nebo autor zápisu, nebo u starých zápisů dotyčný sám
+                        muze_mazat = je_admin or (zapsal == prihlaseny) or (zapsal in ["", "nan"] and row['jméno'] == prihlaseny)
 
                         if muze_mazat:
                             delete_key_state = f"confirm_delete_{unique_key}"
