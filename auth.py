@@ -10,39 +10,30 @@ COOKIE_NAME = "rbk_login_token"
 
 def check_password():
     """
-    Vrátí True = Uživatel je uvnitř.
+    Vrátí True = Uživatel je uvnitř (bez probliknutí).
     Vrátí False = Uživatel vidí formulář.
     """
+    correct_password = str(st.secrets["general"]["password"])
     
-    # 1. VIP FAST TRACK (Okamžitá kontrola paměti) 🏎️
-    # Pokud už víme, že je uživatel přihlášený z minula (v rámci jednoho sezení),
-    # rovnou vracíme True. Neřešíme cookies, neřešíme nic. 0 ms zpoždění.
+    # 1. VIP FAST TRACK (Okamžitá kontrola v rámci jedné session) 🏎️
     if st.session_state.get("is_logged_in", False):
         return True
 
-    # 2. Inicializace Cookie Manageru
-    # (Toto se provede jen při prvním načtení stránky nebo F5)
+    # 2. BLESKOVÉ ČTENÍ COOKIES (Nativní Streamlit 1.35+) ⚡
+    # Tohle se děje na pozadí, 0 ms zpoždění, nepotřebuje roundtrip do prohlížeče.
+    if hasattr(st, 'context') and hasattr(st.context, 'cookies'):
+        native_cookie = st.context.cookies.get(COOKIE_NAME)
+        if native_cookie and hmac.compare_digest(str(native_cookie), correct_password):
+            st.session_state["is_logged_in"] = True
+            return True
+
+    # 3. Inicializace Cookie Manageru (už jen pro ZÁPIS nového hesla)
     cookie_manager = stx.CookieManager(key="auth_cookie_manager")
-    cookie_value = cookie_manager.get(COOKIE_NAME)
-    correct_password = str(st.secrets["general"]["password"])
-    
-    # 3. KONTROLA COOKIE 🍪
-    if cookie_value and hmac.compare_digest(str(cookie_value), correct_password):
-        # Cookie je platná -> Uložíme do "VIP paměti" a pustíme dál
-        st.session_state["is_logged_in"] = True
-        return True
 
-    # 4. ANTI-FLASH (Zabránění probliknutí formuláře) ⚡
-    # Pokud cookie je None, může to znamenat, že se jen nestihla načíst.
-    if cookie_value is None and "auth_check_completed" not in st.session_state:
-        st.session_state["auth_check_completed"] = True
-        try:
-            st.rerun()
-        except AttributeError:
-            st.experimental_rerun()
-        return False
+    # Pokud kód došel až sem, uživatel na 100 % nemá platnou cookie.
+    # Žádný ANTI-FLASH už nepotřebujeme, protože nativní čtení by ho zachytilo hned.
 
-    # 5. LOGIN FORMULÁŘ (Pokud nic výše neklaplo)
+    # 4. LOGIN FORMULÁŘ
     col1, col2, col3 = st.columns([1, 2, 1])
     
     with col2:
@@ -56,9 +47,9 @@ def check_password():
             if submit:
                 if hmac.compare_digest(password_input, correct_password):
                     # Úspěch!
-                    st.session_state["is_logged_in"] = True # VIP Pass
+                    st.session_state["is_logged_in"] = True 
                     
-                    # Uložení cookie na příště
+                    # Uložení cookie na příště přes stx.CookieManager
                     expires = datetime.now() + timedelta(days=COOKIE_EXPIRY_DAYS)
                     cookie_manager.set(COOKIE_NAME, password_input, expires_at=expires)
                     
