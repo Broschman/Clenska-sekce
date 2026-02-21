@@ -24,11 +24,13 @@ def check_password():
         st.error("Chyba při načítání databáze.")
         return False
 
+    # 1. BLESKOVÁ KONTROLA NATIVNÍCH COOKIES
     if hasattr(st, 'context') and hasattr(st.context, 'cookies'):
         native_cookie = st.context.cookies.get(COOKIE_NAME)
         if native_cookie and "|" in native_cookie:
             saved_name, saved_pin = native_cookie.split("|", 1)
-            df_pins_clean = df_jmena[col_pin].astype(str).str.replace(r'\.0$', '', regex=True)
+            # TADY JE TEN HACK: Odstraníme případný apostrof na začátku (^') i .0 na konci pro celou tabulku
+            df_pins_clean = df_jmena[col_pin].astype(str).str.replace(r"^'", "", regex=True).str.replace(r'\.0$', '', regex=True)
             match = df_jmena[(df_jmena[col_name] == saved_name) & (df_pins_clean == saved_pin)]
             
             if not match.empty:
@@ -40,14 +42,17 @@ def check_password():
     cookie_manager = stx.CookieManager(key="auth_cookie_manager")
     cookie_value = cookie_manager.get(COOKIE_NAME)
     
+    # 2. ANTI-FLASH LOGIKA
     if "cookie_manager_mounted" not in st.session_state:
         st.session_state["cookie_manager_mounted"] = True
         st.markdown("<div style='text-align: center; margin-top: 80px; color: gray; font-family: sans-serif;'>Ověřuji identitu... 🌲</div>", unsafe_allow_html=True)
         return False
 
+    # 3. KONTROLA COOKIES Z MANAGERU (Druhý běh)
     if cookie_value and "|" in str(cookie_value):
         saved_name, saved_pin = str(cookie_value).split("|", 1)
-        df_pins_clean = df_jmena[col_pin].astype(str).str.replace(r'\.0$', '', regex=True)
+        # TADY JE TEN HACK ZNOVU
+        df_pins_clean = df_jmena[col_pin].astype(str).str.replace(r"^'", "", regex=True).str.replace(r'\.0$', '', regex=True)
         match = df_jmena[(df_jmena[col_name] == saved_name) & (df_pins_clean == saved_pin)]
         
         if not match.empty:
@@ -56,6 +61,7 @@ def check_password():
             st.session_state["role"] = str(match.iloc[0].get(col_role, '')).strip().lower()
             return True
 
+    # 4. LOGIN FORMULÁŘ
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         st.markdown("<br><br><br>", unsafe_allow_html=True)
@@ -64,7 +70,7 @@ def check_password():
         with st.form("login_form"):
             seznam_lidi = sorted(df_jmena[col_name].dropna().unique().tolist())
             vybrane_jmeno = st.selectbox("Kdo jsi?", options=seznam_lidi)
-            zadavany_pin = st.text_input("Zadej svůj 4místný PIN", type="password")
+            zadavany_pin = st.text_input("Zadej své heslo", type="password")
             
             submit = st.form_submit_button("Vstoupit", type="primary", use_container_width=True)
             
@@ -88,7 +94,7 @@ def check_password():
                         time.sleep(0.5)
                         st.rerun()
                     else:
-                        st.error("❌ Špatný PIN.")
+                        st.error("❌ Špatné heslo.")
                 else:
                     st.error("❌ Uživatel nenalezen.")
                     
