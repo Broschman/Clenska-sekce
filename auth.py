@@ -72,6 +72,7 @@ def check_password():
                 spravny_radek = df_jmena[df_jmena[col_name] == vybrane_jmeno]
                 if not spravny_radek.empty:
                     real_pin = str(spravny_radek.iloc[0].get(col_pin, '')).strip()
+                    if real_pin.startswith("'"): real_pin = real_pin[1:]
                     if real_pin.endswith('.0'): real_pin = real_pin[:-2]
                         
                     if real_pin and zadavany_pin.strip() == real_pin:
