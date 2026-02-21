@@ -194,62 +194,22 @@ conn = data_manager.get_connection()
 df_akce = data_manager.load_akce()
 seznam_jmen = data_manager.load_jmena()
 
-# --- SIDEBAR: PROFIL UŽIVATELE ---
-prihlaseny = st.session_state.get("prihlaseny_uzivatel", "Závodník")
-
-with st.sidebar:
-    st.markdown(f"## 🏃‍♂️ {prihlaseny}")
+# ==========================================
+# --- APLIKACE FILTRU "MOJE AKCE" ---
+# ==========================================
+if st.session_state.get("filtr_moje_akce", False):
+    aktualni_uzivatel = st.session_state.get("prihlaseny_uzivatel", "")
+    st.info(f"🎯 Zobrazuji pouze akce, na které je přihlášený: **{aktualni_uzivatel}**")
     
-    try:
-        df_p = data_manager.load_prihlasky()
-        moje_prihlasky = df_p[df_p['jméno'] == prihlaseny]
+    df_p = data_manager.load_prihlasky()
+    if not df_p.empty and 'jméno' in df_p.columns and 'id_akce' in df_p.columns:
+        moje_prihlasky = df_p[df_p['jméno'] == aktualni_uzivatel]
+        moje_akce_id = moje_prihlasky['id_akce'].astype(str).tolist()
         
-        # Zjištění statistik (fyzika objemu a logistiky)
-        pocet_akci = len(moje_prihlasky)
-        ridic_pocet = sum(moje_prihlasky['doprava'].astype(str).str.contains("Řidič", na=False))
-        
-        c1, c2 = st.columns(2)
-        c1.metric("Závodů", pocet_akci)
-        c2.metric("Dělám řidiče", ridic_pocet)
-        
-        st.divider()
-        st.markdown("### 📅 Moje nejbližší akce")
-        
-        # Vyfiltrování 3 nejbližších budoucích akcí, kde jsem zapsaný
-        if not moje_prihlasky.empty and not df_akce.empty:
-            moje_akce_id = moje_prihlasky['id_akce'].astype(str).tolist()
-            # Spojení mých přihlášek s tabulkou akcí
-            moje_budouci = df_akce[
-                (df_akce['id'].astype(str).isin(moje_akce_id)) & 
-                (df_akce['datum'] >= date.today())
-            ].sort_values(by='datum').head(3)
-            
-            if moje_budouci.empty:
-                st.info("Zatím nemáš v plánu žádný závod. Začni trénovat!")
-            else:
-                for _, row in moje_budouci.iterrows():
-                    # Zkrácený název, aby se to do sidebaru pěkně vešlo
-                    nazev = row['název']
-                    if len(nazev) > 25:
-                        nazev = nazev[:22] + "..."
-                    st.markdown(f"**{row['datum'].strftime('%d.%m.')}** | {nazev}")
-        else:
-            st.info("Zatím nejsi nikde zapsaný.")
-            
-        st.divider()
-        
-        # Tlačítko na odhlášení
-        if st.button("🚪 Odhlásit se", use_container_width=True):
-            st.session_state.clear()  # Vymažeme identitu z paměti
-            # Přinutíme prohlížeč smazat cookie přepsáním na prázdnou s expirační dobou v minulosti
-            import extra_streamlit_components as stx
-            cookie_manager = stx.CookieManager(key="logout_cookie_manager")
-            cookie_manager.delete("rbk_login_token")
-            time.sleep(0.5)
-            st.rerun()
-            
-    except Exception as e:
-        st.caption("Načítám profilová data...")
+        sloupec_id = 'id_akce' if 'id_akce' in df_akce.columns else 'id'
+        df_akce = df_akce[df_akce[sloupec_id].astype(str).isin(moje_akce_id)]
+    else:
+        df_akce = pd.DataFrame() # Žádné přihlášky = prázdný kalendář
         
 # --- 3. LOGIKA KALENDÁŘE ---
 if 'vybrany_datum' not in st.session_state:
