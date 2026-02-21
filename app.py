@@ -115,6 +115,58 @@ with col_profile:
             
         st.divider()
         
+        # --- ZMĚNA HESLA (PIN) ---
+        with st.expander("🔑 Změnit heslo (PIN)"):
+            with st.form("form_zmena_pinu"):
+                stary_pin = st.text_input("Současný PIN", type="password")
+                novy_pin = st.text_input("Nový PIN (4 čísla)", type="password")
+                potvrzeni = st.text_input("Potvrď nový PIN", type="password")
+                btn_zmenit = st.form_submit_button("Uložit nový PIN", type="primary", use_container_width=True)
+
+                if btn_zmenit:
+                    if novy_pin != potvrzeni:
+                        st.error("❌ Nové PINy se neshodují!")
+                    elif not (len(novy_pin) == 4 and novy_pin.isdigit()):
+                        st.error("❌ PIN musí obsahovat přesně 4 číslice.")
+                    else:
+                        try:
+                            # Načtení databáze jmen pro ověření a zápis
+                            conn_jmena = data_manager.get_connection()
+                            df_jmena = conn_jmena.read(worksheet="jmena", ttl=0)
+                            col_name = 'jméno' if 'jméno' in df_jmena.columns else 'Jméno'
+                            col_pin = 'PIN' if 'PIN' in df_jmena.columns else 'pin'
+
+                            spravny_radek = df_jmena[df_jmena[col_name] == prihlaseny]
+                            if not spravny_radek.empty:
+                                real_pin = str(spravny_radek.iloc[0].get(col_pin, '')).strip()
+                                if real_pin.endswith('.0'): real_pin = real_pin[:-2]
+
+                                if stary_pin.strip() == real_pin:
+                                    # Přepsání PINu v tabulce
+                                    idx = spravny_radek.index[0]
+                                    df_jmena.at[idx, col_pin] = novy_pin
+                                    conn_jmena.update(worksheet="jmena", data=df_jmena)
+
+                                    # Aktualizace cookies, aby se uživatel nemusel znovu přihlašovat
+                                    import extra_streamlit_components as stx
+                                    cookie_manager = stx.CookieManager(key="update_pin_cookie")
+                                    from datetime import datetime, timedelta
+                                    expires = datetime.now() + timedelta(days=30)
+                                    cookie_manager.set("rbk_login_token", f"{prihlaseny}|{novy_pin}", expires_at=expires)
+
+                                    st.success("✅ PIN úspěšně změněn!")
+                                    import time
+                                    time.sleep(1)
+                                    st.rerun()
+                                else:
+                                    st.error("❌ Špatný současný PIN!")
+                            else:
+                                st.error("❌ Uživatel nenalezen v databázi.")
+                        except Exception as e:
+                            st.error(f"❌ Chyba spojení: {e}")
+
+        st.divider()
+
         # --- FILTR NA MOJE AKCE ---
         filtr_zapnuty = st.session_state.get("filtr_moje_akce", False)
         if filtr_zapnuty:
@@ -134,7 +186,7 @@ with col_profile:
             cookie_manager.delete("rbk_login_token")
             import time
             time.sleep(0.5)
-            st.rerun()            
+            st.rerun()
             
 with col_help:
     with st.popover("❔", help="Nápověda a Legenda"):
