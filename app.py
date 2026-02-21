@@ -130,7 +130,6 @@ with col_profile:
                         st.error("❌ Heslo musí mít alespoň 4 znaky.")
                     else:
                         try:
-                            # Načtení databáze jmen pro ověření a zápis
                             conn_jmena = data_manager.get_connection()
                             df_jmena = conn_jmena.read(worksheet="jmena", ttl=0)
                             col_name = 'jméno' if 'jméno' in df_jmena.columns else 'Jméno'
@@ -139,15 +138,16 @@ with col_profile:
                             spravny_radek = df_jmena[df_jmena[col_name] == prihlaseny]
                             if not spravny_radek.empty:
                                 real_pin = str(spravny_radek.iloc[0].get(col_pin, '')).strip()
+                                # Fyzikální ošetření Google apostrofu a desetinných nul
+                                if real_pin.startswith("'"): real_pin = real_pin[1:]
                                 if real_pin.endswith('.0'): real_pin = real_pin[:-2]
 
                                 if stary_pin.strip() == real_pin:
-                                    # Přepsání hesla v tabulce
+                                    # Uložení nového hesla s APOSTROFEM (donutí Google držet formát textu)
                                     idx = spravny_radek.index[0]
-                                    df_jmena.at[idx, col_pin] = novy_pin
+                                    df_jmena.at[idx, col_pin] = f"'{novy_pin}"
                                     conn_jmena.update(worksheet="jmena", data=df_jmena)
 
-                                    # Aktualizace cookies
                                     import extra_streamlit_components as stx
                                     cookie_manager = stx.CookieManager(key="update_pin_cookie")
                                     from datetime import datetime, timedelta
