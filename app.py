@@ -138,21 +138,28 @@ with col_profile:
                             spravny_radek = df_jmena[df_jmena[col_name] == prihlaseny]
                             if not spravny_radek.empty:
                                 real_pin = str(spravny_radek.iloc[0].get(col_pin, '')).strip()
-                                # Fyzikální ošetření Google apostrofu a desetinných nul
-                                if real_pin.startswith("'"): real_pin = real_pin[1:]
+                                
+                                # Vyčištění přečteného hesla
+                                if real_pin.startswith("KEY:"): real_pin = real_pin[4:]
+                                elif real_pin.startswith("'"): real_pin = real_pin[1:]
                                 if real_pin.endswith('.0'): real_pin = real_pin[:-2]
 
                                 if stary_pin.strip() == real_pin:
-                                    # Uložení nového hesla s APOSTROFEM (donutí Google držet formát textu)
+                                    # HACK: Uložení s prefixem KEY: (Google s tím nic neudělá)
                                     idx = spravny_radek.index[0]
-                                    df_jmena.at[idx, col_pin] = f"'{novy_pin}"
+                                    df_jmena.at[idx, col_pin] = f"KEY:{novy_pin}"
                                     conn_jmena.update(worksheet="jmena", data=df_jmena)
 
                                     import extra_streamlit_components as stx
+                                    import base64
                                     cookie_manager = stx.CookieManager(key="update_pin_cookie")
                                     from datetime import datetime, timedelta
                                     expires = datetime.now() + timedelta(days=30)
-                                    cookie_manager.set("rbk_login_token", f"{prihlaseny}|{novy_pin}", expires_at=expires)
+                                    
+                                    # HACK: Šifrování cookie do Base64
+                                    cookie_str = f"{prihlaseny}|{novy_pin}"
+                                    cookie_hodnota = base64.b64encode(cookie_str.encode('utf-8')).decode('utf-8')
+                                    cookie_manager.set("rbk_login_token", cookie_hodnota, expires_at=expires)
 
                                     st.success("✅ Heslo úspěšně změněno!")
                                     import time
