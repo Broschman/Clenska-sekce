@@ -1,6 +1,5 @@
 import streamlit as st
 import extra_streamlit_components as stx
-import hmac
 import time
 from datetime import datetime, timedelta
 import pandas as pd
@@ -25,20 +24,20 @@ def check_password():
         st.error("Chyba při načítání databáze.")
         return False
 
-    # 1. BLESKOVÉ ČTENÍ COOKIES (Base64 dekódování)
+    # 1. BLESKOVÉ ČTENÍ COOKIES (Base64 + Očištění \u00A0)
     if hasattr(st, 'context') and hasattr(st.context, 'cookies'):
         native_cookie = st.context.cookies.get(COOKIE_NAME)
         if native_cookie:
             try:
                 decoded_cookie = base64.b64decode(native_cookie).decode('utf-8')
             except:
-                decoded_cookie = str(native_cookie) # Fallback pro staré nešifrované cookies
+                decoded_cookie = str(native_cookie)
                 
             if "|" in decoded_cookie:
                 saved_name, saved_pin = decoded_cookie.split("|", 1)
                 
-                # Oříznutí ochranného KEY:, apostrofů a desetin z tabulky
-                df_pins_clean = df_jmena[col_pin].astype(str).str.replace(r"^KEY:", "", regex=True).str.replace(r"^'", "", regex=True).str.replace(r'\.0$', '', regex=True)
+                # Odstranění neviditelného štítu a nul
+                df_pins_clean = df_jmena[col_pin].astype(str).str.replace('\u00A0', '').str.strip().str.replace(r'\.0$', '', regex=True)
                 match = df_jmena[(df_jmena[col_name] == saved_name) & (df_pins_clean == saved_pin)]
                 
                 if not match.empty:
@@ -50,12 +49,13 @@ def check_password():
     cookie_manager = stx.CookieManager(key="auth_cookie_manager")
     cookie_value = cookie_manager.get(COOKIE_NAME)
     
+    # 2. ANTI-FLASH LOGIKA
     if "cookie_manager_mounted" not in st.session_state:
         st.session_state["cookie_manager_mounted"] = True
         st.markdown("<div style='text-align: center; margin-top: 80px; color: gray; font-family: sans-serif;'>Ověřuji identitu... 🌲</div>", unsafe_allow_html=True)
         return False
 
-    # 2. KONTROLA COOKIES Z MANAGERU (Druhý běh)
+    # 3. KONTROLA COOKIES Z MANAGERU (Druhý běh)
     if cookie_value:
         try:
             decoded_cookie = base64.b64decode(str(cookie_value)).decode('utf-8')
@@ -64,7 +64,7 @@ def check_password():
             
         if "|" in decoded_cookie:
             saved_name, saved_pin = decoded_cookie.split("|", 1)
-            df_pins_clean = df_jmena[col_pin].astype(str).str.replace(r"^KEY:", "", regex=True).str.replace(r"^'", "", regex=True).str.replace(r'\.0$', '', regex=True)
+            df_pins_clean = df_jmena[col_pin].astype(str).str.replace('\u00A0', '').str.strip().str.replace(r'\.0$', '', regex=True)
             match = df_jmena[(df_jmena[col_name] == saved_name) & (df_pins_clean == saved_pin)]
             
             if not match.empty:
@@ -73,7 +73,7 @@ def check_password():
                 st.session_state["role"] = str(match.iloc[0].get(col_role, '')).strip().lower()
                 return True
 
-    # 3. LOGIN FORMULÁŘ
+    # 4. LOGIN FORMULÁŘ
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         st.markdown("<br><br><br>", unsafe_allow_html=True)
@@ -89,9 +89,8 @@ def check_password():
             if submit:
                 spravny_radek = df_jmena[df_jmena[col_name] == vybrane_jmeno]
                 if not spravny_radek.empty:
-                    real_pin = str(spravny_radek.iloc[0].get(col_pin, '')).strip()
-                    if real_pin.startswith("KEY:"): real_pin = real_pin[4:]
-                    elif real_pin.startswith("'"): real_pin = real_pin[1:]
+                    # Vyčištění PINu z databáze před kontrolou
+                    real_pin = str(spravny_radek.iloc[0].get(col_pin, '')).replace('\u00A0', '').strip()
                     if real_pin.endswith('.0'): real_pin = real_pin[:-2]
                         
                     if real_pin and zadavany_pin.strip() == real_pin:
