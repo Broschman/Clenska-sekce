@@ -137,17 +137,14 @@ with col_profile:
 
                             spravny_radek = df_jmena[df_jmena[col_name] == prihlaseny]
                             if not spravny_radek.empty:
-                                real_pin = str(spravny_radek.iloc[0].get(col_pin, '')).strip()
-                                
-                                # Vyčištění přečteného hesla
-                                if real_pin.startswith("KEY:"): real_pin = real_pin[4:]
-                                elif real_pin.startswith("'"): real_pin = real_pin[1:]
+                                # Oříznutí nezlomitelné mezery při čtení starého hesla
+                                real_pin = str(spravny_radek.iloc[0].get(col_pin, '')).replace('\u00A0', '').strip()
                                 if real_pin.endswith('.0'): real_pin = real_pin[:-2]
 
                                 if stary_pin.strip() == real_pin:
-                                    # HACK: Uložení s prefixem KEY: (Google s tím nic neudělá)
+                                    # HACK: Zápis nového hesla s nezlomitelnou mezerou proti entropii Googlu
                                     idx = spravny_radek.index[0]
-                                    df_jmena.at[idx, col_pin] = f"KEY:{novy_pin}"
+                                    df_jmena.at[idx, col_pin] = f"\u00A0{novy_pin.strip()}"
                                     conn_jmena.update(worksheet="jmena", data=df_jmena)
 
                                     import extra_streamlit_components as stx
@@ -156,8 +153,8 @@ with col_profile:
                                     from datetime import datetime, timedelta
                                     expires = datetime.now() + timedelta(days=30)
                                     
-                                    # HACK: Šifrování cookie do Base64
-                                    cookie_str = f"{prihlaseny}|{novy_pin}"
+                                    # Uložení do cookies šifrovaně v Base64 a bez štítu
+                                    cookie_str = f"{prihlaseny}|{novy_pin.strip()}"
                                     cookie_hodnota = base64.b64encode(cookie_str.encode('utf-8')).decode('utf-8')
                                     cookie_manager.set("rbk_login_token", cookie_hodnota, expires_at=expires)
 
@@ -173,6 +170,7 @@ with col_profile:
                             st.error(f"❌ Chyba spojení: {e}")
 
         st.divider()
+        
         # --- FILTR NA MOJE AKCE ---
         filtr_zapnuty = st.session_state.get("filtr_moje_akce", False)
         if filtr_zapnuty:
