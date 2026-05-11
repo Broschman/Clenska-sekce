@@ -323,6 +323,7 @@ def export_admin_section(lidi, nazev_akce, unique_key):
 
 @st.dialog("🚗 Správa dopravy")
 def show_doprava_dialog(akce_id, nazev_akce, datum_akce, input_jmena, in_poznamka=None, in_ubytovani=None):
+    prihlaseny = st.session_state.get("prihlaseny_uzivatel", "")
     """
     Chytrý modální dialog.
     - Pokud dostane string (jedno jméno) -> Zobrazí detail jednotlivce.
