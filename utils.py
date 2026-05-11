@@ -441,15 +441,19 @@ def show_doprava_dialog(akce_id, nazev_akce, datum_akce, input_jmena, in_poznamk
                 
                 new_rows = []
                 for osoba in target_list:
+                    # Zachování původních dat
                     orig = original_rows.loc[osoba] if osoba in original_rows.index else pd.Series()
                     pozn = orig.get('poznámka', in_poznamka or "")
                     ubyt = orig.get('ubytování', ("Ano 🛏️" if in_ubytovani else ""))
+                    # FIX: Zachováme autora, nebo nastavíme aktuálního, pokud je to nový zápis
+                    zapsal = orig.get('zapsal_kdo', st.session_state.get("prihlaseny_uzivatel", ""))
                     
                     new_rows.append({
                         "id_akce": akce_id, "název": nazev_akce, "jméno": osoba,
-                        "poznámka": pozn, "doprava": text_dopravy, "ubytování": ubyt,
+                        "poznámka": pozn, "doprava": dopr, "ubytování": ubyt,
                         "čas zápisu": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                        "id_auto": ""
+                        "id_auto": auto_id,
+                        "zapsal_kdo": zapsal # PŘIDÁNO TADY
                     })
                 
                 conn.update(worksheet="prihlasky", data=pd.concat([df_clean, pd.DataFrame(new_rows)], ignore_index=True))
@@ -498,12 +502,14 @@ def show_doprava_dialog(akce_id, nazev_akce, datum_akce, input_jmena, in_poznamk
         id_auto_curr = ""
         db_poznamka = ""
         db_ubytovani = ""
+        zapsal_kdo_curr = prihlaseny
         
         if not aktualni_zaznam.empty:
             dopr_txt = str(aktualni_zaznam.iloc[0]['doprava'])
             id_auto_curr = str(aktualni_zaznam.iloc[0].get('id_auto', ''))
             db_poznamka = aktualni_zaznam.iloc[0]['poznámka']
             db_ubytovani = aktualni_zaznam.iloc[0]['ubytování']
+            zapsal_kdo_curr = str(aktualni_zaznam.iloc[0].get('zapsal_kdo', prihlaseny))
             
             if "Řidič" in dopr_txt: stav_dopravy = "driver"
             elif "Jedu s" in dopr_txt or "Spolujízda" in dopr_txt: stav_dopravy = "passenger"
@@ -1156,7 +1162,7 @@ def vykreslit_detail_akce(akce, unique_key, conn, seznam_jmen):
                 
                 info_text = dopr.split(",", 1)[1].strip().replace(")", "") if "," in dopr else ""
                 
-                ridici_data.append({"jmeno": r['jméno'], "kapacita": kapacita, "info": info_text, "pasazeri": []})
+                ridici_data.append({"jmeno": r['jméno'], "kapacita": kapacita, "info": info_tet, "pasazeri": []})
             elif "Hledám" in dopr or "Chci" in dopr:
                 cekaliste.append(r['jméno'])
 
@@ -1287,11 +1293,12 @@ def vykreslit_detail_akce(akce, unique_key, conn, seznam_jmen):
                     with c_btn_delete:
                         prihlaseny = st.session_state.get("prihlaseny_uzivatel", "")
                         role = st.session_state.get("role", "")
-                        zapsal = str(row.get('zapsal_kdo', '')).strip()
+                        # Ošetření, aby se "nan" bralo jako prázdný string
+                        zapsal = str(row.get('zapsal_kdo', '')).replace('nan', '').strip()
                         
                         je_admin = role == "admin"
-                        # Může mazat admin, nebo autor zápisu, nebo u starých zápisů dotyčný sám
-                        muze_mazat = je_admin or (zapsal == prihlaseny) or (zapsal in ["", "nan"] and row['jméno'] == prihlaseny)
+                        # NOVÁ LOGIKA: Admin může vše, uživatel maže sebe VŽDY, nebo kohokoliv, koho sám přihlásil
+                        muze_mazat = je_admin or (row['jméno'] == prihlaseny) or (zapsal == prihlaseny)
 
                         if muze_mazat:
                             delete_key_state = f"confirm_delete_{unique_key}"
