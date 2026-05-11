@@ -13,6 +13,31 @@ URL_AUTA = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:c
 def get_connection():
     return st.connection("gsheets", type=GSheetsConnection)
 
+def get_jmena_df():
+    """
+    Klíčová funkce pro auth.py. 
+    Načte kompletní tabulku jmen včetně PINů a rolí.
+    """
+    try:
+        conn = get_connection()
+        # ttl=0 zajistí, že hned uvidíme, když admin změní PIN v tabulce
+        df = conn.read(worksheet="jmena", ttl=0)
+        return df
+    except Exception as e:
+        # Fallback na přímé CSV, pokud GSheetsConnection zlobí
+        try:
+            return pd.read_csv(URL_JMENA)
+        except:
+            return pd.DataFrame(columns=["jméno", "PIN", "role"])
+
+# Tuhle nechej pro ostatní části aplikace, kde stačí jen seznam
+def load_jmena():
+    try:
+        df = get_jmena_df()
+        return sorted(df['jméno'].dropna().unique().tolist())
+    except:
+        return []
+
 # --- 1. AKCE (Cachujeme, aby kalendář neblikal) ---
 # @st.cache_data(ttl=3600) 
 def load_akce():
