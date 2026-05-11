@@ -36,15 +36,15 @@ def check_password():
             if "|" in decoded_cookie:
                 saved_name, saved_pin = decoded_cookie.split("|", 1)
                 
-                # Odstranění neviditelného štítu a nul
-                df_pins_clean = df_jmena[col_pin].astype(str).str.replace('\u00A0', '').str.strip().str.replace(r'\.0$', '', regex=True)
-                match = df_jmena[(df_jmena[col_name] == saved_name) & (df_pins_clean == saved_pin)]
-                
-                if not match.empty:
-                    st.session_state["is_logged_in"] = True
-                    st.session_state["prihlaseny_uzivatel"] = saved_name
-                    st.session_state["role"] = str(match.iloc[0].get(col_role, '')).strip().lower()
-                    return True
+                if st.session_state["username"] in df_jmena[col_name].values:
+            correct_pin = str(df_jmena.loc[df_jmena[col_name] == st.session_state["username"], col_pin].values[0])
+            # Odstranění nezlomitelné mezery, apostrofu a bílých znaků
+            correct_pin = correct_pin.replace('\u00A0', '').lstrip("'").strip()
+            if correct_pin.endswith('.0'):
+                correct_pin = correct_pin[:-2]
+            
+            if st.session_state["password"] == correct_pin:
+                st.session_state["password_correct"] = True
 
     cookie_manager = stx.CookieManager(key="auth_cookie_manager")
     cookie_value = cookie_manager.get(COOKIE_NAME)
