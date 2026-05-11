@@ -8,12 +8,8 @@ import base64
 def check_password():
     """Vrátí `True`, pokud má uživatel správné heslo. Využívá GSheets pro hesla."""
     
-    @st.cache_resource
-    def get_cookie_manager():
-        # Důležité: key musí být unikátní pro tuto instanci
-        return stx.CookieManager(key="auth_cookie_manager")
-    
-    cookie_manager = get_cookie_manager()
+    # OPRAVA CHYBY: Žádné @st.cache_resource! Voláme to napřímo.
+    cookie_manager = stx.CookieManager(key="auth_cookie_manager")
     
     # POJISTKA PRO ODHLÁŠENÍ: Pokud jsme právě klikli na odhlásit, ignorujeme cookies
     if st.session_state.get("logout_in_progress", False):
@@ -76,6 +72,7 @@ def check_password():
                 options=dostupna_jmena, 
                 index=None, 
                 placeholder="Začni psát své jméno...",
+                help="Napiš první písmena, potvrď ENTEREM a pak Tabulátorem skoč na heslo.",
                 key="username"
             )
             st.text_input("PIN (Heslo)", type="password", key="password")
@@ -115,13 +112,11 @@ def check_password():
 
 def logout():
     """Bezpečně odhlásí uživatele."""
-    # Nastavíme vlajku, aby se ignorovaly sušenky v příštím cyklu
     st.session_state["logout_in_progress"] = True
     
     cookie_manager = stx.CookieManager(key="auth_cookie_manager")
     cookie_manager.delete("rbk_login_token")
     
-    # Vyčištění session state
     for key in ["password_correct", "username", "password"]:
         if key in st.session_state:
             del st.session_state[key]
