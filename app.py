@@ -199,7 +199,11 @@ with col_profile:
             st.session_state.clear()
             import extra_streamlit_components as stx
             cookie_manager = stx.CookieManager(key="logout_cookie")
-            cookie_manager.delete("rbk_login_token")
+            
+            # Zeptáme se, jestli cookie existuje. Když jo, vymažeme ji.
+            if cookie_manager.get("rbk_login_token"):
+                cookie_manager.delete("rbk_login_token")
+                
             import time
             time.sleep(0.5)
             st.rerun()
