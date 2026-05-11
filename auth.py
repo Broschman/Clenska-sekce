@@ -6,7 +6,7 @@ import data_manager
 import time
 import base64
 
-# Použijeme novou verzi cookie, aby se pročistily ty staré zaseknuté
+# Používáme v3 pro čistý start po úpravách
 COOKIE_NAME = "rbk_auth_v3"
 
 def get_manager():
@@ -16,16 +16,15 @@ def get_manager():
 
 def check_password():
     """
-    Hlavní strážce brány. 
-    Flow: Logout check -> Cookie check -> Login Form.
+    Standardní autentizace pro členskou sekci.
+    Flow: Kontrola odhlášení -> Kontrola cookie -> Přihlašovací formulář.
     """
-    # 1. Pokud už jsme v této session přihlášení, jedeme dál
     if st.session_state.get("authenticated", False):
         return True
 
     manager = get_manager()
 
-    # 2. LOGOUT LOGIKA (vynucené smazání)
+    # 1. Zpracování požadavku na odhlášení
     if st.session_state.get("logout_requested", False):
         manager.delete(COOKIE_NAME)
         st.session_state.authenticated = False
@@ -33,8 +32,7 @@ def check_password():
         st.session_state.logout_requested = False
         st.rerun()
 
-    # 3. KONTROLA COOKIE (Bleskové ověření)
-    # Zkusíme st.context (rychlé), pokud není, tak manager (pomalý)
+    # 2. Automatické přihlášení přes cookie
     cookie_val = None
     if hasattr(st, "context") and COOKIE_NAME in st.context.cookies:
         cookie_val = st.context.cookies[COOKIE_NAME]
@@ -43,13 +41,12 @@ def check_password():
 
     if cookie_val:
         try:
-            # V cookie máme "Jméno|PIN" v base64
             decoded = base64.b64decode(cookie_val).decode("utf-8")
             if "|" in decoded:
                 c_name, c_pin = decoded.split("|")
                 df_jmena = data_manager.get_jmena_df()
                 
-                # Očištění dat (odstranění .0 u PINů a mezer)
+                # Očištění PINů z GSheets (odstranění .0 a mezer)
                 df_jmena['PIN_clean'] = df_jmena['PIN'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
                 
                 match = df_jmena[
@@ -63,24 +60,23 @@ def check_password():
                     st.session_state.user_role = str(match.iloc[0].get('role', 'user')).lower()
                     return True
         except:
-            manager.delete(COOKIE_NAME) # Poškozená cookie - pryč s ní
+            manager.delete(COOKIE_NAME)
 
-    # 4. LOGIN FORMULÁŘ
-    st.markdown("### 🌲 Vstup do Členské sekce")
+    # 3. Přihlašovací formulář s "normálními" texty
+    st.markdown("### 🔑 Přihlášení do členské sekce")
     
     df_jmena = data_manager.get_jmena_df()
     seznam_jmen = sorted(df_jmena['jméno'].dropna().unique().tolist())
     
     with st.form("login_form"):
-        jmeno = st.selectbox("Kdo jsi, šampione?", [""] + seznam_jmen)
-        pin = st.text_input("Zadej své heslo (PIN)", type="password")
-        submit = st.form_submit_button("Vstoupit do arény", use_container_width=True)
+        jmeno = st.selectbox("Vyberte své jméno", [""] + seznam_jmen)
+        pin = st.text_input("Zadejte PIN", type="password")
+        submit = st.form_submit_button("Přihlásit se", use_container_width=True)
         
         if submit:
             if not jmeno or not pin:
-                st.warning("Vyber jméno a zadej PIN.")
+                st.warning("Prosím, vyplňte jméno i PIN.")
             else:
-                # Stejné čištění jako u cookie checku
                 df_jmena['PIN_clean'] = df_jmena['PIN'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
                 match = df_jmena[(df_jmena['jméno'] == jmeno) & (df_jmena['PIN_clean'] == str(pin).strip())]
                 
@@ -89,19 +85,19 @@ def check_password():
                     st.session_state.user_name = jmeno
                     st.session_state.user_role = str(match.iloc[0].get('role', 'user')).lower()
                     
-                    # Uložíme do cookie pro příště
+                    # Uložení do cookie (base64 pro základní obfuskaci)
                     val_to_save = base64.b64encode(f"{jmeno}|{pin}".encode()).decode()
                     manager.set(COOKIE_NAME, val_to_save)
                     
-                    st.success("Vítej zpět!")
+                    st.success("Přihlášení proběhlo úspěšně.")
                     time.sleep(0.5)
                     st.rerun()
                 else:
-                    st.error("❌ Špatné jméno nebo PIN.")
+                    st.error("Nesprávné jméno nebo PIN.")
                     
     return False
 
 def logout():
-    """Tuhle funkci volej ze sidebar tlačítka"""
+    """Vyvolá proces odhlášení a smazání cookies."""
     st.session_state.logout_requested = True
     st.rerun()
