@@ -6,7 +6,7 @@ import data_manager
 import time
 import base64
 
-# Konstanta pro název cookie
+# Použijeme novou verzi cookie, aby se pročistily ty staré zaseknuté
 COOKIE_NAME = "rbk_auth_v3"
 
 def get_manager():
@@ -33,7 +33,8 @@ def check_password():
         st.session_state.logout_requested = False
         st.rerun()
 
-    # 3. KONTROLA COOKIE (Rychlé ověření při načtení)
+    # 3. KONTROLA COOKIE (Bleskové ověření)
+    # Zkusíme st.context (rychlé), pokud není, tak manager (pomalý)
     cookie_val = None
     if hasattr(st, "context") and COOKIE_NAME in st.context.cookies:
         cookie_val = st.context.cookies[COOKIE_NAME]
@@ -64,14 +65,13 @@ def check_password():
         except:
             manager.delete(COOKIE_NAME) # Poškozená cookie - pryč s ní
 
-    # 4. LOGIN FORMULÁŘ (Civilnější verze)
+    # 4. LOGIN FORMULÁŘ
     st.markdown("### 🔑 Přihlášení do členské sekce")
     
     df_jmena = data_manager.get_jmena_df()
     seznam_jmen = sorted(df_jmena['jméno'].dropna().unique().tolist())
     
     with st.form("login_form"):
-        # Změněno na standardní popisky
         jmeno = st.selectbox("Vyberte své jméno", [""] + seznam_jmen)
         pin = st.text_input("Zadejte PIN", type="password")
         submit = st.form_submit_button("Přihlásit se", use_container_width=True)
@@ -80,7 +80,7 @@ def check_password():
             if not jmeno or not pin:
                 st.warning("Prosím vyberte jméno a zadejte PIN.")
             else:
-                # Čištění dat pro porovnání
+                # Stejné čištění jako u cookie checku
                 df_jmena['PIN_clean'] = df_jmena['PIN'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
                 match = df_jmena[(df_jmena['jméno'] == jmeno) & (df_jmena['PIN_clean'] == str(pin).strip())]
                 
@@ -89,7 +89,7 @@ def check_password():
                     st.session_state.user_name = jmeno
                     st.session_state.user_role = str(match.iloc[0].get('role', 'user')).lower()
                     
-                    # Uložíme do cookie (platnost cca 30 dní)
+                    # Uložíme do cookie pro příště
                     val_to_save = base64.b64encode(f"{jmeno}|{pin}".encode()).decode()
                     manager.set(COOKIE_NAME, val_to_save)
                     
@@ -102,6 +102,6 @@ def check_password():
     return False
 
 def logout():
-    """Vynutí odhlášení a promazání cookies"""
+    """Tuhle funkci volej ze sidebar tlačítka"""
     st.session_state.logout_requested = True
     st.rerun()
