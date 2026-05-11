@@ -160,7 +160,7 @@ with col_profile:
                             import time
                             time.sleep(0.5)
                             st.rerun()
-                                else:
+                            else:
                                     st.error("❌ Špatné současné heslo!")
                             else:
                                 st.error("❌ Uživatel nenalezen v databázi.")
