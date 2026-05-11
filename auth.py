@@ -66,19 +66,19 @@ def check_password():
             manager.delete(COOKIE_NAME) # Poškozená cookie - pryč s ní
 
     # 4. LOGIN FORMULÁŘ
-    st.markdown("### 🔑 Přihlášení do členské sekce")
+    st.markdown("### 🌲 Vstup do Členské sekce")
     
     df_jmena = data_manager.get_jmena_df()
     seznam_jmen = sorted(df_jmena['jméno'].dropna().unique().tolist())
     
     with st.form("login_form"):
-        jmeno = st.selectbox("Vyberte své jméno", [""] + seznam_jmen)
-        pin = st.text_input("Zadejte PIN", type="password")
-        submit = st.form_submit_button("Přihlásit se", use_container_width=True)
+        jmeno = st.selectbox("Kdo jsi, šampione?", [""] + seznam_jmen)
+        pin = st.text_input("Zadej své heslo (PIN)", type="password")
+        submit = st.form_submit_button("Vstoupit do arény", use_container_width=True)
         
         if submit:
             if not jmeno or not pin:
-                st.warning("Prosím vyberte jméno a zadejte PIN.")
+                st.warning("Vyber jméno a zadej PIN.")
             else:
                 # Stejné čištění jako u cookie checku
                 df_jmena['PIN_clean'] = df_jmena['PIN'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
@@ -93,11 +93,11 @@ def check_password():
                     val_to_save = base64.b64encode(f"{jmeno}|{pin}".encode()).decode()
                     manager.set(COOKIE_NAME, val_to_save)
                     
-                    st.success("Přihlášení proběhlo úspěšně.")
+                    st.success("Vítej zpět!")
                     time.sleep(0.5)
                     st.rerun()
                 else:
-                    st.error("❌ Nesprávné jméno nebo PIN.")
+                    st.error("❌ Špatné jméno nebo PIN.")
                     
     return False
 
