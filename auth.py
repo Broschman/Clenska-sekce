@@ -36,12 +36,19 @@ def check_password():
             mask = df_jmena[col_name] == ulozeny_uzivatel
             if not df_jmena[mask].empty:
                 correct_pin = df_jmena.loc[mask, col_pin].values[0]
+                
+                # Získání role z databáze (pokud sloupec existuje, jinak default 'user')
+                col_role = 'role' if 'role' in df_jmena.columns else 'Role'
+                user_role = df_jmena.loc[mask, col_role].values[0] if col_role in df_jmena.columns else 'user'
+                
                 # Ošetření: Odstranění záchranného apostrofu zleva
                 correct_pin = str(correct_pin).replace('\u00A0', '').lstrip("'").strip()
                 
                 if str(ulozene_heslo).strip() == correct_pin:
                     st.session_state["password_correct"] = True
                     st.session_state["username"] = ulozeny_uzivatel
+                    st.session_state["prihlaseny_uzivatel"] = ulozeny_uzivatel  # Záchrana pro app.py
+                    st.session_state["role"] = str(user_role).strip()          # Zápis role!
                     return True
                 else:
                     # Neplatná cookie, mažeme
@@ -87,9 +94,12 @@ def check_password():
                 df_jmena[col_pin] = df_jmena[col_pin].astype(str).str.replace(r'\.0$', '', regex=True)
 
                 if st.session_state["username"] in df_jmena[col_name].values:
-                    # Nalezení hesla
+                    # Nalezení hesla a role
                     mask = df_jmena[col_name] == st.session_state["username"]
                     correct_pin = df_jmena.loc[mask, col_pin].values[0]
+                    
+                    col_role = 'role' if 'role' in df_jmena.columns else 'Role'
+                    user_role = df_jmena.loc[mask, col_role].values[0] if col_role in df_jmena.columns else 'user'
                     
                     # KRITICKÉ: odstranění apostrofu, \u00A0 atd.
                     correct_pin = str(correct_pin).replace('\u00A0', '').lstrip("'").strip()
@@ -97,6 +107,8 @@ def check_password():
 
                     if zade_heslo == correct_pin:
                         st.session_state["password_correct"] = True
+                        st.session_state["prihlaseny_uzivatel"] = st.session_state["username"] # Pojistka
+                        st.session_state["role"] = str(user_role).strip()                      # Zápis role!
                         
                         # Generování a uložení cookies
                         cookie_str = f"{st.session_state['username']}|{zade_heslo}"
