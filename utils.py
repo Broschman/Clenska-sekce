@@ -1163,7 +1163,7 @@ def vykreslit_detail_akce(akce, unique_key, conn, seznam_jmen):
                 
                 info_text = dopr.split(",", 1)[1].strip().replace(")", "") if "," in dopr else ""
                 
-                ridici_data.append({"jmeno": r['jméno'], "kapacita": kapacita, "info": info_tet, "pasazeri": []})
+                ridici_data.append({"jmeno": r['jméno'], "kapacita": kapacita, "info": info_text, "pasazeri": []})
             elif "Hledám" in dopr or "Chci" in dopr:
                 cekaliste.append(r['jméno'])
 
