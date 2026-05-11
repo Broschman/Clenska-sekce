@@ -5,9 +5,8 @@ import extra_streamlit_components as stx
 import data_manager
 import time
 import base64
-import pandas as pd
 
-# Použijeme verzi v3, aby se vyčistila stará chybná data
+# Použijeme tuto verzi cookie
 COOKIE_NAME = "rbk_auth_v3"
 
 def get_manager():
@@ -18,7 +17,7 @@ def get_manager():
 def check_password():
     """
     Hlavní strážce brány. 
-    Flow: Logout check -> Cookie check -> Login Form.
+    Synchronizováno s app.py (používá 'prihlaseny_uzivatel' a 'role').
     """
     # 1. Pokud už jsme v této session přihlášení, jedeme dál
     if st.session_state.get("authenticated", False):
@@ -30,8 +29,8 @@ def check_password():
     if st.session_state.get("logout_requested", False):
         manager.delete(COOKIE_NAME)
         st.session_state.authenticated = False
-        st.session_state.user_name = None
-        st.session_state.user_role = "user"
+        st.session_state.prihlaseny_uzivatel = None
+        st.session_state.role = None
         st.session_state.logout_requested = False
         st.rerun()
 
@@ -49,28 +48,22 @@ def check_password():
                 c_name, c_pin = decoded.split("|")
                 df_jmena = data_manager.get_jmena_df()
                 
-                # Očištění dat v tabulce
                 df_jmena['PIN_clean'] = df_jmena['PIN'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
-                df_jmena['jméno_clean'] = df_jmena['jméno'].astype(str).str.strip()
                 
                 match = df_jmena[
-                    (df_jmena['jméno_clean'] == str(c_name).strip()) & 
+                    (df_jmena['jméno'] == c_name) & 
                     (df_jmena['PIN_clean'] == str(c_pin).strip())
                 ]
                 
                 if not match.empty:
-                    # Načtení role s ošetřením NaN (prázdných buněk)
-                    raw_role = match.iloc[0].get('role', 'user')
-                    role = str(raw_role).lower().strip() if pd.notna(raw_role) and raw_role != "" else "user"
-                    
                     st.session_state.authenticated = True
-                    st.session_state.user_name = match.iloc[0]['jméno']
-                    st.session_state.user_role = role
+                    st.session_state.prihlaseny_uzivatel = c_name  # Sjednoceno s app.py
+                    st.session_state.role = str(match.iloc[0].get('role', 'user')).lower()
                     return True
         except:
             manager.delete(COOKIE_NAME)
 
-    # 4. LOGIN FORMULÁŘ (Texty změněny na civilní verzi)
+    # 4. LOGIN FORMULÁŘ
     st.markdown("### 🔑 Přihlášení do členské sekce")
     
     df_jmena = data_manager.get_jmena_df()
@@ -89,15 +82,10 @@ def check_password():
                 match = df_jmena[(df_jmena['jméno'] == jmeno) & (df_jmena['PIN_clean'] == str(pin).strip())]
                 
                 if not match.empty:
-                    # Načtení role s ošetřením NaN
-                    raw_role = match.iloc[0].get('role', 'user')
-                    role = str(raw_role).lower().strip() if pd.notna(raw_role) and raw_role != "" else "user"
-                    
                     st.session_state.authenticated = True
-                    st.session_state.user_name = jmeno
-                    st.session_state.user_role = role
+                    st.session_state.prihlaseny_uzivatel = jmeno  # Sjednoceno s app.py
+                    st.session_state.role = str(match.iloc[0].get('role', 'user')).lower()
                     
-                    # Uložení do cookie
                     val_to_save = base64.b64encode(f"{jmeno}|{pin}".encode()).decode()
                     manager.set(COOKIE_NAME, val_to_save)
                     
