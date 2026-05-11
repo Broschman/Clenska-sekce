@@ -8,26 +8,26 @@ import base64
 def check_password():
     """Vrátí True, pokud má uživatel správné heslo. Řeší cookies, roli i speciální znaky."""
     
-    # Inicializace bez cache, aby neřval Streamlit warning
     cookie_manager = stx.CookieManager(key="auth_cookie_manager")
     
-    # 1. POJISTKA PRO ODHLÁŠENÍ: Pokud jsme v logout procesu, ignorujeme cookies
-    if st.session_state.get("logout_in_progress", False):
-        cookie_hodnota = None
+    # KRITICKÝ KROK: Mazání sušenky provádíme až TADY v novém cyklu, 
+    # aby Streamlit nestihl zastřelit JS kód před odesláním do prohlížeče.
+    if st.session_state.get("logged_out_flag", False):
+        cookie_manager.delete("rbk_login_token")
+        st.session_state["logged_out_flag"] = False
+        cookie_hodnota = None  # Uměle zrušíme hodnotu, abychom zabránili auto-loginu
     else:
         cookie_hodnota = cookie_manager.get("rbk_login_token")
 
-    # 2. AUTOMATICKÉ PŘIHLÁŠENÍ (Cookie existuje)
+    # AUTOMATICKÉ PŘIHLÁŠENÍ (Cookie existuje)
     if cookie_hodnota:
         try:
             dekodovano = base64.b64decode(cookie_hodnota).decode('utf-8')
             ulozeny_uzivatel, ulozene_heslo = dekodovano.split('|', 1)
             
-            # Pokud už data v session state máme a sedí, jen projdeme
             if st.session_state.get("password_correct") and st.session_state.get("prihlaseny_uzivatel") == ulozeny_uzivatel:
                 return True
             
-            # Jinak validujeme a vytáhneme ROLI z DB
             conn_jmena = data_manager.get_connection()
             df_jmena = conn_jmena.read(worksheet="jmena", ttl=0)
             col_name = 'jméno' if 'jméno' in df_jmena.columns else 'Jméno'
@@ -47,11 +47,8 @@ def check_password():
         except Exception:
             pass
 
-    # 3. PŘIHLAŠOVACÍ FORMULÁŘ (Není přihlášen)
+    # PŘIHLAŠOVACÍ FORMULÁŘ
     if not st.session_state.get("password_correct", False):
-        # Reset odhlašovací vlajky, jakmile uvidíme login form
-        st.session_state["logout_in_progress"] = False
-        
         try:
             conn_jmena = data_manager.get_connection()
             df_jmena = conn_jmena.read(worksheet="jmena", ttl=300)
@@ -108,18 +105,14 @@ def check_password():
     return True
 
 def logout():
-    """Bezpečné odhlášení s promazáním sušenek i stavů."""
-    # Nastavíme bariéru proti auto-loginu
-    st.session_state["logout_in_progress"] = True
-    
-    # Smažeme sušenku přes manager
-    cookie_manager = stx.CookieManager(key="auth_cookie_manager")
-    cookie_manager.delete("rbk_login_token")
-    
-    # Totální čistka session_state
+    """Bezpečné odhlášení."""
+    # 1. Čistka backendového session state = okamžitý logout v Pythonu
     for key in ["password_correct", "prihlaseny_uzivatel", "role"]:
         if key in st.session_state:
             del st.session_state[key]
             
-    st.rerun()
+    # 2. Nahodíme vlajku. Až se načte formulář v novém běhu, smaže se sušenka.
+    st.session_state["logged_out_flag"] = True
     
+    # 3. Rerun - aplikace přeskočí do přihlašovacího UI
+    st.rerun()
