@@ -10,17 +10,16 @@ def check_password():
     
     cookie_manager = stx.CookieManager(key="auth_cookie_manager")
     
-    # KRITICKÝ KROK: Mazání sušenky provádíme až TADY v novém cyklu, 
-    # aby Streamlit nestihl zastřelit JS kód před odesláním do prohlížeče.
-    if st.session_state.get("logged_out_flag", False):
-        cookie_manager.delete("rbk_login_token")
-        st.session_state["logged_out_flag"] = False
-        cookie_hodnota = None  # Uměle zrušíme hodnotu, abychom zabránili auto-loginu
+    # 1. NUKLEÁRNÍ BLOKÁDA: Pokud jsi dal odhlásit, kompletně ignorujeme sušenku, 
+    # dokud se znovu ručně nepřihlásíš.
+    if st.session_state.get("force_login_screen", False):
+        cookie_manager.delete("rbk_login_token") # Opakovaně bombardujeme prohlížeč příkazem k mazání
+        cookie_hodnota = None
     else:
         cookie_hodnota = cookie_manager.get("rbk_login_token")
 
-    # AUTOMATICKÉ PŘIHLÁŠENÍ (Cookie existuje)
-    if cookie_hodnota:
+    # 2. AUTOMATICKÉ PŘIHLÁŠENÍ (Proběhne pouze, pokud není aktivní blokáda)
+    if cookie_hodnota and not st.session_state.get("force_login_screen", False):
         try:
             dekodovano = base64.b64decode(cookie_hodnota).decode('utf-8')
             ulozeny_uzivatel, ulozene_heslo = dekodovano.split('|', 1)
@@ -47,7 +46,7 @@ def check_password():
         except Exception:
             pass
 
-    # PŘIHLAŠOVACÍ FORMULÁŘ
+    # 3. PŘIHLAŠOVACÍ FORMULÁŘ
     if not st.session_state.get("password_correct", False):
         try:
             conn_jmena = data_manager.get_connection()
@@ -88,6 +87,9 @@ def check_password():
                         st.session_state["prihlaseny_uzivatel"] = vybrane_jmeno
                         st.session_state["role"] = str(df_jmena.loc[mask, col_role].values[0]) if col_role in df_jmena.columns else ""
                         
+                        # KRITICKÉ: Úspěšné přihlášení = sejmutí blokády pro další návštěvy
+                        st.session_state["force_login_screen"] = False
+                        
                         cookie_str = f"{vybrane_jmeno}|{zadane_heslo}"
                         cookie_hodnota = base64.b64encode(cookie_str.encode('utf-8')).decode('utf-8')
                         expires = datetime.now() + timedelta(days=30)
@@ -105,14 +107,13 @@ def check_password():
     return True
 
 def logout():
-    """Bezpečné odhlášení."""
-    # 1. Čistka backendového session state = okamžitý logout v Pythonu
+    """Bezpečné odhlášení imunní proti Streamlit React ghost bugům."""
+    # 1. Okamžitá čistka lokálních proměnných (okamžitě tě vykopne z hlavní aplikace)
     for key in ["password_correct", "prihlaseny_uzivatel", "role"]:
         if key in st.session_state:
             del st.session_state[key]
             
-    # 2. Nahodíme vlajku. Až se načte formulář v novém běhu, smaže se sušenka.
-    st.session_state["logged_out_flag"] = True
+    # 2. TRVALÁ BLOKÁDA AUTO-LOGINU (Zruší ji až další úspěšné ruční přihlášení)
+    st.session_state["force_login_screen"] = True
     
-    # 3. Rerun - aplikace přeskočí do přihlašovacího UI
     st.rerun()
