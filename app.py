@@ -130,38 +130,36 @@ with col_profile:
                         st.error("❌ Heslo musí mít alespoň 4 znaky.")
                     else:
                         try:
-                            conn_jmena = data_manager.get_connection()
-                            df_jmena = conn_jmena.read(worksheet="jmena", ttl=0)
+                            # Načtení dat (striktně ttl=0)
+                            conn = data_manager.get_connection()
+                            df_jmena = conn.read(worksheet="jmena", ttl=0)
+
+                            # Nalezení správných názvů sloupců
                             col_name = 'jméno' if 'jméno' in df_jmena.columns else 'Jméno'
                             col_pin = 'PIN' if 'PIN' in df_jmena.columns else 'pin'
 
-                            spravny_radek = df_jmena[df_jmena[col_name] == prihlaseny]
-                            if not spravny_radek.empty:
-                                # Oříznutí nezlomitelné mezery při čtení starého hesla
-                                real_pin = str(spravny_radek.iloc[0].get(col_pin, '')).replace('\u00A0', '').strip()
-                                if real_pin.endswith('.0'): real_pin = real_pin[:-2]
+                            # Očištění celého sloupce (prevence floatů, kritické pro zápis!)
+                            df_jmena[col_pin] = df_jmena[col_pin].astype(str).str.replace(r'\.0$', '', regex=True)
 
-                                if stary_pin.strip() == real_pin:
-                                    # HACK: Zápis nového hesla s nezlomitelnou mezerou proti entropii Googlu
-                                    idx = spravny_radek.index[0]
-                                    df_jmena.at[idx, col_pin] = f"\u00A0{novy_pin.strip()}"
-                                    conn_jmena.update(worksheet="jmena", data=df_jmena)
+                            # Příprava hesla (ošetření GSheets vzorců)
+                            ciste_heslo = str(nove_heslo).strip()
+                            if ciste_heslo.startswith(("+", "=", "-")):
+                                heslo_do_db = f"'{ciste_heslo}"
+                            else:
+                                heslo_do_db = ciste_heslo
 
-                                    import extra_streamlit_components as stx
-                                    import base64
-                                    cookie_manager = stx.CookieManager(key="update_pin_cookie")
-                                    from datetime import datetime, timedelta
-                                    expires = datetime.now() + timedelta(days=30)
-                                    
-                                    # Uložení do cookies šifrovaně v Base64 a bez štítu
-                                    cookie_str = f"{prihlaseny}|{novy_pin.strip()}"
-                                    cookie_hodnota = base64.b64encode(cookie_str.encode('utf-8')).decode('utf-8')
-                                    cookie_manager.set("rbk_login_token", cookie_hodnota, expires_at=expires)
+                            # Zápis k aktuálnímu uživateli
+                            mask_uzivatele = df_jmena[col_name] == st.session_state["prihlaseny_uzivatel"]
+                            df_jmena.loc[mask_uzivatele, col_pin] = heslo_do_db
 
-                                    st.success("✅ Heslo úspěšně změněno!")
-                                    import time
-                                    time.sleep(1)
-                                    st.rerun()
+                            # Zápis do GSheets a povinný reset cache
+                            conn.update(worksheet="jmena", data=df_jmena)
+                            st.cache_data.clear()
+                            
+                            st.success("✅ Heslo úspěšně změněno!")
+                            import time
+                            time.sleep(0.5)
+                            st.rerun()
                                 else:
                                     st.error("❌ Špatné současné heslo!")
                             else:
