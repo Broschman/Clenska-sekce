@@ -6,106 +6,132 @@ import time
 import base64
 
 def check_password():
-    """Vrátí True, pokud je uživatel přihlášen. Řeší cookies, roli i tvrdý logout."""
+    """Vrátí `True`, pokud má uživatel správné heslo. Využívá GSheets pro hesla."""
     
-    # 1. Pokud už v této relaci víme, že je přihlášen, pustíme ho hned
-    if st.session_state.get("password_correct"):
-        return True
-
-    # Inicializace manageru
-    cookie_manager = stx.CookieManager(key="rbk_auth_v5")
+    # Anti-flash cookie logika pomocí extra_streamlit_components
+    @st.cache_resource
+    def get_cookie_manager():
+        return stx.CookieManager(key="auth_cookie")
     
-    # 2. LOGOUT BLOKÁDA: Pokud jsi dal odhlásit, sušenky totálně ignorujeme
-    if st.session_state.get("logout_active", False):
-        cookie_manager.delete("rbk_login_token") # Zkoušíme ji smazat i v prohlížeči
-        cookie_hodnota = None
-    else:
-        cookie_hodnota = cookie_manager.get("rbk_login_token")
+    cookie_manager = get_cookie_manager()
+    cookie_hodnota = cookie_manager.get("rbk_login_token")
 
-    # 3. AUTOMATICKÉ PŘIHLÁŠENÍ (Proběhne, jen když není aktivní blokáda)
-    if cookie_hodnota and not st.session_state.get("logout_active", False):
+    # Kontrola cookies a automatické přihlášení
+    if cookie_hodnota:
         try:
+            # Dekódování Base64
             dekodovano = base64.b64decode(cookie_hodnota).decode('utf-8')
             ulozeny_uzivatel, ulozene_heslo = dekodovano.split('|', 1)
             
+            # Pokud už víme, že je přihlášen, a cookie sedí, pustíme ho
+            if st.session_state.get("password_correct", False) and st.session_state.get("username") == ulozeny_uzivatel:
+                 return True
+            
+            # Validace cookie proti DB
             conn_jmena = data_manager.get_connection()
             df_jmena = conn_jmena.read(worksheet="jmena", ttl=0)
+            
             col_name = 'jméno' if 'jméno' in df_jmena.columns else 'Jméno'
             col_pin = 'PIN' if 'PIN' in df_jmena.columns else 'pin'
-            col_role = 'role' if 'role' in df_jmena.columns else 'Role'
             
+            # Kritický patch: Očištění databáze (zabití .0 a přetypování na string)
             df_jmena[col_pin] = df_jmena[col_pin].astype(str).str.replace(r'\.0$', '', regex=True)
+
             mask = df_jmena[col_name] == ulozeny_uzivatel
-            
             if not df_jmena[mask].empty:
-                correct_pin = str(df_jmena.loc[mask, col_pin].values[0]).replace('\u00A0', '').lstrip("'").strip()
+                correct_pin = df_jmena.loc[mask, col_pin].values[0]
+                # Ošetření: Odstranění záchranného apostrofu zleva
+                correct_pin = str(correct_pin).replace('\u00A0', '').lstrip("'").strip()
+                
                 if str(ulozene_heslo).strip() == correct_pin:
-                    # Nastavení session state pro app.py
                     st.session_state["password_correct"] = True
-                    st.session_state["prihlaseny_uzivatel"] = ulozeny_uzivatel
-                    st.session_state["role"] = str(df_jmena.loc[mask, col_role].values[0]) if col_role in df_jmena.columns else ""
+                    st.session_state["username"] = ulozeny_uzivatel
                     return True
-        except:
-            pass
+                else:
+                    # Neplatná cookie, mažeme
+                    cookie_manager.delete("rbk_login_token")
+            else:
+                 # Uživatel smazán z DB, ale má cookie -> smazat cookie
+                 cookie_manager.delete("rbk_login_token")
+        except Exception as e:
+            print(f"Chyba při čtení cookies: {e}")
+            pass # Chyba v dekódování, ignorujeme
 
-    # 4. PŘIHLAŠOVACÍ FORMULÁŘ
-    try:
-        conn_jmena = data_manager.get_connection()
-        df_jmena = conn_jmena.read(worksheet="jmena", ttl=300)
-        col_name = 'jméno' if 'jméno' in df_jmena.columns else 'Jméno'
-        dostupna_jmena = df_jmena[col_name].dropna().tolist()
-    except:
-        dostupna_jmena = []
-
-    st.markdown("<h1 style='text-align: center;'>Zadejte heslo k sekci:</h1>", unsafe_allow_html=True)
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        vybrane_jmeno = st.selectbox("Jméno", options=dostupna_jmena, index=None, placeholder="Začni psát...")
-        zadane_heslo = st.text_input("PIN (Heslo)", type="password")
-        btn_login = st.button("Přihlásit se")
-
-    if btn_login and vybrane_jmeno:
+    # Není přihlášen, zobrazit formulář
+    if not st.session_state.get("password_correct", False):
+        # 1. Zjistit dostupná jména z DB
         try:
             conn_jmena = data_manager.get_connection()
-            df_jmena = conn_jmena.read(worksheet="jmena", ttl=0)
+            df_jmena = conn_jmena.read(worksheet="jmena", ttl=300) # Tady stačí cache
             col_name = 'jméno' if 'jméno' in df_jmena.columns else 'Jméno'
-            col_pin = 'PIN' if 'PIN' in df_jmena.columns else 'pin'
-            col_role = 'role' if 'role' in df_jmena.columns else 'Role'
-            
-            df_jmena[col_pin] = df_jmena[col_pin].astype(str).str.replace(r'\.0$', '', regex=True)
-            mask = df_jmena[col_name] == vybrane_jmeno
-            
-            if not df_jmena[mask].empty:
-                correct_pin = str(df_jmena.loc[mask, col_pin].values[0]).replace('\u00A0', '').lstrip("'").strip()
-                if str(zadane_heslo).strip() == correct_pin:
-                    # Úspěšný manuální login - rušíme blokádu a nastavujeme stavy
-                    st.session_state["password_correct"] = True
-                    st.session_state["prihlaseny_uzivatel"] = vybrane_jmeno
-                    st.session_state["role"] = str(df_jmena.loc[mask, col_role].values[0]) if col_role in df_jmena.columns else ""
-                    st.session_state["logout_active"] = False
-                    
-                    # Uložit do sušenky
-                    cookie_str = f"{vybrane_jmeno}|{zadane_heslo}"
-                    cookie_hodnota = base64.b64encode(cookie_str.encode('utf-8')).decode('utf-8')
-                    expires = datetime.now() + timedelta(days=30)
-                    cookie_manager.set("rbk_login_token", cookie_hodnota, expires_at=expires)
-                    
-                    st.success("✅ Přihlášeno!")
-                    time.sleep(0.5)
-                    st.rerun()
-                else:
-                    st.error("😕 Špatný PIN")
+            dostupna_jmena = [""] + df_jmena[col_name].dropna().tolist()
         except Exception as e:
-            st.error(f"Chyba: {e}")
-    return False
+            st.error(f"Nelze načíst databázi uživatelů: {e}")
+            dostupna_jmena = [""]
+
+        # 2. Layout formuláře
+        st.markdown("<h1 style='text-align: center;'>Zadejte heslo k sekci:</h1>", unsafe_allow_html=True)
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            st.selectbox("Jméno", dostupna_jmena, key="username")
+            st.text_input("PIN (Heslo)", type="password", key="password")
+            btn_login = st.button("Přihlásit se")
+
+        # 3. Logika přihlášení (po kliknutí nebo Enteru)
+        if btn_login and st.session_state["username"] != "":
+            try:
+                # Načtení čistých dat pro kontrolu
+                conn_jmena = data_manager.get_connection()
+                df_jmena = conn_jmena.read(worksheet="jmena", ttl=0)
+                
+                col_name = 'jméno' if 'jméno' in df_jmena.columns else 'Jméno'
+                col_pin = 'PIN' if 'PIN' in df_jmena.columns else 'pin'
+
+                # Znovu očištění dat
+                df_jmena[col_pin] = df_jmena[col_pin].astype(str).str.replace(r'\.0$', '', regex=True)
+
+                if st.session_state["username"] in df_jmena[col_name].values:
+                    # Nalezení hesla
+                    mask = df_jmena[col_name] == st.session_state["username"]
+                    correct_pin = df_jmena.loc[mask, col_pin].values[0]
+                    
+                    # KRITICKÉ: odstranění apostrofu, \u00A0 atd.
+                    correct_pin = str(correct_pin).replace('\u00A0', '').lstrip("'").strip()
+                    zade_heslo = str(st.session_state["password"]).strip()
+
+                    if zade_heslo == correct_pin:
+                        st.session_state["password_correct"] = True
+                        
+                        # Generování a uložení cookies
+                        cookie_str = f"{st.session_state['username']}|{zade_heslo}"
+                        cookie_hodnota = base64.b64encode(cookie_str.encode('utf-8')).decode('utf-8')
+                        expires = datetime.now() + timedelta(days=30)
+                        cookie_manager.set("rbk_login_token", cookie_hodnota, expires_at=expires)
+                        
+                        st.success("✅ Přihlášení úspěšné!")
+                        time.sleep(0.5)
+                        st.rerun()
+                    else:
+                        st.error("😕 Nesprávné heslo")
+                else:
+                     st.error("Uživatel nenalezen.")
+            except Exception as e:
+                st.error(f"Chyba při ověřování: {e}")
+        return False
+    
+    return True
 
 def logout():
-    """Totální odhlášení."""
-    # Resetujeme paměť session
-    for key in ["password_correct", "prihlaseny_uzivatel", "role"]:
-        if key in st.session_state:
-            del st.session_state[key]
-            
-    # Zapneme Logout Blokádu - check_password bude ignorovat cookies, dokud se znova nepřihlásíš
-    st.session_state["logout_active"] = True
+    """Odhlásí uživatele a resetuje stavy."""
+    @st.cache_resource
+    def get_cookie_manager():
+        return stx.CookieManager(key="auth_cookie")
+    
+    cookie_manager = get_cookie_manager()
+    cookie_manager.delete("rbk_login_token")
+    
+    if "password_correct" in st.session_state:
+        del st.session_state["password_correct"]
+    if "username" in st.session_state:
+        del st.session_state["username"]
     st.rerun()
