@@ -8,12 +8,8 @@ import base64
 def check_password():
     """Vrátí `True`, pokud má uživatel správné heslo. Využívá GSheets pro hesla."""
     
-    # Anti-flash cookie logika pomocí extra_streamlit_components
-    @st.cache_resource
-    def get_cookie_manager():
-        return stx.CookieManager(key="auth_cookie")
-    
-    cookie_manager = get_cookie_manager()
+    # CookieManager nesmí být v @st.cache_resource, inicializujeme napřímo
+    cookie_manager = stx.CookieManager(key="auth_cookie")
     cookie_hodnota = cookie_manager.get("rbk_login_token")
 
     # Kontrola cookies a automatické přihlášení
@@ -123,11 +119,7 @@ def check_password():
 
 def logout():
     """Odhlásí uživatele a resetuje stavy."""
-    @st.cache_resource
-    def get_cookie_manager():
-        return stx.CookieManager(key="auth_cookie")
-    
-    cookie_manager = get_cookie_manager()
+    cookie_manager = stx.CookieManager(key="auth_cookie")
     cookie_manager.delete("rbk_login_token")
     
     if "password_correct" in st.session_state:
