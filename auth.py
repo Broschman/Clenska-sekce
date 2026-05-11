@@ -111,15 +111,14 @@ def check_password():
     return False
 
 def logout():
-    """Odhlásí uživatele a nastaví trvalou blokádu pro auto-login v rámci relace."""
-    cookie_manager = stx.CookieManager(key="auth_mgr_v3")
-    cookie_manager.delete("rbk_login_token")
-    
-    # Vymažeme data o přihlášení ze session state
+    """Odhlásí uživatele. Čistě a bez kolize komponent."""
+    # 1. Okamžitě vymažeme paměť o přihlášení
     for key in ["password_correct", "prihlaseny_uzivatel", "role"]:
         if key in st.session_state:
             del st.session_state[key]
             
-    # Nastavíme blokádu - dokud uživatel tab nezavře, sušenka ho sama nepřihlásí
+    # 2. Nahodíme vlajku (check_password díky ní smaže sušenku v dalším cyklu)
     st.session_state["explicit_logout"] = True
+    
+    # 3. Znovu načteme appku (okamžitý skok na login)
     st.rerun()
